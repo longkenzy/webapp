@@ -44,14 +44,6 @@ const nextConfig: NextConfig = {
     
     return config;
   },
-  
-  // Disable unnecessary features in development
-  ...(process.env.NODE_ENV === 'development' && {
-    // Reduce logging in development
-    logging: {
-      fetches: false,
-    },
-  }),
 };
 
 export default nextConfig;

@@ -26,7 +26,13 @@ export default async function AdminDashboardPage() {
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: { requester: true }
-    })
+    }).then(tickets => tickets.map(ticket => ({
+      id: ticket.id,
+      title: ticket.title,
+      status: ticket.status,
+      createdAt: ticket.createdAt.toISOString(),
+      requester: ticket.requester
+    })))
   ]);
 
   // Calculate statistics

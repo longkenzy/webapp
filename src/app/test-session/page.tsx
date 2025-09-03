@@ -1,4 +1,5 @@
 import { getSession } from "@/lib/auth/session";
+import Link from "next/link";
 
 export default async function TestSessionPage() {
   const session = await getSession();
@@ -87,12 +88,12 @@ export default async function TestSessionPage() {
         >
           Logout
         </a>
-        <a 
+        <Link 
           href="/" 
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Go Home
-        </a>
+        </Link>
         <button 
           onClick={() => window.location.reload()} 
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"

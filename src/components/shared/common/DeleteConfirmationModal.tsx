@@ -75,7 +75,7 @@ export default function DeleteConfirmationModal({
               {message}
               {itemName && (
                 <span className="font-medium text-gray-900 block mt-1">
-                  "{itemName}"
+                  &quot;{itemName}&quot;
                 </span>
               )}
             </p>

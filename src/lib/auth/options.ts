@@ -64,7 +64,7 @@ export const authOptions: NextAuthOptions = {
           }
           
           console.log('✅ Authorization successful');
-          return { id: user.id, email: user.email, name: user.name ?? null, role: user.role, status: user.status } as any;
+          return { id: user.id, email: user.email, name: user.name ?? null, role: user.role, status: user.status };
         } catch (error) {
           console.error('❌ Error in authorize:', error);
           console.error('❌ Error details:', {
@@ -87,11 +87,11 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         // @ts-expect-error custom field
-        token.role = (user as any).role;
+        token.role = (user as { role?: string }).role;
         // @ts-expect-error custom field
         token.loginTime = Date.now();
         // @ts-expect-error custom field
-        token.status = (user as any).status;
+        token.status = (user as { status?: string }).status;
       }
       return token;
     },
@@ -100,11 +100,11 @@ export const authOptions: NextAuthOptions = {
         // @ts-expect-error custom field
         session.user.id = token.sub as string;
         // @ts-expect-error custom field
-        session.user.role = (token as any).role;
+        session.user.role = (token as { role?: string }).role;
         // @ts-expect-error custom field
-        session.user.loginTime = (token as any).loginTime;
+        session.user.loginTime = (token as { loginTime?: number }).loginTime;
         // @ts-expect-error custom field
-        session.user.status = (token as any).status;
+        session.user.status = (token as { status?: string }).status;
       }
       return session;
     },

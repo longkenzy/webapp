@@ -63,7 +63,7 @@ export default function EditPermissionsModal({ isOpen, onClose, user, onSave }: 
     setError('');
     
     try {
-      const updates: any = { role, status };
+      const updates: { role?: string; status?: string; username?: string; password?: string } = { role, status };
       
       // Only include username if it changed
       if (username !== user.username) {
@@ -82,7 +82,7 @@ export default function EditPermissionsModal({ isOpen, onClose, user, onSave }: 
 
       await onSave(user.id, updates);
       onClose();
-    } catch (err) {
+    } catch {
       setError('Có lỗi xảy ra khi cập nhật thông tin. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
@@ -318,8 +318,8 @@ export default function EditPermissionsModal({ isOpen, onClose, user, onSave }: 
                     <div>
                       <h4 className="text-sm font-medium text-red-800">Cảnh báo khóa tài khoản</h4>
                       <p className="text-sm text-red-700 mt-1">
-                        Khi chọn trạng thái "Không hoạt động", tài khoản này sẽ bị khóa và không thể đăng nhập vào hệ thống. 
-                        Người dùng sẽ nhận được thông báo "Tài khoản đã bị khóa" khi cố gắng đăng nhập.
+                        Khi chọn trạng thái &quot;Không hoạt động&quot;, tài khoản này sẽ bị khóa và không thể đăng nhập vào hệ thống. 
+                        Người dùng sẽ nhận được thông báo &quot;Tài khoản đã bị khóa&quot; khi cố gắng đăng nhập.
                         {role === Role.ADMIN && ' Đặc biệt chú ý: Khóa tài khoản Admin có thể ảnh hưởng đến quyền quản trị hệ thống.'}
                         {(role === Role.IT_LEAD || role === Role.IT_STAFF) && ' Chú ý: Khóa tài khoản IT Staff có thể ảnh hưởng đến việc xử lý ticket.'}
                       </p>

@@ -21,21 +21,21 @@ import {
 interface NavLinkProps {
   href: string;
   label: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   isActive: boolean;
 }
 
 interface SubNavLinkProps {
   href: string;
   label: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   isActive: boolean;
 }
 
 interface NavLinkWithDropdownProps {
   href: string;
   label: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   isActive: boolean;
   hasSubItems?: boolean;
   isOpen?: boolean;

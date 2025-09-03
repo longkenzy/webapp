@@ -25,7 +25,7 @@ export default function AuthGuard({ children, requiredRole, redirectTo }: AuthGu
     }
 
     if (status === "authenticated" && session?.user) {
-      const userRole = (session.user as any).role;
+      const userRole = (session.user as { role?: string }).role;
       
       // Check if user is trying to access admin routes
       if (pathname.startsWith("/admin")) {

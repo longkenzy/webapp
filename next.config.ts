@@ -5,13 +5,14 @@ const nextConfig: NextConfig = {
   experimental: {
     // Optimize page loading
     optimizePackageImports: ['lucide-react'],
-    // Reduce bundle size
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
+  },
+  
+  // Turbopack configuration
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
       },
     },
   },

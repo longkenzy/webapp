@@ -24,7 +24,7 @@ export default function LoginPage() {
   // Redirect based on user role after successful login
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
-      const userRole = (session.user as any).role;
+      const userRole = (session.user as { role?: string }).role;
       const callbackUrl = search.get("from");
       
       if (callbackUrl) {
@@ -68,7 +68,7 @@ export default function LoginPage() {
             return;
           }
         }
-      } catch (checkError) {
+      } catch {
         // If check-status fails, continue with normal sign in
         console.log('Status check failed, proceeding with normal sign in');
       }
@@ -84,7 +84,7 @@ export default function LoginPage() {
         setError("Email hoặc mật khẩu không đúng");
       }
       // Don't redirect here - let useEffect handle it based on session
-    } catch (err) {
+    } catch {
       setError("Đã xảy ra lỗi. Vui lòng thử lại.");
     } finally {
       setLoading(false);

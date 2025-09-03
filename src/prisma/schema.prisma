@@ -1,0 +1,146 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  name       String?
+  phone      String?
+  department String?
+  status     String?    @default("active")
+  role       Role       @default(USER)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  password   String
+  username   String     @unique
+  employeeId String?    @unique
+  comments   Comment[]
+  schedules  Schedule[]
+  assigned   Ticket[]   @relation("AssigneeTickets")
+  tickets    Ticket[]   @relation("RequesterTickets")
+  employee   Employee?  @relation(fields: [employeeId], references: [id])
+  worklogs   Worklog[]
+}
+
+model Employee {
+  id               String   @id @default(cuid())
+  fullName         String
+  dateOfBirth      DateTime
+  gender           String
+  hometown         String
+  religion         String
+  ethnicity        String
+  startDate        DateTime
+  primaryPhone     String
+  secondaryPhone   String?
+  personalEmail    String
+  companyEmail     String   @unique
+  placeOfBirth     String
+  permanentAddress String
+  temporaryAddress String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  avatar           String?
+  contractType     String?
+  department       String?
+  position         String?
+  status           String   @default("active")
+  user             User?
+}
+
+model Ticket {
+  id          String         @id @default(cuid())
+  title       String
+  description String
+  priority    TicketPriority @default(P3)
+  status      TicketStatus   @default(OPEN)
+  requesterId String
+  assigneeId  String?
+  dueAt       DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  comments    Comment[]
+  assignee    User?          @relation("AssigneeTickets", fields: [assigneeId], references: [id])
+  requester   User           @relation("RequesterTickets", fields: [requesterId], references: [id])
+  worklogs    Worklog[]
+}
+
+model Worklog {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  duration  Int
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  ticketId  String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  startAt   DateTime
+  endAt     DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model KPIConfig {
+  id                   String   @id @default(cuid())
+  firstResponseMinutes Int      @default(60)
+  resolveMinutesP1     Int      @default(240)
+  resolveMinutesP2     Int      @default(480)
+  resolveMinutesP3     Int      @default(1440)
+  resolveMinutesP4     Int      @default(2880)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  IT_LEAD
+  IT_STAFF
+  USER
+}
+
+enum TicketPriority {
+  P1
+  P2
+  P3
+  P4
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  ON_HOLD
+}

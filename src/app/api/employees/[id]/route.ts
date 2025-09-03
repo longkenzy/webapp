@@ -3,12 +3,13 @@ import { db } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const employee = await db.employee.findUnique({
       where: {
-        id: params.id,
+        id: id,
       },
     });
 
@@ -31,9 +32,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     
     const {
@@ -71,7 +73,7 @@ export async function PUT(
     const existingEmployee = await db.employee.findFirst({
       where: {
         companyEmail,
-        id: { not: params.id }
+        id: { not: id }
       }
     });
 
@@ -84,7 +86,7 @@ export async function PUT(
 
     const updatedEmployee = await db.employee.update({
       where: {
-        id: params.id,
+        id: id,
       },
       data: {
         fullName,
@@ -120,13 +122,14 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     // Check if employee exists
     const employee = await db.employee.findUnique({
       where: {
-        id: params.id,
+        id: id,
       },
     });
 
@@ -148,7 +151,7 @@ export async function DELETE(
     // Delete the employee
     await db.employee.delete({
       where: {
-        id: params.id,
+        id: id,
       },
     });
 

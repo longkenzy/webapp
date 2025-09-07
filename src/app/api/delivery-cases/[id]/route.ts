@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,9 +13,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const deliveryCase = await db.receivingCase.findUnique({
       where: {
-        id: params.id,
+        id: id,
         form: 'Giao hàng' // Ensure it's a delivery case
       },
       include: {
@@ -80,7 +82,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -88,6 +90,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const {
       status,
@@ -106,7 +109,7 @@ export async function PUT(
     // Check if delivery case exists
     const existingCase = await db.receivingCase.findUnique({
       where: {
-        id: params.id,
+        id: id,
         form: 'Giao hàng'
       }
     });
@@ -117,7 +120,7 @@ export async function PUT(
 
     // Update delivery case
     const updatedCase = await db.receivingCase.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         status,
         endDate: endDate ? new Date(endDate) : null,
@@ -180,14 +183,14 @@ export async function PUT(
     if (products && Array.isArray(products)) {
       // Delete existing products
       await db.product.deleteMany({
-        where: { receivingCaseId: params.id }
+        where: { receivingCaseId: id }
       });
 
       // Create new products
       if (products.length > 0) {
         await db.product.createMany({
           data: products.map((product: any) => ({
-            receivingCaseId: params.id,
+            receivingCaseId: id,
             name: product.name,
             code: product.code,
             quantity: product.quantity,
@@ -198,7 +201,7 @@ export async function PUT(
 
       // Fetch updated case with products
       const finalCase = await db.receivingCase.findUnique({
-        where: { id: params.id },
+        where: { id: id },
         include: {
           requester: {
             select: {
@@ -260,7 +263,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -268,10 +271,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     // Check if delivery case exists
     const existingCase = await db.receivingCase.findUnique({
       where: {
-        id: params.id,
+        id: id,
         form: 'Giao hàng'
       }
     });
@@ -282,7 +286,7 @@ export async function DELETE(
 
     // Delete delivery case (products will be deleted automatically due to cascade)
     await db.receivingCase.delete({
-      where: { id: params.id }
+      where: { id: id }
     });
 
     return NextResponse.json({ message: 'Delivery case deleted successfully' });

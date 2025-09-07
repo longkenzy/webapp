@@ -9,60 +9,59 @@ datasource db {
 }
 
 model User {
-  id         String     @id @default(cuid())
-  email      String     @unique
-  name       String?
-  phone      String?
-  department String?
-  status     String?    @default("active")
-  role       Role       @default(USER)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  password   String
-  username   String     @unique
-  employeeId String?    @unique
-  schedules  Schedule[]
-  employee   Employee?  @relation(fields: [employeeId], references: [id])
-  internalCaseComments InternalCaseComment[]
-  internalCaseWorklogs InternalCaseWorklog[]
+  id                    String                 @id @default(cuid())
+  email                 String                 @unique
+  name                  String?
+  phone                 String?
+  department            String?
+  status                String?                @default("active")
+  role                  Role                   @default(USER)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  employeeId            String?                @unique
+  password              String
+  username              String                 @unique
+  deliveryCaseComments  DeliveryCaseComment[]
+  deliveryCaseWorklogs  DeliveryCaseWorklog[]
+  internalCaseComments  InternalCaseComment[]
+  internalCaseWorklogs  InternalCaseWorklog[]
   receivingCaseComments ReceivingCaseComment[]
   receivingCaseWorklogs ReceivingCaseWorklog[]
-  deliveryCaseComments DeliveryCaseComment[]
-  deliveryCaseWorklogs DeliveryCaseWorklog[]
+  schedules             Schedule[]
+  employee              Employee?              @relation(fields: [employeeId], references: [id])
 }
 
 model Employee {
-  id               String   @id @default(cuid())
-  fullName         String
-  dateOfBirth      DateTime
-  gender           String
-  hometown         String
-  religion         String
-  ethnicity        String
-  startDate        DateTime
-  primaryPhone     String
-  secondaryPhone   String?
-  personalEmail    String
-  companyEmail     String   @unique
-  placeOfBirth     String
-  permanentAddress String
-  temporaryAddress String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  avatar           String?
-  contractType     String?
-  department       String?
-  position         String?
-  status           String   @default("active")
-  user             User?
-  internalCasesRequester InternalCase[] @relation("RequesterInternalCases")
-  internalCasesHandler InternalCase[] @relation("HandlerInternalCases")
+  id                      String          @id @default(cuid())
+  fullName                String
+  dateOfBirth             DateTime
+  gender                  String
+  hometown                String
+  religion                String
+  ethnicity               String
+  startDate               DateTime
+  primaryPhone            String
+  secondaryPhone          String?
+  personalEmail           String
+  companyEmail            String          @unique
+  placeOfBirth            String
+  permanentAddress        String
+  temporaryAddress        String?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  avatar                  String?
+  contractType            String?
+  department              String?
+  position                String?
+  status                  String          @default("active")
+  deliveryCasesHandler    DeliveryCase[]  @relation("HandlerDeliveryCases")
+  deliveryCasesRequester  DeliveryCase[]  @relation("RequesterDeliveryCases")
+  internalCasesHandler    InternalCase[]  @relation("HandlerInternalCases")
+  internalCasesRequester  InternalCase[]  @relation("RequesterInternalCases")
+  receivingCasesHandler   ReceivingCase[] @relation("HandlerReceivingCases")
   receivingCasesRequester ReceivingCase[] @relation("RequesterReceivingCases")
-  receivingCasesHandler ReceivingCase[] @relation("HandlerReceivingCases")
-  deliveryCasesRequester  DeliveryCase[] @relation("RequesterDeliveryCases")
-  deliveryCasesHandler    DeliveryCase[] @relation("HandlerDeliveryCases")
+  user                    User?
 }
-
 
 model Schedule {
   id        String   @id @default(cuid())
@@ -76,18 +75,16 @@ model Schedule {
 }
 
 model Partner {
-  id                String   @id @default(cuid())
-  fullCompanyName   String   // Tên công ty đầy đủ
-  shortName         String   @unique // Tên viết tắt
-  address           String   // Địa chỉ mới
-  contactPerson     String?  // Người liên hệ
-  contactPhone      String?  // SĐT Người liên hệ
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
-  // Relations
-  receivingCases    ReceivingCase[]
-  deliveryCases     DeliveryCase[]
+  id              String          @id @default(cuid())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  address         String
+  contactPerson   String?
+  contactPhone    String?
+  fullCompanyName String
+  shortName       String          @unique
+  deliveryCases   DeliveryCase[]
+  receivingCases  ReceivingCase[]
 }
 
 model CaseType {
@@ -99,143 +96,117 @@ model CaseType {
 }
 
 model KPIConfig {
-  id                   String   @id @default(cuid())
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model InternalCase {
-  id                String            @id @default(cuid())
-  title             String
-  description       String
-  requesterId       String
-  handlerId         String
-  caseType          String
-  form              String            @default("Onsite") // Onsite, Offsite, Remote
-  startDate         DateTime
-  endDate           DateTime?
-  status            InternalCaseStatus @default(RECEIVED)
-  notes             String?
-  
-  // User self-assessment fields
-  userDifficultyLevel    Int?    // 1-5 points
-  userEstimatedTime      Int?    // 1-5 points
-  userImpactLevel        Int?    // 1-5 points
-  userUrgencyLevel       Int?    // 1-5 points
-  userFormScore          Int?    // 1-2 points (Onsite: 2, Offsite/Remote: 1)
-  
-  // Admin assessment fields
-  adminDifficultyLevel   Int?    // 1-5 points
-  adminEstimatedTime     Int?    // 1-5 points
-  adminImpactLevel       Int?    // 1-5 points
-  adminUrgencyLevel      Int?    // 1-5 points
-  
-  // Assessment metadata
-  userAssessmentDate     DateTime?
-  adminAssessmentDate    DateTime?
-  adminAssessmentNotes   String?
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  
-  // Relations
-  requester         Employee          @relation("RequesterInternalCases", fields: [requesterId], references: [id])
-  handler           Employee          @relation("HandlerInternalCases", fields: [handlerId], references: [id])
-  comments          InternalCaseComment[]
-  worklogs         InternalCaseWorklog[]
+  id                   String                @id @default(cuid())
+  title                String
+  description          String
+  requesterId          String
+  handlerId            String
+  caseType             String
+  form                 String                @default("Onsite")
+  startDate            DateTime
+  endDate              DateTime?
+  status               InternalCaseStatus    @default(RECEIVED)
+  notes                String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  userAssessmentDate   DateTime?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  handler              Employee              @relation("HandlerInternalCases", fields: [handlerId], references: [id])
+  requester            Employee              @relation("RequesterInternalCases", fields: [requesterId], references: [id])
+  comments             InternalCaseComment[]
+  worklogs             InternalCaseWorklog[]
 }
 
 model InternalCaseComment {
-  id            String       @id @default(cuid())
+  id             String       @id @default(cuid())
   internalCaseId String
-  userId        String
-  content       String
-  createdAt     DateTime     @default(now())
-  
-  // Relations
-  internalCase  InternalCase @relation(fields: [internalCaseId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
+  userId         String
+  content        String
+  createdAt      DateTime     @default(now())
+  internalCase   InternalCase @relation(fields: [internalCaseId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
 }
 
 model InternalCaseWorklog {
-  id            String       @id @default(cuid())
+  id             String       @id @default(cuid())
   internalCaseId String
-  userId        String
-  duration      Int          // in minutes
-  description   String
-  createdAt     DateTime     @default(now())
-  
-  // Relations
-  internalCase  InternalCase @relation(fields: [internalCaseId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
+  userId         String
+  duration       Int
+  description    String
+  createdAt      DateTime     @default(now())
+  internalCase   InternalCase @relation(fields: [internalCaseId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
 }
 
 model ReceivingCase {
-  id                String            @id @default(cuid())
-  title             String
-  description       String
-  requesterId       String
-  handlerId         String
-  supplierId        String
-  form              String            @default("Onsite") // Onsite, Offsite, Remote
-  startDate         DateTime
-  endDate           DateTime?
-  status            ReceivingCaseStatus @default(RECEIVED)
-  notes             String?
-  
-  // User self-assessment fields
-  userDifficultyLevel    Int?    // 1-5 points
-  userEstimatedTime      Int?    // 1-5 points
-  userImpactLevel        Int?    // 1-5 points
-  userUrgencyLevel       Int?    // 1-5 points
-  userFormScore          Int?    // 1-2 points (Onsite: 2, Offsite/Remote: 1)
-  
-  // Admin assessment fields
-  adminDifficultyLevel   Int?    // 1-5 points
-  adminEstimatedTime     Int?    // 1-5 points
-  adminImpactLevel       Int?    // 1-5 points
-  adminUrgencyLevel      Int?    // 1-5 points
-  
-  // Assessment metadata
-  userAssessmentDate     DateTime?
-  adminAssessmentDate    DateTime?
-  adminAssessmentNotes   String?
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  
-  // Relations
-  requester         Employee          @relation("RequesterReceivingCases", fields: [requesterId], references: [id])
-  handler           Employee          @relation("HandlerReceivingCases", fields: [handlerId], references: [id])
-  supplier          Partner           @relation(fields: [supplierId], references: [id])
-  comments          ReceivingCaseComment[]
-  worklogs         ReceivingCaseWorklog[]
-  products         ReceivingCaseProduct[]
+  id                   String                 @id @default(cuid())
+  title                String
+  description          String
+  requesterId          String
+  handlerId            String
+  supplierId           String
+  form                 String                 @default("Onsite")
+  startDate            DateTime
+  endDate              DateTime?
+  status               ReceivingCaseStatus    @default(RECEIVED)
+  notes                String?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  userAssessmentDate   DateTime?
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  handler              Employee               @relation("HandlerReceivingCases", fields: [handlerId], references: [id])
+  requester            Employee               @relation("RequesterReceivingCases", fields: [requesterId], references: [id])
+  supplier             Partner                @relation(fields: [supplierId], references: [id])
+  comments             ReceivingCaseComment[]
+  products             ReceivingCaseProduct[]
+  worklogs             ReceivingCaseWorklog[]
 }
 
 model ReceivingCaseComment {
-  id            String       @id @default(cuid())
+  id              String        @id @default(cuid())
   receivingCaseId String
-  userId        String
-  content       String
-  createdAt     DateTime     @default(now())
-  
-  // Relations
-  receivingCase ReceivingCase @relation(fields: [receivingCaseId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
+  userId          String
+  content         String
+  createdAt       DateTime      @default(now())
+  receivingCase   ReceivingCase @relation(fields: [receivingCaseId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
 }
 
 model ReceivingCaseWorklog {
-  id            String       @id @default(cuid())
+  id              String        @id @default(cuid())
   receivingCaseId String
-  userId        String
-  duration      Int          // in minutes
-  description   String
-  createdAt     DateTime     @default(now())
-  
-  // Relations
-  receivingCase ReceivingCase @relation(fields: [receivingCaseId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
+  userId          String
+  duration        Int
+  description     String
+  createdAt       DateTime      @default(now())
+  receivingCase   ReceivingCase @relation(fields: [receivingCaseId], references: [id])
+  user            User          @relation(fields: [userId], references: [id])
 }
 
 model ReceivingCaseProduct {
@@ -244,12 +215,99 @@ model ReceivingCaseProduct {
   name            String
   code            String?
   quantity        Int
-  serialNumber    String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-  
-  // Relations
+  serialNumber    String?
   receivingCase   ReceivingCase @relation(fields: [receivingCaseId], references: [id], onDelete: Cascade)
+}
+
+model DeliveryCase {
+  id                   String                @id @default(cuid())
+  title                String
+  description          String
+  requesterId          String
+  handlerId            String
+  customerId           String
+  form                 String                @default("Onsite")
+  startDate            DateTime
+  endDate              DateTime?
+  notes                String?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  userAssessmentDate   DateTime?
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  status               DeliveryCaseStatus    @default(RECEIVED)
+  customer             Partner               @relation(fields: [customerId], references: [id])
+  handler              Employee              @relation("HandlerDeliveryCases", fields: [handlerId], references: [id])
+  requester            Employee              @relation("RequesterDeliveryCases", fields: [requesterId], references: [id])
+  comments             DeliveryCaseComment[]
+  products             DeliveryCaseProduct[]
+  worklogs             DeliveryCaseWorklog[]
+}
+
+model DeliveryCaseComment {
+  id             String       @id @default(cuid())
+  deliveryCaseId String
+  userId         String
+  content        String
+  createdAt      DateTime     @default(now())
+  deliveryCase   DeliveryCase @relation(fields: [deliveryCaseId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+}
+
+model DeliveryCaseWorklog {
+  id             String       @id @default(cuid())
+  deliveryCaseId String
+  userId         String
+  duration       Int
+  description    String
+  createdAt      DateTime     @default(now())
+  deliveryCase   DeliveryCase @relation(fields: [deliveryCaseId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+}
+
+model DeliveryCaseProduct {
+  id             String       @id @default(cuid())
+  deliveryCaseId String
+  name           String
+  code           String?
+  quantity       Int
+  serialNumber   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deliveryCase   DeliveryCase @relation(fields: [deliveryCaseId], references: [id], onDelete: Cascade)
+}
+
+model EvaluationConfig {
+  id        String             @id @default(cuid())
+  type      EvaluationType
+  category  EvaluationCategory
+  isActive  Boolean            @default(true)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  options   EvaluationOption[]
+}
+
+model EvaluationOption {
+  id        String           @id @default(cuid())
+  configId  String
+  label     String
+  points    Int
+  order     Int              @default(0)
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  config    EvaluationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
@@ -259,135 +317,25 @@ enum Role {
   USER
 }
 
-
 enum InternalCaseStatus {
-  RECEIVED      // Tiếp nhận
-  IN_PROGRESS   // Đang xử lý
-  COMPLETED     // Hoàn thành
-  CANCELLED     // Hủy
+  RECEIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 enum ReceivingCaseStatus {
-  RECEIVED      // Tiếp nhận
-  IN_PROGRESS   // Đang xử lý
-  COMPLETED     // Hoàn thành
-  CANCELLED     // Hủy
+  RECEIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 enum DeliveryCaseStatus {
-  RECEIVED      // Tiếp nhận
-  IN_PROGRESS   // Đang xử lý
-  COMPLETED     // Hoàn thành
-  CANCELLED     // Hủy
-}
-
-model DeliveryCase {
-  id                String              @id @default(cuid())
-  title             String
-  description       String
-  requesterId       String
-  handlerId         String
-  customerId        String
-  form              String              @default("Onsite")
-  startDate         DateTime
-  endDate           DateTime?
-  status            DeliveryCaseStatus @default(RECEIVED)
-  notes             String?
-  
-  // User self-assessment fields
-  userDifficultyLevel    Int?
-  userEstimatedTime      Int?
-  userImpactLevel        Int?
-  userUrgencyLevel       Int?
-  userFormScore          Int?
-  
-  // Admin assessment fields
-  adminDifficultyLevel   Int?
-  adminEstimatedTime     Int?
-  adminImpactLevel       Int?
-  adminUrgencyLevel      Int?
-  
-  // Assessment metadata
-  userAssessmentDate     DateTime?
-  adminAssessmentDate    DateTime?
-  adminAssessmentNotes   String?
-  
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  
-  // Relations
-  requester         Employee            @relation("RequesterDeliveryCases", fields: [requesterId], references: [id])
-  handler           Employee            @relation("HandlerDeliveryCases", fields: [handlerId], references: [id])
-  customer          Partner             @relation(fields: [customerId], references: [id])
-  comments          DeliveryCaseComment[]
-  worklogs          DeliveryCaseWorklog[]
-  products          DeliveryCaseProduct[]
-}
-
-model DeliveryCaseComment {
-  id            String       @id @default(cuid())
-  deliveryCaseId String
-  userId        String
-  content       String
-  createdAt     DateTime     @default(now())
-  
-  // Relations
-  deliveryCase  DeliveryCase @relation(fields: [deliveryCaseId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
-}
-
-model DeliveryCaseWorklog {
-  id            String       @id @default(cuid())
-  deliveryCaseId String
-  userId        String
-  duration      Int
-  description   String
-  createdAt     DateTime     @default(now())
-  
-  // Relations
-  deliveryCase  DeliveryCase @relation(fields: [deliveryCaseId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
-}
-
-model DeliveryCaseProduct {
-  id              String        @id @default(cuid())
-  deliveryCaseId  String
-  name            String
-  code            String?
-  quantity        Int
-  serialNumber    String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  // Relations
-  deliveryCase    DeliveryCase  @relation(fields: [deliveryCaseId], references: [id], onDelete: Cascade)
-}
-
-// Evaluation Configuration Models
-model EvaluationConfig {
-  id          String   @id @default(cuid())
-  type        EvaluationType
-  category    EvaluationCategory
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  options     EvaluationOption[]
-}
-
-model EvaluationOption {
-  id          String   @id @default(cuid())
-  configId    String
-  label       String
-  points      Int
-  order       Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  config      EvaluationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  RECEIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 enum EvaluationType {

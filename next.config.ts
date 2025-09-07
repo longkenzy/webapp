@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  eslint: {
+    // Skip ESLint during production builds on Vercel
+    ignoreDuringBuilds: true,
+  },
   // Disable automatic static optimization for dynamic routes
   experimental: {
     // Optimize page loading

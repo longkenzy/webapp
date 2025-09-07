@@ -1,24 +1,73 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth/session";
-import { Role } from "@prisma/client";
 import { atLeast } from "@/lib/auth/rbac";
+import { Role } from "@prisma/client";
+import { getSession } from "@/lib/auth/session";
 
-export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!atLeast(session.user.role, Role.IT_STAFF)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const partners = await db.partner.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json(partners);
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!atLeast(session.user.role, Role.IT_STAFF)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const partners = await db.partner.findMany({ 
+      orderBy: { shortName: "asc" } 
+    });
+
+    return NextResponse.json(partners);
+  } catch (error) {
+    console.error("Error fetching partners:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
 
-export async function POST(req: Request) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!atLeast(session.user.role, Role.IT_LEAD)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const data = await req.json();
-  const created = await db.partner.create({ data });
-  return NextResponse.json(created, { status: 201 });
+export async function POST(request: NextRequest) {
+  try { {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!atLeast(session.user.role, Role.IT_STAFF)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { fullCompanyName, shortName, address, contactPerson, contactPhone } = body;
+
+    // Validate required fields
+    if (!fullCompanyName || !shortName || !address) {
+      return NextResponse.json(
+        { error: "Tên công ty đầy đủ, tên viết tắt và địa chỉ là bắt buộc" },
+        { status: 400 }
+      );
+    }
+
+    // Create the new partner
+    const newPartner = await db.partner.create({
+      data: {
+        fullCompanyName,
+        shortName,
+        address,
+        contactPerson: contactPerson || null,
+        contactPhone: contactPhone || null,
+      },
+    });
+
+    return NextResponse.json(newPartner);
+  } catch (error) {
+    console.error("Error creating partner:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
-
-

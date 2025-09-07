@@ -13,6 +13,9 @@ interface DeleteConfirmationModalProps {
   cancelText?: string;
   itemName?: string;
   isLoading?: boolean;
+  isDeleting?: boolean;
+  warningMessage?: string;
+  disabled?: boolean;
 }
 
 export default function DeleteConfirmationModal({
@@ -24,7 +27,10 @@ export default function DeleteConfirmationModal({
   confirmText = 'Xóa',
   cancelText = 'Hủy',
   itemName,
-  isLoading = false
+  isLoading = false,
+  isDeleting: propIsDeleting = false,
+  warningMessage,
+  disabled = false
 }: DeleteConfirmationModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 

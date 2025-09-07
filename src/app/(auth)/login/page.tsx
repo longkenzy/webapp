@@ -43,37 +43,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // First, check if the account exists and its status
-      try {
-        const checkResponse = await fetch('/api/users/check-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
-        });
-
-        if (checkResponse.ok) {
-          const checkResult = await checkResponse.json();
-          
-          if (checkResult.status === 'inactive') {
-            setNotificationType('warning');
-            setNotificationMessage('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.');
-            setShowNotification(true);
-            setError("Tài khoản đã bị khóa");
-            setLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // If check-status fails, continue with normal sign in
-        console.log('Status check failed, proceeding with normal sign in');
-      }
-
-      // Proceed with normal sign in
+      // Direct sign in with NextAuth - it will handle all validation
       const result = await signIn("credentials", {
         redirect: false,
         email: formData.email,
@@ -81,7 +51,15 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Email hoặc mật khẩu không đúng");
+        // Handle specific error cases
+        if (result.error === 'ACCOUNT_INACTIVE') {
+          setNotificationType('warning');
+          setNotificationMessage('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.');
+          setShowNotification(true);
+          setError("Tài khoản đã bị khóa");
+        } else {
+          setError("Email hoặc mật khẩu không đúng");
+        }
       }
       // Don't redirect here - let useEffect handle it based on session
     } catch {
@@ -118,7 +96,8 @@ export default function LoginPage() {
               width={80}
               height={80}
               priority
-              className="rounded-lg w-auto h-auto"
+              className="rounded-lg"
+              style={{ width: 'auto', height: 'auto' }}
               onError={(e) => {
                 // Fallback to text if logo not found
                 const target = e.target as HTMLImageElement;
@@ -212,12 +191,12 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || !formData.email || !formData.password}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 relative"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Đang đăng nhập...
+                  <span>Đang xác thực...</span>
                 </div>
               ) : (
                 "Đăng nhập"
@@ -243,21 +222,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Demo Accounts */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-600 mb-2">Tài khoản demo:</p>
-            <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-700">Admin:</span>
-                <span className="font-mono text-gray-900">admin@it.local</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">User:</span>
-                <span className="font-mono text-gray-900">user1@it.local</span>
-              </div>
-              <div className="text-gray-500">Mật khẩu: Passw0rd!</div>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

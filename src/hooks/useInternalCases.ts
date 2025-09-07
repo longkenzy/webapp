@@ -1,0 +1,233 @@
+"use client";
+
+import { useState, useCallback, useMemo } from 'react';
+
+interface Employee {
+  id: string;
+  fullName: string;
+  position: string;
+  department: string;
+}
+
+interface InternalCase {
+  id: string;
+  title: string;
+  description: string;
+  requester: Employee;
+  handler: Employee;
+  caseType: string;
+  form: string;
+  status: string;
+  startDate: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+  notes?: string;
+  userDifficultyLevel?: number;
+  userEstimatedTime?: number;
+  userImpactLevel?: number;
+  userUrgencyLevel?: number;
+  userFormScore?: number;
+  userAssessmentDate?: string;
+  adminDifficultyLevel?: number;
+  adminEstimatedTime?: number;
+  adminImpactLevel?: number;
+  adminUrgencyLevel?: number;
+  adminAssessmentDate?: string;
+  adminAssessmentNotes?: string;
+}
+
+interface UseInternalCasesProps {
+  initialCases?: InternalCase[];
+}
+
+export function useInternalCases({ initialCases = [] }: UseInternalCasesProps = {}) {
+  const [internalCases, setInternalCases] = useState<InternalCase[]>(initialCases);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedHandler, setSelectedHandler] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+  // Memoized filtered cases
+  const filteredCases = useMemo(() => {
+    return internalCases.filter(case_ => {
+      const matchesSearch = !searchTerm || 
+        case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        case_.requester.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        case_.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        case_.caseType.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesHandler = !selectedHandler || case_.handler.id === selectedHandler;
+      const matchesStatus = !selectedStatus || case_.status === selectedStatus;
+      
+      const matchesDateFrom = !dateFrom || new Date(case_.startDate) >= new Date(dateFrom);
+      const matchesDateTo = !dateTo || new Date(case_.startDate) <= new Date(dateTo);
+
+      return matchesSearch && matchesHandler && matchesStatus && matchesDateFrom && matchesDateTo;
+    });
+  }, [internalCases, searchTerm, selectedHandler, selectedStatus, dateFrom, dateTo]);
+
+  // Memoized unique handlers and statuses for filter options
+  const uniqueHandlers = useMemo(() => {
+    const handlers = new Map();
+    internalCases.forEach(case_ => {
+      handlers.set(case_.handler.id, case_.handler);
+    });
+    return Array.from(handlers.values());
+  }, [internalCases]);
+
+  const uniqueStatuses = useMemo(() => {
+    return [...new Set(internalCases.map(case_ => case_.status))];
+  }, [internalCases]);
+
+  // Fetch cases with retry logic
+  const fetchInternalCases = useCallback(async (retryCount = 0) => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/internal-cases', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=60',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setInternalCases(data.data || []);
+      } else {
+        console.error('Failed to fetch internal cases:', response.status, response.statusText);
+        if (retryCount < 2) {
+          console.log(`Retrying fetch internal cases... (${retryCount + 1}/2)`);
+          setTimeout(() => fetchInternalCases(retryCount + 1), 1000);
+        } else {
+          setInternalCases([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching internal cases:', error);
+      if (retryCount < 2) {
+        console.log(`Retrying fetch internal cases... (${retryCount + 1}/2)`);
+        setTimeout(() => fetchInternalCases(retryCount + 1), 1000);
+      } else {
+        setInternalCases([]);
+      }
+    } finally {
+      if (retryCount === 0) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  // Refresh cases
+  const refreshInternalCases = useCallback(async () => {
+    setRefreshing(true);
+    await fetchInternalCases();
+    setRefreshing(false);
+  }, [fetchInternalCases]);
+
+  // Toggle row expansion
+  const toggleRowExpansion = useCallback((id: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Clear all filters
+  const clearFilters = useCallback(() => {
+    setSearchTerm('');
+    setSelectedHandler('');
+    setSelectedStatus('');
+    setDateFrom('');
+    setDateTo('');
+  }, []);
+
+  // Delete case with optimistic update
+  const deleteCase = useCallback(async (caseToDelete: InternalCase) => {
+    // Optimistically remove from state
+    setInternalCases(prev => prev.filter(c => c.id !== caseToDelete.id));
+    
+    try {
+      const response = await fetch(`/api/internal-cases/${caseToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        // Revert on failure
+        setInternalCases(prev => [...prev, caseToDelete]);
+        throw new Error('Failed to delete case');
+      }
+    } catch (error) {
+      console.error('Error deleting case:', error);
+      // Revert on error
+      setInternalCases(prev => [...prev, caseToDelete]);
+      throw error;
+    }
+  }, []);
+
+  // Update case with optimistic update
+  const updateCase = useCallback(async (updatedCase: InternalCase) => {
+    // Optimistically update in state
+    setInternalCases(prev => prev.map(c => c.id === updatedCase.id ? updatedCase : c));
+    
+    try {
+      const response = await fetch(`/api/internal-cases/${updatedCase.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedCase),
+      });
+
+      if (!response.ok) {
+        // Revert on failure - refetch to get correct state
+        await fetchInternalCases();
+        throw new Error('Failed to update case');
+      }
+    } catch (error) {
+      console.error('Error updating case:', error);
+      // Revert on error - refetch to get correct state
+      await fetchInternalCases();
+      throw error;
+    }
+  }, [fetchInternalCases]);
+
+  return {
+    // State
+    internalCases,
+    filteredCases,
+    loading,
+    refreshing,
+    searchTerm,
+    selectedHandler,
+    selectedStatus,
+    dateFrom,
+    dateTo,
+    expandedRows,
+    uniqueHandlers,
+    uniqueStatuses,
+    
+    // Actions
+    setInternalCases,
+    setSearchTerm,
+    setSelectedHandler,
+    setSelectedStatus,
+    setDateFrom,
+    setDateTo,
+    fetchInternalCases,
+    refreshInternalCases,
+    toggleRowExpansion,
+    clearFilters,
+    deleteCase,
+    updateCase,
+  };
+}

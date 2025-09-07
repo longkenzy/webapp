@@ -1,0 +1,297 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
+import { db } from '@/lib/db';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const deliveryCase = await db.receivingCase.findUnique({
+      where: {
+        id: params.id,
+        form: 'Giao hàng' // Ensure it's a delivery case
+      },
+      include: {
+        requester: {
+          select: {
+            id: true,
+            fullName: true,
+            position: true,
+            department: true
+          }
+        },
+        handler: {
+          select: {
+            id: true,
+            fullName: true,
+            position: true,
+            department: true
+          }
+        },
+        supplier: {
+          select: {
+            id: true,
+            shortName: true,
+            fullCompanyName: true,
+            contactPerson: true,
+            contactPhone: true
+          }
+        },
+        products: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            quantity: true,
+            serialNumber: true
+          }
+        },
+        _count: {
+          select: {
+            comments: true,
+            worklogs: true,
+            products: true
+          }
+        }
+      }
+    });
+
+    if (!deliveryCase) {
+      return NextResponse.json({ error: 'Delivery case not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(deliveryCase);
+
+  } catch (error) {
+    console.error('Error fetching delivery case:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const {
+      status,
+      endDate,
+      notes,
+      userDifficultyLevel,
+      userEstimatedTime,
+      userImpactLevel,
+      userUrgencyLevel,
+      userFormScore,
+      userAssessmentDate,
+      description,
+      products
+    } = body;
+
+    // Check if delivery case exists
+    const existingCase = await db.receivingCase.findUnique({
+      where: {
+        id: params.id,
+        form: 'Giao hàng'
+      }
+    });
+
+    if (!existingCase) {
+      return NextResponse.json({ error: 'Delivery case not found' }, { status: 404 });
+    }
+
+    // Update delivery case
+    const updatedCase = await db.receivingCase.update({
+      where: { id: params.id },
+      data: {
+        status,
+        endDate: endDate ? new Date(endDate) : null,
+        notes,
+        userDifficultyLevel,
+        userEstimatedTime,
+        userImpactLevel,
+        userUrgencyLevel,
+        userFormScore,
+        userAssessmentDate: userAssessmentDate ? new Date(userAssessmentDate) : null,
+        description,
+        updatedAt: new Date()
+      },
+      include: {
+        requester: {
+          select: {
+            id: true,
+            fullName: true,
+            position: true,
+            department: true
+          }
+        },
+        handler: {
+          select: {
+            id: true,
+            fullName: true,
+            position: true,
+            department: true
+          }
+        },
+        supplier: {
+          select: {
+            id: true,
+            shortName: true,
+            fullCompanyName: true,
+            contactPerson: true,
+            contactPhone: true
+          }
+        },
+        products: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            quantity: true,
+            serialNumber: true
+          }
+        },
+        _count: {
+          select: {
+            comments: true,
+            worklogs: true,
+            products: true
+          }
+        }
+      }
+    });
+
+    // Update products if provided
+    if (products && Array.isArray(products)) {
+      // Delete existing products
+      await db.product.deleteMany({
+        where: { receivingCaseId: params.id }
+      });
+
+      // Create new products
+      if (products.length > 0) {
+        await db.product.createMany({
+          data: products.map((product: any) => ({
+            receivingCaseId: params.id,
+            name: product.name,
+            code: product.code,
+            quantity: product.quantity,
+            serialNumber: product.serialNumber
+          }))
+        });
+      }
+
+      // Fetch updated case with products
+      const finalCase = await db.receivingCase.findUnique({
+        where: { id: params.id },
+        include: {
+          requester: {
+            select: {
+              id: true,
+              fullName: true,
+              position: true,
+              department: true
+            }
+          },
+          handler: {
+            select: {
+              id: true,
+              fullName: true,
+              position: true,
+              department: true
+            }
+          },
+          supplier: {
+            select: {
+              id: true,
+              shortName: true,
+              fullCompanyName: true,
+              contactPerson: true,
+              contactPhone: true
+            }
+          },
+          products: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              quantity: true,
+              serialNumber: true
+            }
+          },
+          _count: {
+            select: {
+              comments: true,
+              worklogs: true,
+              products: true
+            }
+          }
+        }
+      });
+
+      return NextResponse.json(finalCase);
+    }
+
+    return NextResponse.json(updatedCase);
+
+  } catch (error) {
+    console.error('Error updating delivery case:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if delivery case exists
+    const existingCase = await db.receivingCase.findUnique({
+      where: {
+        id: params.id,
+        form: 'Giao hàng'
+      }
+    });
+
+    if (!existingCase) {
+      return NextResponse.json({ error: 'Delivery case not found' }, { status: 404 });
+    }
+
+    // Delete delivery case (products will be deleted automatically due to cascade)
+    await db.receivingCase.delete({
+      where: { id: params.id }
+    });
+
+    return NextResponse.json({ message: 'Delivery case deleted successfully' });
+
+  } catch (error) {
+    console.error('Error deleting delivery case:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

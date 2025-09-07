@@ -1,12 +1,19 @@
-import { PrismaClient, Role, TicketPriority, TicketStatus } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: "postgresql://neondb_owner:npg_jzQACkco0T8S@ep-broad-truth-a1v49nhu-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require",
+    },
+  },
+});
 
 async function main() {
   // Users
   const password = await bcrypt.hash("Passw0rd!", 10);
-  const [admin, lead, staff1, staff2, user1, user2] = await Promise.all([
+  const [admin, lead, staff1, staff2, staff3, staff4, user1, user2, user3, user4, user5, user6, user7, user8] = await Promise.all([
+    // Admin
     prisma.user.upsert({
       where: { email: "admin@it.local" },
       update: {},
@@ -15,9 +22,12 @@ async function main() {
         email: "admin@it.local", 
         password: password, 
         role: Role.ADMIN, 
-        name: "Admin" 
+        name: "Nguyễn Văn Admin",
+        phone: "0901234567",
+        department: "IT"
       },
     }),
+    // IT Lead
     prisma.user.upsert({
       where: { email: "lead@it.local" },
       update: {},
@@ -26,9 +36,12 @@ async function main() {
         email: "lead@it.local", 
         password: password, 
         role: Role.IT_LEAD, 
-        name: "IT Lead" 
+        name: "Trần Thị Lead",
+        phone: "0901234568",
+        department: "IT"
       },
     }),
+    // IT Staff
     prisma.user.upsert({
       where: { email: "staff1@it.local" },
       update: {},
@@ -37,7 +50,9 @@ async function main() {
         email: "staff1@it.local", 
         password: password, 
         role: Role.IT_STAFF, 
-        name: "IT Staff 1" 
+        name: "Lê Văn Staff 1",
+        phone: "0901234569",
+        department: "IT"
       },
     }),
     prisma.user.upsert({
@@ -48,9 +63,38 @@ async function main() {
         email: "staff2@it.local", 
         password: password, 
         role: Role.IT_STAFF, 
-        name: "IT Staff 2" 
+        name: "Phạm Thị Staff 2",
+        phone: "0901234570",
+        department: "IT"
       },
     }),
+    prisma.user.upsert({
+      where: { email: "staff3@it.local" },
+      update: {},
+      create: { 
+        username: "staff3",
+        email: "staff3@it.local", 
+        password: password, 
+        role: Role.IT_STAFF, 
+        name: "Hoàng Văn Staff 3",
+        phone: "0901234571",
+        department: "IT"
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "staff4@it.local" },
+      update: {},
+      create: { 
+        username: "staff4",
+        email: "staff4@it.local", 
+        password: password, 
+        role: Role.IT_STAFF, 
+        name: "Vũ Thị Staff 4",
+        phone: "0901234572",
+        department: "IT"
+      },
+    }),
+    // Regular Users
     prisma.user.upsert({
       where: { email: "user1@it.local" },
       update: {},
@@ -59,7 +103,9 @@ async function main() {
         email: "user1@it.local", 
         password: password, 
         role: Role.USER, 
-        name: "User 1" 
+        name: "Nguyễn Thị User 1",
+        phone: "0901234573",
+        department: "Kế toán"
       },
     }),
     prisma.user.upsert({
@@ -70,7 +116,87 @@ async function main() {
         email: "user2@it.local", 
         password: password, 
         role: Role.USER, 
-        name: "User 2" 
+        name: "Trần Văn User 2",
+        phone: "0901234574",
+        department: "Nhân sự"
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "user3@it.local" },
+      update: {},
+      create: { 
+        username: "user3",
+        email: "user3@it.local", 
+        password: password, 
+        role: Role.USER, 
+        name: "Lê Thị User 3",
+        phone: "0901234575",
+        department: "Marketing"
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "user4@it.local" },
+      update: {},
+      create: { 
+        username: "user4",
+        email: "user4@it.local", 
+        password: password, 
+        role: Role.USER, 
+        name: "Phạm Văn User 4",
+        phone: "0901234576",
+        department: "Kinh doanh"
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "user5@it.local" },
+      update: {},
+      create: { 
+        username: "user5",
+        email: "user5@it.local", 
+        password: password, 
+        role: Role.USER, 
+        name: "Hoàng Thị User 5",
+        phone: "0901234577",
+        department: "Sản xuất"
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "user6@it.local" },
+      update: {},
+      create: { 
+        username: "user6",
+        email: "user6@it.local", 
+        password: password, 
+        role: Role.USER, 
+        name: "Vũ Văn User 6",
+        phone: "0901234578",
+        department: "Chất lượng"
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "user7@it.local" },
+      update: {},
+      create: { 
+        username: "user7",
+        email: "user7@it.local", 
+        password: password, 
+        role: Role.USER, 
+        name: "Đặng Thị User 7",
+        phone: "0901234579",
+        department: "Logistics"
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "user8@it.local" },
+      update: {},
+      create: { 
+        username: "user8",
+        email: "user8@it.local", 
+        password: password, 
+        role: Role.USER, 
+        name: "Bùi Văn User 8",
+        phone: "0901234580",
+        department: "Tài chính"
       },
     }),
   ]);
@@ -81,33 +207,8 @@ async function main() {
     update: {},
     create: {
       id: "default",
-      firstResponseMinutes: 60,
-      resolveMinutesP1: 240,
-      resolveMinutesP2: 480,
-      resolveMinutesP3: 1440,
-      resolveMinutesP4: 2880,
     },
   });
-
-  // Tickets (10)
-  const priorities = [TicketPriority.P1, TicketPriority.P2, TicketPriority.P3, TicketPriority.P4];
-  const statuses = [TicketStatus.OPEN, TicketStatus.IN_PROGRESS, TicketStatus.RESOLVED, TicketStatus.ON_HOLD];
-
-  for (let i = 1; i <= 10; i++) {
-    const priority = priorities[i % priorities.length];
-    const status = statuses[i % statuses.length];
-    await prisma.ticket.create({
-      data: {
-        title: `Sample Ticket #${i}`,
-        description: `This is a sample ticket number ${i}.`,
-        priority,
-        status,
-        requesterId: i % 2 === 0 ? user1.id : user2.id,
-        assigneeId: i % 3 === 0 ? staff1.id : staff2.id,
-        dueAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * (i % 7)),
-      },
-    });
-  }
 
   // Create employees
   const employees = [
@@ -168,7 +269,7 @@ async function main() {
       placeOfBirth: "Hồ Chí Minh",
       permanentAddress: "258 Hiền Vương, Phường Phú Thạnh, TP. Hồ Chí Minh",
       temporaryAddress: null,
-      position: "Senior Developer",
+      position: "Developer",
       department: "IT",
       status: "active",
       contractType: "Chính thức",
@@ -252,8 +353,8 @@ async function main() {
       placeOfBirth: "Đồng Tháp",
       permanentAddress: "Ấp 6, xã Tân Đông, tỉnh Đồng Tháp",
       temporaryAddress: "273/40/4 Nguyễn Văn Đậu, P. Bình Lợi Trung, Tp HCM",
-      position: "Designer",
-      department: "Design",
+      position: "Developer",
+      department: "IT",
       status: "active",
       contractType: "Chính thức",
       avatar: null,
@@ -265,7 +366,7 @@ async function main() {
       hometown: "Hà Nội",
       religion: "Không",
       ethnicity: "Kinh",
-      startDate: new Date("2025-07-02"),
+      startDate: new Date("2025-02-07"),
       primaryPhone: "0373910512",
       secondaryPhone: null,
       personalEmail: "nguyenhien2802@gmail.com",
@@ -273,8 +374,8 @@ async function main() {
       placeOfBirth: "Hồ Chí Minh",
       permanentAddress: "108/18, Tô Hiệu, Phường Phú Thạnh, TP Hồ Chí Minh",
       temporaryAddress: "108/18 tô hiệu, phường phú thạnh (hiệp tân cũ), quận tân phú",
-      position: "Marketing",
-      department: "Marketing",
+      position: "Developer",
+      department: "IT",
       status: "active",
       contractType: "Thử việc",
       avatar: null,
@@ -286,7 +387,7 @@ async function main() {
       hometown: "Hồ Chí Minh",
       religion: "Không",
       ethnicity: "Kinh",
-      startDate: new Date("2025-06-02"),
+      startDate: new Date("2025-02-06"),
       primaryPhone: "0933512955",
       secondaryPhone: null,
       personalEmail: "dnkimngoc0104@gmail.com",
@@ -294,10 +395,10 @@ async function main() {
       placeOfBirth: "Hồ Chí Minh",
       permanentAddress: "77/12 Kp Bình Đường 1, Phường Dĩ An, TP Hồ Chí Minh",
       temporaryAddress: "45/39 Bình Đường 1, P. Dĩ An, TP HCM",
-      position: "HR Manager",
-      department: "HR",
+      position: "Developer",
+      department: "IT",
       status: "active",
-      contractType: "Chính thức",
+      contractType: "Thử việc",
       avatar: null,
     },
     {
@@ -307,7 +408,7 @@ async function main() {
       hometown: "Quảng Ngãi",
       religion: "Không",
       ethnicity: "Kinh",
-      startDate: new Date("2025-06-10"),
+      startDate: new Date("2025-10-06"),
       primaryPhone: "0942291393",
       secondaryPhone: null,
       personalEmail: "chethanhluan@gmail.com",
@@ -315,7 +416,7 @@ async function main() {
       placeOfBirth: "Quảng Ngãi",
       permanentAddress: "Thôn 2, Xã Mỏ Cày, Quảng Ngãi",
       temporaryAddress: "28/3/4 Văn Chung, Phường Tân Bình, TPHCM",
-      position: "Project Manager",
+      position: "Developer",
       department: "IT",
       status: "active",
       contractType: "Chính thức",
@@ -328,7 +429,7 @@ async function main() {
       hometown: "Hồ Chí Minh",
       religion: "Phật",
       ethnicity: "Kinh",
-      startDate: new Date("2025-03-10"),
+      startDate: new Date("2025-10-03"),
       primaryPhone: "0936762430",
       secondaryPhone: null,
       personalEmail: "tranhoangphuc943@gmail.com",
@@ -395,6 +496,333 @@ async function main() {
   }
 
   console.log(`Created ${employees.length} employees`);
+
+  // Create suppliers/partners
+  const suppliers = [
+    {
+      fullCompanyName: "CÔNG TY TNHH CHIẾU SÁNG ĐIỆN TỬ ỨNG DỤNG",
+      shortName: "AICe",
+      address: "257 Giải Phóng, Phường Kim Liên, Quận Đống Đa, Hà Nội",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TRÁCH NHIỆM HỮU HẠN AMPERE COMPUTING VIETNAM",
+      shortName: "AMPERE",
+      address: "Lô D.01, đường Tân Thuận, khu chế xuất Tân Thuận, Phường Tân Thuận, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH AURECON VIỆT NAM",
+      shortName: "AURECON",
+      address: "Tầng 24 và 25, Tòa nhà Lim Tower III, Số 29A, Đường Nguyễn Đình Chiểu, Phường Tân Định, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY CỔ PHẦN ĐẦU TƯ TỔNG HỢP LIÊN VIỆT",
+      shortName: "BASE TÂN PHÚ (Liên Việt)",
+      address: "3/10A Hiền Vương, Phường Phú Thạnh, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH THƯƠNG MẠI KỸ THUẬT BCA",
+      shortName: "BCA",
+      address: "118 Cộng Hòa, Phường Tân Sơn Nhất, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH DEVEE ENTERTAINMENT",
+      shortName: "DEVEE ENT",
+      address: "Số 70 Hoàng Trọng Mậu, Khu dân cư Him Lam, Phường Tân Hưng, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY CỔ PHẦN DIPLOMAT",
+      shortName: "DIPLOMAT",
+      address: "76-78 Nguyễn Thị Minh Khai, Phường Xuân Hòa, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Duy",
+      contactPhone: "0938012354",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH ELECTRONIC TRIPOD VIỆT NAM (BIÊN HÒA)",
+      shortName: "ELECTRONIC TRIPOD VN",
+      address: "Số 31, Đường 3A, KCN Biên Hòa 2, phường Trấn Biên, Tỉnh Đồng Nai",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH ELITE LONG THÀNH",
+      shortName: "ELITE LONG THÀNH",
+      address: "Lô D, KCN Lộc An - Bình Sơn, Xã Long Thành, Tỉnh Đồng Nai",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH DỊCH VỤ GIÁO DỤC EVEREST",
+      shortName: "EVEREST EDU",
+      address: "Số 38 Nguyễn Lâm, Phường Diên Hồng, TP Hồ Chí Minh",
+      contactPerson: "Ms. Viên",
+      contactPhone: "0968973005",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH CÔNG NGHỆ GFT VIỆT NAM",
+      shortName: "GFT VN",
+      address: "Phòng 02-115, Tầng 2, WeWork Lim Tower 3, Số 29A Nguyễn Đình Chiểu, Phường Tân Định, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH TIN HỌC GIA PHÚC KHANG.",
+      shortName: "GIA PHÚC KHANG",
+      address: "644/1 Đoàn Văn Bơ, Phường Xóm Chiếu, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Đức",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH HASKONINGDHV VIỆT NAM",
+      shortName: "HASKONINGDHV VN",
+      address: "Tầng 6, Tòa nhà Vista Tower, Số 628C Võ Nguyên Giáp, Phường An Khánh, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Thái",
+      contactPhone: "0777911087",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH MỘT THÀNH VIÊN THƯƠNG MẠI DỊCH VỤ HỘI LỘC",
+      shortName: "HỘI LỘC",
+      address: "Số 609/13/23 Nguyễn Chí Thanh, Phường Phú An, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Nguyệt Lê",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY CỔ PHẦN HUDECO",
+      shortName: "HUDECO",
+      address: "496/32/30 Dương Quảng Hàm, Phường An Nhơn, Thành phố Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "TỔ CHỨC DI CƯ QUỐC TẾ",
+      shortName: "IOM",
+      address: "1B Phạm Ngọc Thạch, Phường Sài Gòn, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Như",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH LAPBEE",
+      shortName: "LAPBEE",
+      address: "Số 170 Đường Trương Công Định, Phường Tân Bình, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Hoàng",
+      contactPhone: "0938491468",
+    },
+    {
+      fullCompanyName: "Công Ty TNHH MTV TM -DV Tin Học Lê Huy",
+      shortName: "LÊ HUY",
+      address: "48 Chấn Hưng, Phường Tân Hòa, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "LOTTE VIETNAM COMPANY LIMITED (CÔNG TY TNHH LOTTE VIỆT NAM)",
+      shortName: "LOTTE VN",
+      address: "469 Nguyễn Hữu Thọ, Phường Tân Hưng, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH MAXLINK",
+      shortName: "MAXLINK",
+      address: "L17-11, Tầng 17, Tòa nhà Vincom Center, 72 Lê Thánh Tôn, Phường Sài Gòn, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY CỔ PHẦN GIẢI PHÁP MÁY CHỦ VIỆT",
+      shortName: "MÁY CHỦ VIỆT",
+      address: "196/1/8 Cộng Hòa, Phường Bảy Hiền, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH DỊCH VỤ TIN HỌC SIÊU TỐC (MEMORYZONE)",
+      shortName: "MEMORYZONE",
+      address: "4C Đồng Xoài, Phường Tân Bình, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Khanh",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH TRUNG TÂM PHÁT TRIỂN PHẦN MỀM VIỆT NAM",
+      shortName: "NAB (Phát Triển Phần Mềm VN)",
+      address: "Tầng 8, 9, 10, 11, 12 Tháp A, số 15 đường Trần Bạch Đằng, Phường An Khánh, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Thư",
+      contactPhone: "0376556982",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH KỸ THUẬT THƯƠNG MẠI DỊCH VỤ NÉT VIỆT",
+      shortName: "NETVIET",
+      address: "187 Tôn Thất Thuyết, Phường Vĩnh Hội, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH VI TÍNH NGUYÊN KIM",
+      shortName: "NGUYÊN KIM",
+      address: "245b Trần Quang Khải, Phường Tân Định, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Chi",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH NHÂN SINH PHÚC",
+      shortName: "NHÂN SINH PHÚC",
+      address: "124 Hồng Hà, Phường Tân Sơn Hòa, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Anh",
+      contactPhone: "0962737656",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH NIELSENIQ VIỆT NAM",
+      shortName: "NIELSENIQ",
+      address: "Lầu 4, Tòa nhà Centre Point, số 106, đường Nguyễn Văn Trỗi, Phường Phú Nhuận, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Duy",
+      contactPhone: "0352701071",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH DỊCH VỤ VÀ GIẢI PHÁP CÔNG NGHỆ MỚI",
+      shortName: "NTEC (Công Nghệ Mới)",
+      address: "Tầng 12 - Tháp A2, Viettel Tower, 285 Cách Mạng Tháng Tám, Phường Hòa Hưng, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Khoa",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY CỔ PHẦN CÔNG NGHỆ NTG VIỆT NAM",
+      shortName: "NTG VN",
+      address: "Tầng 10, tòa Suced Tower, số 108 đường Nguyễn Hoàng, Phường Từ Liêm, Quận Nam Từ Liêm, Hà Nội",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "Công ty TNHH TM Âm Thanh Ánh Sáng Nội Thất PHAN NGUYỄN",
+      shortName: "PHAN NGUYỄN",
+      address: "406 Tân Sơn Nhì, Phường Tân Sơn Nhì, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY CỔ PHẦN DƯỢC PHẨM PHARMACITY",
+      shortName: "PHARMACITY",
+      address: "248A Nơ Trang Long, Phường Bình Thạnh, TP.HCM",
+      contactPerson: "Ms. Quỳnh",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH QUẢNG TIN",
+      shortName: "QUẢNG TIN",
+      address: "Số 8 Đường số 12, Cư xá Chu Văn An, Phường Bình Thạnh, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Thúy",
+      contactPhone: "0933198939",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH XI MĂNG SCG VIỆT NAM (CHI NHÁNH TP.HCM)",
+      shortName: "SCG XI MĂNG VN (CN TPHCM)",
+      address: "Số 117-119, Lý Chính Thắng, Phường Xuân Hòa, TP. Hồ Chí Minh.",
+      contactPerson: "Mr. Giả",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "SEARA SPORTS SYSTEMS VIETNAM CO., LTD.",
+      shortName: "SEARA",
+      address: "227 Nam Kỳ Khởi Nghĩa, Phường Nhiêu Lộc, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Nhung",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY CỔ PHẦN GIẢI PHÁP SIÊU VIỆT",
+      shortName: "SIÊU VIỆT",
+      address: "109/45 Lê Quốc Hưng, Phường Xóm Chiếu, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Trang",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH CÔNG NGHỆ - DỊCH VỤ SMART SERVICES",
+      shortName: "SMART SERVICES",
+      address: "Lầu 7, Tòa nhà MIOS Building, Số 121 Hoàng Hoa Thám, Phường Gia Định, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Khoa",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH THƯƠNG MẠI VÀ ĐẦU TƯ TẬP ĐOÀN TÂM SEN",
+      shortName: "TÂM SEN",
+      address: "Số 41, Ngõ 52, Phố Tô Ngọc Vân, Phường Tây Hồ, Quận Tây Hồ, Hà Nội",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH TATA COFFEE VIỆT NAM",
+      shortName: "TATA COFFEE VN",
+      address: "Số 12 VSIP II-A đường số 32, Khu công nghiệp Việt Nam-Singapore II-A, Phường Vĩnh Tân, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Sam",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "Công ty TNHH Tin Học Thành Nhân",
+      shortName: "THÀNH NHÂN",
+      address: "174-176-178-180 Bùi Thị Xuân, Phường Bến Thành, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH TOTALENERGIES LPG VIỆT NAM",
+      shortName: "TOTALENERGIES LPG VN",
+      address: "89/7E Đường Bến Nghé, Phường Tân Thuận, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Trung",
+      contactPhone: "0365604499",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH TOTALENERGIES MARKETING VIỆT NAM",
+      shortName: "TOTALENERGIES MKG VN",
+      address: "Số 111A, Đường Pasteur, Phường Sài Gòn, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Đoài",
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH UGREEN GROUP VIỆT NAM",
+      shortName: "UGREEN SG (Vi Tính SG)",
+      address: "Tầng 12 (1206), CitiLight Tower, Số 45, Đường Võ Thị Sáu, Phường Tân Định, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Lâm",
+      contactPhone: "0703097056",
+    },
+    {
+      fullCompanyName: "CÔNG TY CỔ PHẦN VANTAGE LOGISTICS",
+      shortName: "VANTAGE LOGISTICS",
+      address: "Phòng 6.01, Tầng 6 RiverGate Residence, Số 151-155 Đường Bến Vân Đồn, Phường Khánh Hội, TP. Hồ Chí Minh",
+      contactPerson: "Mr. Công",
+      contactPhone: "0973299901",
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH TM - DV CÔNG NGHỆ VINA TECH",
+      shortName: "VINA TECH",
+      address: "6 Đặng Thai Mai, Phường Phú Nhuận, TP. Hồ Chí Minh",
+      contactPerson: null,
+      contactPhone: null,
+    },
+    {
+      fullCompanyName: "CÔNG TY TNHH WUERTH DỊCH VỤ CÔNG NGHIỆP",
+      shortName: "WUERTH VN",
+      address: "Phòng 402, Tầng 4, Tòa nhà CentrePoint, 106 Nguyễn Văn Trỗi, Phường Phú Nhuận, TP. Hồ Chí Minh",
+      contactPerson: "Ms. Thùy",
+      contactPhone: "0931495596",
+    },
+  ];
+
+  for (const supplierData of suppliers) {
+    await prisma.partner.create({
+      data: supplierData,
+    });
+  }
+
+  console.log(`Created ${suppliers.length} suppliers`);
 }
 
 main()

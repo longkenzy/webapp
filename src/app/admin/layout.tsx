@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {/* Sidebar */}
       <AdminSidebar 
         userName={session.user.name || 'Admin'} 
-        userEmail={session.user.email} 
+        userEmail={session.user.email || ''} 
       />
 
       {/* Topbar */}

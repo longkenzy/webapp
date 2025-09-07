@@ -15,7 +15,9 @@ import {
   Users, 
   UserCheck,
   Settings, 
-  ChevronDown
+  ChevronDown,
+  BarChart3,
+  Building2
 } from "lucide-react";
 
 interface NavLinkProps {
@@ -120,8 +122,8 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
       icon: Briefcase,
       subItems: [
         { href: "/admin/work/internal", label: "Case nội bộ", icon: FileText },
-        { href: "/admin/work/receiving", label: "Case nhận hàng", icon: Truck },
-        { href: "/admin/work/delivery", label: "Case giao hàng", icon: Truck },
+        { href: "/admin/receiving-cases", label: "Case nhận hàng", icon: Truck },
+        { href: "/admin/delivery-cases", label: "Case giao hàng", icon: Truck },
         { href: "/admin/work/incident", label: "Case xử lý sự cố", icon: AlertTriangle },
         { href: "/admin/work/maintenance", label: "Case bảo trì", icon: Wrench },
         { href: "/admin/work/warranty", label: "Case bảo hành", icon: Shield },
@@ -139,7 +141,15 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
   ];
 
   const otherItems = [
-    { href: "/admin/settings", label: "Settings", icon: Settings },
+    { 
+      href: "/admin/settings", 
+      label: "Settings", 
+      icon: Settings,
+      subItems: [
+        { href: "/admin/settings/kpi", label: "Điểm KPI", icon: BarChart3 },
+        { href: "/admin/partners", label: "Nhà cung cấp", icon: Building2 },
+      ]
+    },
   ];
 
   return (
@@ -222,17 +232,52 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
             Others
           </h3>
-          <ul className="space-y-2">
-            {otherItems.map((item) => (
-              <li key={item.href}>
-                <NavLink
-                  href={item.href}
-                  label={item.label}
-                  icon={item.icon}
-                  isActive={pathname === item.href}
-                />
-              </li>
-            ))}
+          <ul className="space-y-1">
+            {otherItems.map((item) => {
+              const isOpen = openMenus.includes(item.href);
+              const hasSubItems = item.subItems && item.subItems.length > 0;
+              
+              return (
+                <li key={item.href}>
+                  {hasSubItems ? (
+                    <NavLinkWithDropdown
+                      href={item.href}
+                      label={item.label}
+                      icon={item.icon}
+                      isActive={pathname === item.href || pathname.startsWith(item.href + '/')}
+                      hasSubItems={hasSubItems}
+                      isOpen={isOpen}
+                      onToggle={() => toggleMenu(item.href)}
+                    />
+                  ) : (
+                    <NavLink
+                      href={item.href}
+                      label={item.label}
+                      icon={item.icon}
+                      isActive={pathname === item.href}
+                    />
+                  )}
+                  
+                  {/* Submenu */}
+                  {hasSubItems && (
+                    <ul className={`mt-1 ml-4 space-y-1 overflow-hidden transition-all duration-200 ${
+                      isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                      {item.subItems.map((subItem) => (
+                        <li key={subItem.href}>
+                          <SubNavLink
+                            href={subItem.href}
+                            label={subItem.label}
+                            icon={subItem.icon}
+                            isActive={pathname === subItem.href}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </nav>

@@ -1,5 +1,7 @@
 "use client";
 import { SessionProvider } from "next-auth/react";
+import { EvaluationProvider } from "@/contexts/EvaluationContext";
+import UnifiedSessionManager from "@/components/shared/common/UnifiedSessionManager";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -7,7 +9,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       refetchInterval={0} // Disable automatic refetching
       refetchOnWindowFocus={false} // Disable refetch on window focus
     >
-      {children}
+      <EvaluationProvider>
+        <UnifiedSessionManager showTimer={false} showWarning={false} warningMinutes={5} />
+        {children}
+      </EvaluationProvider>
     </SessionProvider>
   );
 }

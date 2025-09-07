@@ -120,33 +120,45 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('DELETE /api/users/[id] - Starting delete operation');
+    
     const session = await getSession();
     if (!session) {
+      console.log('DELETE /api/users/[id] - No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    console.log('DELETE /api/users/[id] - Session found:', { userId: session.user.id, role: session.user.role });
+
     // Check if user has permission to delete users
     if (!atLeast(session.user.role, Role.IT_STAFF)) {
+      console.log('DELETE /api/users/[id] - Insufficient permissions');
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { id } = await params;
+    console.log('DELETE /api/users/[id] - Deleting user with ID:', id);
 
     // Prevent users from deleting themselves
     if (id === session.user.id) {
+      console.log('DELETE /api/users/[id] - User trying to delete themselves');
       return NextResponse.json({ 
         error: 'Cannot delete your own account' 
       }, { status: 400 });
     }
 
     // Check if user exists
+    console.log('DELETE /api/users/[id] - Checking if user exists');
     const existingUser = await db.user.findUnique({
       where: { id }
     });
 
     if (!existingUser) {
+      console.log('DELETE /api/users/[id] - User not found');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
+
+    console.log('DELETE /api/users/[id] - User found:', { email: existingUser.email, role: existingUser.role });
 
     // Check if user has higher role than the current user
     if (existingUser.role === Role.ADMIN && session.user.role !== Role.ADMIN) {
@@ -155,75 +167,112 @@ export async function DELETE(
       }, { status: 403 });
     }
 
-    // Check if user is currently assigned to any active tickets
-    const activeTickets = await db.ticket.findMany({
-      where: {
-        OR: [
-          { requesterId: id },
-          { assigneeId: id }
-        ],
-        status: {
-          in: ['OPEN', 'IN_PROGRESS', 'ON_HOLD']
+    // Check if user is currently assigned to any active internal cases
+    console.log('DELETE /api/users/[id] - Checking for active internal cases');
+    
+    // First, check if user has an associated employee record
+    const userEmployee = await db.employee.findFirst({
+      where: { 
+        user: {
+          id: id
         }
       }
     });
+    
+    let activeInternalCases = [];
+    if (userEmployee) {
+      activeInternalCases = await db.internalCase.findMany({
+        where: {
+          OR: [
+            { requesterId: userEmployee.id },
+            { handlerId: userEmployee.id }
+          ],
+          status: {
+            in: ['RECEIVED', 'IN_PROGRESS']
+          }
+        }
+      });
+    }
 
-    if (activeTickets.length > 0) {
+    console.log('DELETE /api/users/[id] - Found active internal cases:', activeInternalCases.length);
+
+    if (activeInternalCases.length > 0) {
+      console.log('DELETE /api/users/[id] - Cannot delete user due to active cases');
       return NextResponse.json({
-        error: `Không thể xóa tài khoản vì đang có ${activeTickets.length} ticket đang hoạt động. Vui lòng chuyển giao hoặc đóng các ticket này trước.`
+        error: `Không thể xóa tài khoản vì đang có ${activeInternalCases.length} case đang hoạt động. Vui lòng chuyển giao hoặc đóng các case này trước.`
       }, { status: 400 });
     }
 
     // Delete all related data first, then delete the user
+    console.log('DELETE /api/users/[id] - Starting transaction to delete user and related data');
     const result = await db.$transaction(async (tx) => {
       try {
-        // Delete worklogs
-        const deletedWorklogs = await tx.worklog.deleteMany({
+        console.log('DELETE /api/users/[id] - Transaction started');
+        
+        // Delete internal case worklogs
+        console.log('DELETE /api/users/[id] - Deleting internal case worklogs');
+        const deletedInternalCaseWorklogs = await tx.internalCaseWorklog.deleteMany({
           where: { userId: id }
         });
-        console.log(`Deleted ${deletedWorklogs.count} worklogs`);
+        console.log(`Deleted ${deletedInternalCaseWorklogs.count} internal case worklogs`);
 
-        // Delete comments
-        const deletedComments = await tx.comment.deleteMany({
+        // Delete internal case comments
+        console.log('DELETE /api/users/[id] - Deleting internal case comments');
+        const deletedInternalCaseComments = await tx.internalCaseComment.deleteMany({
           where: { userId: id }
         });
-        console.log(`Deleted ${deletedComments.count} comments`);
+        console.log(`Deleted ${deletedInternalCaseComments.count} internal case comments`);
 
         // Delete schedules
+        console.log('DELETE /api/users/[id] - Deleting schedules');
         const deletedSchedules = await tx.schedule.deleteMany({
           where: { userId: id }
         });
         console.log(`Deleted ${deletedSchedules.count} schedules`);
 
-        // Delete tickets where user is requester (cannot have null requester)
-        const deletedTickets = await tx.ticket.deleteMany({
-          where: { requesterId: id }
-        });
-        console.log(`Deleted ${deletedTickets.count} tickets`);
+        // Handle internal cases if user has employee record
+        let deletedInternalCases = 0;
+        let updatedInternalCases = 0;
+        
+        if (userEmployee) {
+          console.log('DELETE /api/users/[id] - User has employee record, handling internal cases');
+          
+          // Delete internal cases where employee is requester (cannot have null requester)
+          const deletedCases = await tx.internalCase.deleteMany({
+            where: { requesterId: userEmployee.id }
+          });
+          deletedInternalCases = deletedCases.count;
+          console.log(`Deleted ${deletedInternalCases} internal cases`);
 
-        // Update tickets to remove assignee reference (if any)
-        const updatedTickets = await tx.ticket.updateMany({
-          where: { assigneeId: id },
-          data: { assigneeId: null }
-        });
-        console.log(`Updated ${updatedTickets.count} tickets`);
+          // Update internal cases to remove handler reference (if any)
+          const updatedCases = await tx.internalCase.updateMany({
+            where: { handlerId: userEmployee.id },
+            data: { handlerId: null }
+          });
+          updatedInternalCases = updatedCases.count;
+          console.log(`Updated ${updatedInternalCases} internal cases`);
+        }
 
         // Delete the user
+        console.log('DELETE /api/users/[id] - Deleting user');
         const deletedUser = await tx.user.delete({
           where: { id }
         });
         console.log(`Deleted user: ${deletedUser.email}`);
 
-        return {
-          deletedWorklogs: deletedWorklogs.count,
-          deletedComments: deletedComments.count,
+        const result = {
+          deletedInternalCaseWorklogs: deletedInternalCaseWorklogs.count,
+          deletedInternalCaseComments: deletedInternalCaseComments.count,
           deletedSchedules: deletedSchedules.count,
-          deletedTickets: deletedTickets.count,
-          updatedTickets: updatedTickets.count,
+          deletedInternalCases: deletedInternalCases,
+          updatedInternalCases: updatedInternalCases,
           deletedUser: deletedUser.email
         };
+        
+        console.log('DELETE /api/users/[id] - Transaction completed successfully:', result);
+        return result;
       } catch (txError) {
-        console.error('Transaction error:', txError);
+        console.error('DELETE /api/users/[id] - Transaction error:', txError);
         throw txError;
       }
     });
@@ -233,29 +282,32 @@ export async function DELETE(
     return NextResponse.json({
       message: 'User deleted successfully',
       details: {
-        deletedWorklogs: result.deletedWorklogs,
-        deletedComments: result.deletedComments,
+        deletedInternalCaseWorklogs: result.deletedInternalCaseWorklogs,
+        deletedInternalCaseComments: result.deletedInternalCaseComments,
         deletedSchedules: result.deletedSchedules,
-        deletedTickets: result.deletedTickets,
-        updatedTickets: result.updatedTickets,
+        deletedInternalCases: result.deletedInternalCases,
+        updatedInternalCases: result.updatedInternalCases,
         deletedUser: result.deletedUser
       }
     });
 
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('DELETE /api/users/[id] - Error deleting user:', error);
     
     // Provide more specific error messages
     if (error instanceof Error) {
+      console.error('DELETE /api/users/[id] - Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      
       if (error.message.includes('foreign key constraint')) {
         return NextResponse.json(
           { error: 'Không thể xóa tài khoản vì có dữ liệu liên quan. Vui lòng xóa các dữ liệu liên quan trước.' },
           { status: 400 }
         );
       }
-      
-      // Log the specific error for debugging
-      console.error('Specific error details:', error.message);
       
       // Check for common database errors
       if (error.message.includes('Record to delete does not exist')) {
@@ -271,10 +323,17 @@ export async function DELETE(
           { status: 400 }
         );
       }
+      
+      if (error.message.includes('Connection')) {
+        return NextResponse.json(
+          { error: 'Lỗi kết nối database. Vui lòng thử lại sau.' },
+          { status: 500 }
+        );
+      }
     }
     
     // Log the full error for debugging
-    console.error('Full error object:', error);
+    console.error('DELETE /api/users/[id] - Full error object:', error);
     
     return NextResponse.json(
       { error: 'Internal server error. Vui lòng thử lại sau.' },

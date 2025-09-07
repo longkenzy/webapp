@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   Home, 
-  Ticket, 
   Calendar, 
   User, 
   LogOut, 
@@ -32,6 +31,7 @@ export default function UserNavbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isWorkDropdownOpen, setIsWorkDropdownOpen] = useState(false);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
 
   const navigation = [
     { name: 'Dashboard', href: '/user/dashboard', icon: Home },
@@ -54,6 +54,25 @@ export default function UserNavbar() {
     await signOut({ callbackUrl: '/login' });
   };
 
+  // Fetch user avatar
+  useEffect(() => {
+    const fetchUserAvatar = async () => {
+      if (session?.user?.id) {
+        try {
+          const response = await fetch('/api/user/profile');
+          if (response.ok) {
+            const data = await response.json();
+            setUserAvatar(data.avatarUrl);
+          }
+        } catch (error) {
+          console.error('Error fetching user avatar:', error);
+        }
+      }
+    };
+
+    fetchUserAvatar();
+  }, [session?.user?.id]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,39 +94,43 @@ export default function UserNavbar() {
   }, [isWorkDropdownOpen, isProfileDropdownOpen]);
 
   return (
-    <nav className="bg-gradient-to-r from-slate-50 to-blue-50 border-b border-slate-200/60 shadow-lg backdrop-blur-sm sticky top-0 z-50">
+    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-18">
+        <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
             <Link href="/user/dashboard" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                <span className="text-white font-bold text-lg tracking-wide">IT</span>
+              <div className="w-9 h-9 rounded-lg overflow-hidden group-hover:opacity-90 transition-opacity duration-200">
+                <img 
+                  src="/logo/logo.png" 
+                  alt="IT Services" 
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="hidden sm:block">
-                <span className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-blue-800 bg-clip-text text-transparent">
-                  IT Services
+                <span className="text-xl font-semibold text-gray-900">
+                  IT Services Management
                 </span>
-                <p className="text-xs text-slate-500 -mt-1">Professional Solutions</p>
+                <p className="text-xs text-gray-500 -mt-1">Professional Solutions</p>
               </div>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden lg:flex items-center space-x-1">
+          <div className="hidden lg:flex items-center space-x-3">
             {navigation.map((item) => {
               const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center space-x-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive(item.href)
-                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 hover:shadow-md'
+                      ? 'bg-gray-900 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-white' : 'text-slate-500'}`} />
+                  <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-white' : 'text-gray-500'}`} />
                   <span>{item.name}</span>
                 </Link>
               );
@@ -120,18 +143,17 @@ export default function UserNavbar() {
               onMouseLeave={() => {
                 setTimeout(() => {
                   setIsWorkDropdownOpen(false);
-                }, 150);
+                }, 200);
               }}
             >
               <button
-                onClick={() => setIsWorkDropdownOpen(!isWorkDropdownOpen)}
-                className={`flex items-center space-x-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   workMenuItems.some(item => isActive(item.href))
-                    ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 hover:shadow-md'
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
-                <Briefcase className={`h-4 w-4 ${workMenuItems.some(item => isActive(item.href)) ? 'text-white' : 'text-slate-500'}`} />
+                <Briefcase className={`h-4 w-4 ${workMenuItems.some(item => isActive(item.href)) ? 'text-white' : 'text-gray-500'}`} />
                 <span>Công việc</span>
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isWorkDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -139,7 +161,13 @@ export default function UserNavbar() {
               {/* Work Dropdown Menu */}
               {isWorkDropdownOpen && (
                 <div 
-                  className="absolute top-full left-0 mt-2 w-72 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-200/50 py-2 z-50 space-y-0 overflow-hidden"
+                  className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 overflow-hidden"
+                  onMouseEnter={() => setIsWorkDropdownOpen(true)}
+                  onMouseLeave={() => {
+                    setTimeout(() => {
+                      setIsWorkDropdownOpen(false);
+                    }, 200);
+                  }}
                 >
                   {workMenuItems.map((item) => {
                     const Icon = item.icon;
@@ -147,14 +175,14 @@ export default function UserNavbar() {
                       <Link
                         key={item.name}
                         href={item.href}
-                        className={`flex items-center space-x-3 px-4 py-3 text-sm transition-all duration-200 border-b border-slate-100/50 last:border-b-0 ${
+                        className={`flex items-center space-x-3 px-4 py-2.5 text-sm transition-colors duration-150 ${
                           isActive(item.href)
-                            ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 border-l-4 border-l-blue-500'
-                            : 'text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 hover:text-slate-900'
+                            ? 'bg-gray-100 text-gray-900'
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                         }`}
                         onClick={() => setIsWorkDropdownOpen(false)}
                       >
-                        <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-blue-600' : 'text-slate-500'}`} />
+                        <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-gray-700' : 'text-gray-500'}`} />
                         <span className="font-medium">{item.name}</span>
                       </Link>
                     );
@@ -165,7 +193,7 @@ export default function UserNavbar() {
           </div>
 
           {/* Right side - Notifications, Profile */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             {/* Notifications */}
             <div className="relative">
               <NotificationDropdown />
@@ -183,58 +211,68 @@ export default function UserNavbar() {
             >
               <button
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                className="flex items-center space-x-3 p-2 rounded-xl hover:bg-white/60 transition-all duration-200 hover:shadow-md group"
+                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 group"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                  <span className="text-white font-semibold text-sm">
-                    {session?.user?.name?.[0] || session?.user?.email?.[0] || 'U'}
-                  </span>
+                <div className="w-8 h-8 rounded-full overflow-hidden group-hover:opacity-90 transition-opacity duration-200">
+                  {userAvatar ? (
+                    <img 
+                      src={userAvatar} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                      <span className="text-white font-medium text-sm">
+                        {session?.user?.name?.[0] || session?.user?.email?.[0] || 'U'}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <p className="text-sm font-semibold text-slate-900">
+                  <p className="text-sm font-medium text-gray-900">
                     {session?.user?.name || 'User'}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-gray-500">
                     {session?.user?.email}
                   </p>
                 </div>
-                <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Profile Dropdown Menu */}
               {isProfileDropdownOpen && (
-                <div className="absolute right-0 mt-3 w-64 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-200/50 py-3 z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-slate-100/50 bg-gradient-to-r from-slate-50 to-blue-50">
-                    <p className="text-sm font-semibold text-slate-900">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-medium text-gray-900">
                       {session?.user?.name || 'User'}
                     </p>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-gray-500">
                       {session?.user?.email}
                     </p>
                   </div>
                   
                   <Link
                     href="/user/profile"
-                    className="flex items-center space-x-3 px-4 py-3 text-sm text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 transition-all duration-200"
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-150"
                     onClick={() => setIsProfileDropdownOpen(false)}
                   >
-                    <User className="h-4 w-4 text-slate-500" />
+                    <User className="h-4 w-4 text-gray-500" />
                     <span>Hồ sơ cá nhân</span>
                   </Link>
                   
                   <Link
                     href="/user/settings"
-                    className="flex items-center space-x-3 px-4 py-3 text-sm text-slate-700 hover:bg-gradient-to-r hover:from-slate-50 hover:to-blue-50 transition-all duration-200"
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-150"
                     onClick={() => setIsProfileDropdownOpen(false)}
                   >
-                    <Settings className="h-4 w-4 text-slate-500" />
+                    <Settings className="h-4 w-4 text-gray-500" />
                     <span>Cài đặt</span>
                   </Link>
                   
-                  <div className="border-t border-slate-100/50 mt-2 pt-2">
+                  <div className="border-t border-gray-100 mt-1 pt-1">
                     <button
                       onClick={handleSignOut}
-                      className="flex items-center space-x-3 px-4 py-3 text-sm text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-pink-50 w-full text-left transition-all duration-200"
+                      className="flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 w-full text-left transition-colors duration-150"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Đăng xuất</span>
@@ -247,7 +285,7 @@ export default function UserNavbar() {
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2.5 text-slate-600 hover:text-slate-900 hover:bg-white/60 rounded-xl transition-all duration-200 hover:shadow-md"
+              className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors duration-200"
             >
               {isMobileMenuOpen ? (
                 <X className="h-5 w-5" />
@@ -260,30 +298,30 @@ export default function UserNavbar() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200/50 py-4 bg-white/95 backdrop-blur-sm rounded-b-2xl shadow-lg">
-            <div className="space-y-2 px-2">
+          <div className="lg:hidden border-t border-gray-200 py-4 bg-white">
+            <div className="space-y-1 px-2">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-150 ${
                       isActive(item.href)
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        ? 'bg-gray-900 text-white'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-white' : 'text-slate-500'}`} />
+                    <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-white' : 'text-gray-500'}`} />
                     <span>{item.name}</span>
                   </Link>
                 );
               })}
 
               {/* Mobile Work Menu */}
-              <div className="border-t border-slate-200/50 pt-3 mt-3">
-                <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              <div className="border-t border-gray-200 pt-3 mt-3">
+                <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Công việc
                 </div>
                 {workMenuItems.map((item) => {
@@ -292,22 +330,20 @@ export default function UserNavbar() {
                     <Link
                       key={item.name}
                       href={item.href}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors duration-150 ${
                         isActive(item.href)
-                          ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/25'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                          ? 'bg-gray-900 text-white'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                       }`}
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
-                      <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-white' : 'text-slate-500'}`} />
+                      <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-white' : 'text-gray-500'}`} />
                       <span>{item.name}</span>
                     </Link>
                   );
                 })}
               </div>
             </div>
-            
-
           </div>
         )}
       </div>

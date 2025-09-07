@@ -14,15 +14,13 @@ interface TimeSeriesData {
 }
 
 interface DashboardChartsProps {
-  statusData: ChartData[];
   revenueData: TimeSeriesData[];
   orderData: TimeSeriesData[];
-  recentTickets?: Array<{ id: string; title: string; status: string; createdAt: string }>;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-export default function DashboardCharts({ statusData, revenueData, orderData, recentTickets }: DashboardChartsProps) {
+export default function DashboardCharts({ revenueData, orderData }: DashboardChartsProps) {
   return (
     <>
       {/* Charts Row */}
@@ -50,29 +48,20 @@ export default function DashboardCharts({ statusData, revenueData, orderData, re
         {/* Order Time Chart */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Ticket Status</h3>
+            <h3 className="text-lg font-semibold text-gray-900">System Performance</h3>
             <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
               View Report
             </button>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={statusData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {statusData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
+            <LineChart data={orderData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="day" />
+              <YAxis />
               <Tooltip />
-            </PieChart>
+              <Line type="monotone" dataKey="current" stroke="#3B82F6" strokeWidth={2} />
+              <Line type="monotone" dataKey="previous" stroke="#E5E7EB" strokeWidth={2} />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -114,40 +103,45 @@ export default function DashboardCharts({ statusData, revenueData, orderData, re
           </div>
         </div>
 
-        {/* Recent Tickets */}
+        {/* Activity Log */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Tickets</h3>
-          <p className="text-gray-600 text-sm mb-6">Latest ticket submissions</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
+          <p className="text-gray-600 text-sm mb-6">Latest system activities</p>
           <div className="space-y-4">
-            {recentTickets?.map((ticket) => (
-              <div key={ticket.id} className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 text-xs font-medium">#{ticket.id.slice(-4)}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {ticket.title}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    by {ticket.requester.name || ticket.requester.email}
-                  </p>
-                </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  ticket.status === 'OPEN' ? 'bg-red-100 text-red-800' :
-                  ticket.status === 'IN_PROGRESS' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {ticket.status}
-                </span>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <span className="text-green-600 text-xs font-medium">✓</span>
               </div>
-            ))}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">System updated</p>
+                <p className="text-xs text-gray-500">2 hours ago</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <span className="text-blue-600 text-xs font-medium">+</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">New user registered</p>
+                <p className="text-xs text-gray-500">4 hours ago</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                <span className="text-purple-600 text-xs font-medium">!</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">Backup completed</p>
+                <p className="text-xs text-gray-500">6 hours ago</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Order Chart */}
+        {/* Performance Chart */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Priority Distribution</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Performance Trends</h3>
             <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
               View Report
             </button>

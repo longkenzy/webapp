@@ -156,21 +156,33 @@ export default function PermissionsPage() {
     }
 
     try {
+      console.log('Frontend: Starting delete user with ID:', userId);
+      
       const response = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
+      console.log('Frontend: Delete response status:', response.status);
+
       if (response.ok) {
+        const result = await response.json();
+        console.log('Frontend: Delete successful:', result);
+        
         // Remove user from local state
         setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
         showNotification('success', 'Xóa tài khoản thành công!');
       } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Có lỗi xảy ra');
+        const errorData = await response.json();
+        console.error('Frontend: Delete failed with error:', errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: Có lỗi xảy ra`);
       }
     } catch (error) {
-      console.error('Error deleting user:', error);
-      showNotification('error', error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa tài khoản');
+      console.error('Frontend: Error deleting user:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Có lỗi xảy ra khi xóa tài khoản';
+      showNotification('error', errorMessage);
     }
   };
 

@@ -27,6 +27,8 @@ model User {
   internalCaseWorklogs  InternalCaseWorklog[]
   receivingCaseComments ReceivingCaseComment[]
   receivingCaseWorklogs ReceivingCaseWorklog[]
+  incidentComments      IncidentComment[]
+  incidentWorklogs      IncidentWorklog[]
   schedules             Schedule[]
   employee              Employee?              @relation(fields: [employeeId], references: [id])
 }
@@ -60,6 +62,8 @@ model Employee {
   internalCasesRequester  InternalCase[]  @relation("RequesterInternalCases")
   receivingCasesHandler   ReceivingCase[] @relation("HandlerReceivingCases")
   receivingCasesRequester ReceivingCase[] @relation("RequesterReceivingCases")
+  incidentsReporter       Incident[]      @relation("ReporterIncidents")
+  incidentsHandler        Incident[]      @relation("HandlerIncidents")
   user                    User?
 }
 
@@ -310,6 +314,59 @@ model EvaluationOption {
   config    EvaluationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 }
 
+model Incident {
+  id                   String           @id @default(cuid())
+  title                String
+  description          String
+  reporterId           String
+  handlerId            String
+  incidentType         String
+  priority             IncidentPriority @default(MEDIUM)
+  startDate            DateTime
+  endDate              DateTime?
+  status               IncidentStatus   @default(REPORTED)
+  notes                String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  userAssessmentDate   DateTime?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  reporter             Employee         @relation("ReporterIncidents", fields: [reporterId], references: [id])
+  handler              Employee         @relation("HandlerIncidents", fields: [handlerId], references: [id])
+  comments             IncidentComment[]
+  worklogs             IncidentWorklog[]
+}
+
+model IncidentComment {
+  id         String   @id @default(cuid())
+  incidentId String
+  userId     String
+  content    String
+  createdAt  DateTime @default(now())
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model IncidentWorklog {
+  id         String   @id @default(cuid())
+  incidentId String
+  userId     String
+  duration   Int
+  description String
+  createdAt  DateTime @default(now())
+  incident   Incident @relation(fields: [incidentId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
 enum Role {
   ADMIN
   IT_LEAD
@@ -349,4 +406,19 @@ enum EvaluationCategory {
   IMPACT
   URGENCY
   FORM
+}
+
+enum IncidentStatus {
+  REPORTED
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+  ESCALATED
+}
+
+enum IncidentPriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
 }

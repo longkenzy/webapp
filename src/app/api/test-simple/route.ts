@@ -17,10 +17,14 @@ export async function GET() {
     
   } catch (error) {
     console.error("❌ Simple test failed:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorName = error instanceof Error ? error.name : 'Unknown';
+    
     return NextResponse.json({
       success: false,
-      error: error.message,
-      name: error.name
+      error: errorMessage,
+      name: errorName
     }, { status: 500 });
   }
 }

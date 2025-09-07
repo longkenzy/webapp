@@ -30,8 +30,8 @@ interface Partner {
   id: string;
   shortName: string;
   fullCompanyName: string;
-  contactPerson: string;
-  contactPhone: string;
+  contactPerson: string | null;
+  contactPhone: string | null;
 }
 
 interface Product {

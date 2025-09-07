@@ -77,8 +77,6 @@ export const EvaluationForm: React.FC<EvaluationFormProps> = ({
         return 'mức độ khẩn cấp';
       case EvaluationCategory.FORM:
         return 'hình thức';
-      default:
-        return category.toLowerCase();
     }
   };
 

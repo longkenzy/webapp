@@ -180,16 +180,16 @@ export async function POST(request: NextRequest) {
     } catch (dbError) {
       console.error("❌ Database error during user creation:", dbError);
       console.error("❌ Database error details:", {
-        name: dbError.name,
-        message: dbError.message,
-        code: dbError.code,
-        meta: dbError.meta
+        name: dbError instanceof Error ? dbError.name : 'Unknown',
+        message: dbError instanceof Error ? dbError.message : String(dbError),
+        code: (dbError as any)?.code || 'Unknown',
+        meta: (dbError as any)?.meta || null
       });
       
       await db.$disconnect();
       
       // Return specific error message
-      if (dbError.code === 'P2002') {
+      if ((dbError as any)?.code === 'P2002') {
         return NextResponse.json(
           { error: "Tên đăng nhập hoặc email đã tồn tại" },
           { status: 400 }
@@ -202,9 +202,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("❌ Error creating account:", error);
     console.error("❌ Error details:", {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : 'No stack trace'
     });
     
     // Try to disconnect database
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Return more specific error message
-    if (error.message.includes('DATABASE_URL')) {
+    if (error instanceof Error && error.message.includes('DATABASE_URL')) {
       return NextResponse.json(
         { error: "Lỗi kết nối database" },
         { status: 500 }

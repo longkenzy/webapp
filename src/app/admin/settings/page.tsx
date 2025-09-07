@@ -11,8 +11,8 @@ export default async function SettingsPage() {
     <div>
       <h1 className="text-xl font-semibold mb-4">Settings</h1>
       <div className="rounded border p-4">
-        <div className="text-sm opacity-70">First Response (min)</div>
-        <div className="text-lg">{cfg?.firstResponseMinutes}</div>
+        <div className="text-sm opacity-70">Configuration</div>
+        <div className="text-lg">KPI Config ID: {cfg?.id || 'No config found'}</div>
       </div>
     </div>
   );

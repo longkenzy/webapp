@@ -5,6 +5,7 @@ import { Package, Search, Filter, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReceivingCaseTable from '@/components/admin/ReceivingCaseTable';
 import * as XLSX from 'xlsx';
+import { ReceivingCaseStatus } from '@prisma/client';
 
 interface ReceivingCase {
   id: string;
@@ -13,7 +14,7 @@ interface ReceivingCase {
   form: string;
   startDate: string;
   endDate: string | null;
-  status: string;
+  status: ReceivingCaseStatus;
   notes: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
@@ -47,12 +48,20 @@ interface ReceivingCase {
     id: string;
     shortName: string;
     fullCompanyName: string;
-    contactPerson: string;
-    contactPhone: string;
-  };
+    contactPerson: string | null;
+    contactPhone: string | null;
+  } | null;
+  products: {
+    id: string;
+    name: string;
+    code: string | null;
+    quantity: number;
+    serialNumber: string | null;
+  }[];
   _count: {
     comments: number;
     worklogs: number;
+    products: number;
   };
 }
 

@@ -699,9 +699,9 @@ export default function InternalCasePage() {
       <CreateInternalCaseModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newCase) => {
+        onSuccess={(newCase: any) => {
           // Add new case to the end of the list (since we sort by createdAt ASC)
-          setCases(prevCases => [...prevCases, newCase]);
+          setCases(prevCases => [...prevCases, newCase as InternalCase]);
         }}
       />
 

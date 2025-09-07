@@ -182,15 +182,15 @@ export async function PUT(
     // Update products if provided
     if (products && Array.isArray(products)) {
       // Delete existing products
-      await db.product.deleteMany({
-        where: { receivingCaseId: id }
+      await db.deliveryCaseProduct.deleteMany({
+        where: { deliveryCaseId: id }
       });
 
       // Create new products
       if (products.length > 0) {
-        await db.product.createMany({
+        await db.deliveryCaseProduct.createMany({
           data: products.map((product: any) => ({
-            receivingCaseId: id,
+            deliveryCaseId: id,
             name: product.name,
             code: product.code,
             quantity: product.quantity,

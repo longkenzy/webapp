@@ -35,8 +35,8 @@ export default async function UserDashboardPage() {
     db.internalCase.count({
       where: {
         OR: [
-          { requesterId: session?.user.employeeId },
-          { handlerId: session?.user.employeeId }
+          { requesterId: session?.user.employee?.id },
+          { handlerId: session?.user.employee?.id }
         ]
       }
     })

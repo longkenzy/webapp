@@ -5,7 +5,7 @@ import { ReceivingCaseStatus } from "@prisma/client";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getSession();
@@ -13,8 +13,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const receivingCase = await db.receivingCase.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         requester: {
           select: {
@@ -89,7 +90,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getSession();
@@ -97,6 +98,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const {
       title,
@@ -117,7 +119,7 @@ export async function PUT(
 
     // Check if receiving case exists
     const existingCase = await db.receivingCase.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingCase) {
@@ -153,7 +155,7 @@ export async function PUT(
     if (products !== undefined) {
       // Delete existing products
       await db.receivingCaseProduct.deleteMany({
-        where: { receivingCaseId: params.id }
+        where: { receivingCaseId: id }
       });
 
       // Add new products
@@ -170,7 +172,7 @@ export async function PUT(
     }
 
     const updatedCase = await db.receivingCase.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       include: {
         requester: {
@@ -220,7 +222,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getSession();
@@ -228,9 +230,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     // Check if receiving case exists
     const existingCase = await db.receivingCase.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingCase) {
@@ -239,7 +242,7 @@ export async function DELETE(
 
     // Delete the receiving case (cascade will handle related records)
     await db.receivingCase.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json({ message: "Receiving case deleted successfully" });

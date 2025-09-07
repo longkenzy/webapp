@@ -5,6 +5,7 @@ import { Package, Search, Filter, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
 import * as XLSX from 'xlsx';
+import { DeliveryCaseStatus } from '@prisma/client';
 
 interface DeliveryCase {
   id: string;
@@ -13,7 +14,7 @@ interface DeliveryCase {
   form: string;
   startDate: string;
   endDate: string | null;
-  status: string;
+  status: DeliveryCaseStatus;
   notes: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
@@ -47,12 +48,20 @@ interface DeliveryCase {
     id: string;
     shortName: string;
     fullCompanyName: string;
-    contactPerson: string;
-    contactPhone: string;
-  };
+    contactPerson: string | null;
+    contactPhone: string | null;
+  } | null;
+  products: {
+    id: string;
+    name: string;
+    code: string | null;
+    quantity: number;
+    serialNumber: string | null;
+  }[];
   _count: {
     comments: number;
     worklogs: number;
+    products: number;
   };
 }
 

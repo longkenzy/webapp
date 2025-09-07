@@ -13,8 +13,22 @@ export default async function TestSessionPage() {
       };
     }
 
-    // @ts-expect-error custom field
     const loginTime = session.user.loginTime;
+    if (!loginTime) {
+      return {
+        hasSession: true,
+        session: {
+          user: {
+            id: session.user.id,
+            email: session.user.email,
+            role: session.user.role,
+            loginTime: null
+          }
+        },
+        timeInfo: null
+      };
+    }
+    
     const now = Date.now();
     const sessionDuration = 60 * 60 * 1000; // 1 hour
     const expiryTime = loginTime + sessionDuration;

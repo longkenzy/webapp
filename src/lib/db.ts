@@ -12,13 +12,6 @@ export const db: PrismaClient = globalThis.prisma ?? new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
-  // Optimize connection pool for better performance
-  __internal: {
-    engine: {
-      connectTimeout: 10000, // 10 seconds
-      queryTimeout: 30000,   // 30 seconds
-    },
-  },
 });
 
 if (process.env.NODE_ENV !== "production") globalThis.prisma = db;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { Role } from "@prisma/client";
 
 export async function POST() {
   try {
@@ -10,7 +11,7 @@ export async function POST() {
       username: `test_${Date.now()}`,
       email: `test_${Date.now()}@test.com`,
       password: 'test123',
-      role: 'USER',
+      role: Role.USER,
       status: 'inactive'
     };
     
@@ -38,18 +39,23 @@ export async function POST() {
     
   } catch (error) {
     console.error("❌ User creation test failed:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorName = error instanceof Error ? error.name : 'Unknown';
+    const errorCode = (error as any)?.code || 'UNKNOWN';
+    
     console.error("❌ Error details:", {
-      name: error.name,
-      message: error.message,
-      code: error.code
+      name: errorName,
+      message: errorMessage,
+      code: errorCode
     });
     
     return NextResponse.json({
       success: false,
-      error: error.message,
+      error: errorMessage,
       details: {
-        name: error.name,
-        code: error.code
+        name: errorName,
+        code: errorCode
       }
     }, { status: 500 });
   }

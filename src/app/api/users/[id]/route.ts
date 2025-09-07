@@ -62,8 +62,8 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: { role?: string; status?: string; username?: string; password?: string; updatedAt: Date } = {
-      role,
+    const updateData: { role?: Role; status?: string; username?: string; password?: string; updatedAt: Date } = {
+      role: role as Role,
       status,
       updatedAt: new Date()
     };
@@ -232,25 +232,21 @@ export async function DELETE(
 
         // Handle internal cases if user has employee record
         let deletedInternalCases = 0;
-        let updatedInternalCases = 0;
         
         if (userEmployee) {
           console.log('DELETE /api/users/[id] - User has employee record, handling internal cases');
           
-          // Delete internal cases where employee is requester (cannot have null requester)
+          // Delete internal cases where employee is requester or handler
           const deletedCases = await tx.internalCase.deleteMany({
-            where: { requesterId: userEmployee.id }
+            where: { 
+              OR: [
+                { requesterId: userEmployee.id },
+                { handlerId: userEmployee.id }
+              ]
+            }
           });
           deletedInternalCases = deletedCases.count;
           console.log(`Deleted ${deletedInternalCases} internal cases`);
-
-          // Update internal cases to remove handler reference (if any)
-          const updatedCases = await tx.internalCase.updateMany({
-            where: { handlerId: userEmployee.id },
-            data: { handlerId: null }
-          });
-          updatedInternalCases = updatedCases.count;
-          console.log(`Updated ${updatedInternalCases} internal cases`);
         }
 
         // Delete the user
@@ -265,7 +261,6 @@ export async function DELETE(
           deletedInternalCaseComments: deletedInternalCaseComments.count,
           deletedSchedules: deletedSchedules.count,
           deletedInternalCases: deletedInternalCases,
-          updatedInternalCases: updatedInternalCases,
           deletedUser: deletedUser.email
         };
         
@@ -286,7 +281,6 @@ export async function DELETE(
         deletedInternalCaseComments: result.deletedInternalCaseComments,
         deletedSchedules: result.deletedSchedules,
         deletedInternalCases: result.deletedInternalCases,
-        updatedInternalCases: result.updatedInternalCases,
         deletedUser: result.deletedUser
       }
     });

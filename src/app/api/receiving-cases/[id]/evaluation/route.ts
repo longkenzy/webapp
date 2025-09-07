@@ -5,7 +5,7 @@ import { db } from '@/lib/db';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,6 +14,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await request.json();
     const {
       adminDifficultyLevel,
@@ -24,7 +25,7 @@ export async function PUT(
 
     // Update the receiving case with admin evaluation
     const updatedCase = await db.receivingCase.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         adminDifficultyLevel: adminDifficultyLevel ? parseInt(adminDifficultyLevel) : null,
         adminEstimatedTime: adminEstimatedTime ? parseInt(adminEstimatedTime) : null,

@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { Role } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
   debug: false,
@@ -95,30 +96,20 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         // @ts-expect-error custom field
         token.role = (user as { role?: string }).role;
-        // @ts-expect-error custom field
         token.loginTime = Date.now();
-        // @ts-expect-error custom field
         token.status = (user as { status?: string }).status;
-        // @ts-expect-error custom field
         token.department = (user as { department?: string }).department;
-        // @ts-expect-error custom field
         token.employee = (user as { employee?: any }).employee;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        // @ts-expect-error custom field
         session.user.id = token.sub as string;
-        // @ts-expect-error custom field
-        session.user.role = (token as { role?: string }).role;
-        // @ts-expect-error custom field
+        session.user.role = (token as { role?: string }).role as Role;
         session.user.loginTime = (token as { loginTime?: number }).loginTime;
-        // @ts-expect-error custom field
         session.user.status = (token as { status?: string }).status;
-        // @ts-expect-error custom field
         session.user.department = (token as { department?: string }).department;
-        // @ts-expect-error custom field
         session.user.employee = (token as { employee?: any }).employee;
       }
       return session;

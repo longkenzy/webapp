@@ -54,6 +54,22 @@ export default function AdminInternalWorkPageOptimized() {
   ];
 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.ADMIN, adminCategories);
+
+  // Helper function to get category label
+  const getCategoryLabel = (category: EvaluationCategory) => {
+    switch (category) {
+      case EvaluationCategory.DIFFICULTY:
+        return 'Độ khó';
+      case EvaluationCategory.TIME:
+        return 'Thời gian';
+      case EvaluationCategory.IMPACT:
+        return 'Tác động';
+      case EvaluationCategory.URGENCY:
+        return 'Độ khẩn cấp';
+      default:
+        return category;
+    }
+  };
   const { fetchConfigs } = useEvaluation();
 
   // Use custom hooks for state management
@@ -458,7 +474,7 @@ export default function AdminInternalWorkPageOptimized() {
               {adminCategories.map((category) => (
                 <div key={category}>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {getFieldOptions(category).label}
+                    {getCategoryLabel(category)}
                   </label>
                   <select
                     value={evaluationForm[category as keyof typeof evaluationForm]}
@@ -466,8 +482,8 @@ export default function AdminInternalWorkPageOptimized() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Chọn điểm</option>
-                    {getFieldOptions(category).options.map((option) => (
-                      <option key={option.value} value={option.value}>
+                    {getFieldOptions(category).map((option) => (
+                      <option key={option.id} value={option.points}>
                         {option.label}
                       </option>
                     ))}

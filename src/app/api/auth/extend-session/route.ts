@@ -10,8 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update login time to extend session
-    // @ts-expect-error custom field
-    session.user.loginTime = Date.now();
+    (session.user as any).loginTime = Date.now();
 
     return NextResponse.json({ 
       success: true, 

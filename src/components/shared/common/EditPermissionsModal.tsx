@@ -63,7 +63,7 @@ export default function EditPermissionsModal({ isOpen, onClose, user, onSave }: 
     setError('');
     
     try {
-      const updates: { role?: string; status?: string; username?: string; password?: string } = { role, status };
+      const updates: { role: Role; status: string; username?: string; password?: string } = { role, status };
       
       // Only include username if it changed
       if (username !== user.username) {

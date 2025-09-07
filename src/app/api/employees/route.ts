@@ -51,10 +51,12 @@ export async function POST(request: Request) {
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create new user
+    const username = email.split('@')[0]; // Generate username from email
     const newUser = await db.user.create({
       data: {
         name,
         email,
+        username,
         phone: phone || null,
         department: department || null,
         role: role || Role.USER,

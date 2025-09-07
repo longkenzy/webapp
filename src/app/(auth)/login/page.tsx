@@ -1,12 +1,12 @@
 "use client";
 import { signIn, useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Notification from "@/components/shared/common/Notification";
 
-export default function LoginPage() {
+function LoginForm() {
   const search = useSearchParams();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -227,6 +227,24 @@ export default function LoginPage() {
       </div>
     </div>
     </>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+            <div className="flex items-center justify-center">
+              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
 

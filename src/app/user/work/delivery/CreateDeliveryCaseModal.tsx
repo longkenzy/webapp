@@ -711,7 +711,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
                 <div className="text-center py-8 text-gray-500">
                   <Package className="h-8 w-8 mx-auto mb-2 text-gray-400" />
                   <p className="text-sm">Chưa có sản phẩm nào</p>
-                  <p className="text-xs">Nhấn "Thêm sản phẩm" để bắt đầu</p>
+                  <p className="text-xs">Nhấn &quot;Thêm sản phẩm&quot; để bắt đầu</p>
                 </div>
               ) : (
                 <div className="space-y-4">

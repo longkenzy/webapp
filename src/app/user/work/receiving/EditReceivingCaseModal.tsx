@@ -406,7 +406,7 @@ export default function EditReceivingCaseModal({
               <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
                 <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-sm text-gray-500">Chưa có sản phẩm nào</p>
-                <p className="text-xs text-gray-400 mt-1">Nhấn "Thêm sản phẩm" để bắt đầu</p>
+                <p className="text-xs text-gray-400 mt-1">Nhấn &quot;Thêm sản phẩm&quot; để bắt đầu</p>
               </div>
             )}
           </div>

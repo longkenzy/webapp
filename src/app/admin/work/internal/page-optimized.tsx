@@ -500,7 +500,7 @@ export default function AdminInternalWorkPageOptimized() {
           <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Xác nhận xóa</h3>
             <p className="text-gray-600 mb-6">
-              Bạn có chắc chắn muốn xóa case "{selectedCase.title}"? Hành động này không thể hoàn tác.
+              Bạn có chắc chắn muốn xóa case &quot;{selectedCase.title}&quot;? Hành động này không thể hoàn tác.
             </p>
             <div className="flex justify-end space-x-3">
               <button

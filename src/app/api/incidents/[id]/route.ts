@@ -25,7 +25,7 @@ export async function PUT(
     const {
       endDate,
       status,
-      priority,
+      customerId,
       notes,
       // Admin assessment fields
       adminDifficultyLevel,
@@ -70,8 +70,8 @@ export async function PUT(
     if (status !== undefined) {
       updateData.status = status;
     }
-    if (priority !== undefined) {
-      updateData.priority = priority;
+    if (customerId !== undefined) {
+      updateData.customerId = customerId;
     }
     if (notes !== undefined) {
       updateData.notes = notes;
@@ -127,6 +127,15 @@ export async function PUT(
             position: true,
             department: true
           }
+        },
+        customer: {
+          select: {
+            id: true,
+            fullCompanyName: true,
+            shortName: true,
+            contactPerson: true,
+            contactPhone: true
+          }
         }
       }
     });
@@ -178,6 +187,22 @@ export async function GET(
             fullName: true,
             position: true,
             department: true
+          }
+        },
+        customer: {
+          select: {
+            id: true,
+            fullCompanyName: true,
+            shortName: true,
+            contactPerson: true,
+            contactPhone: true
+          }
+        },
+        incidentType: {
+          select: {
+            id: true,
+            name: true,
+            description: true
           }
         }
       }

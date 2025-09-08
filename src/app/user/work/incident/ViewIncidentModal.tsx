@@ -8,7 +8,13 @@ interface Incident {
   description: string;
   endDate?: string;
   status: string;
-  priority: string;
+  customer?: {
+    id: string;
+    fullCompanyName: string;
+    shortName: string;
+    contactPerson?: string;
+    contactPhone?: string;
+  };
   reporter: {
     id: string;
     fullName: string;
@@ -86,35 +92,6 @@ export default function ViewIncidentModal({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'CRITICAL':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'HIGH':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'MEDIUM':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'LOW':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'CRITICAL':
-        return 'Nghiêm trọng';
-      case 'HIGH':
-        return 'Cao';
-      case 'MEDIUM':
-        return 'Trung bình';
-      case 'LOW':
-        return 'Thấp';
-      default:
-        return priority;
-    }
-  };
 
   const formatIncidentType = (incidentType: string) => {
     switch (incidentType) {
@@ -208,11 +185,22 @@ export default function ViewIncidentModal({
                 <p className="text-sm text-gray-900 mt-1">{formatIncidentType(incidentData.incidentType)}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-600">Mức độ ưu tiên:</span>
+                <span className="text-sm font-medium text-gray-600">Khách hàng:</span>
                 <div className="mt-1">
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getPriorityColor(incidentData.priority)}`}>
-                    {getPriorityText(incidentData.priority)}
-                  </span>
+                  {incidentData.customer ? (
+                    <div className="text-sm text-gray-900">
+                      <div className="font-medium">{incidentData.customer.fullCompanyName}</div>
+                      <div className="text-xs text-gray-500">({incidentData.customer.shortName})</div>
+                      {incidentData.customer.contactPerson && (
+                        <div className="text-xs text-gray-500">Liên hệ: {incidentData.customer.contactPerson}</div>
+                      )}
+                      {incidentData.customer.contactPhone && (
+                        <div className="text-xs text-gray-500">Điện thoại: {incidentData.customer.contactPhone}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-400">-</span>
+                  )}
                 </div>
               </div>
               <div>

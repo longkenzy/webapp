@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     console.log("Request body:", body);
+    console.log("Incident type received:", body.incidentType);
     
     const {
       title,
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
       reporterId,
       handlerId,
       incidentType,
-      priority,
+      customerId,
       startDate,
       endDate,
       status,
@@ -41,6 +42,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
+      );
+    }
+
+    // Find or create incident type
+    let incidentTypeId;
+    try {
+      // First, try to find existing incident type by name
+      let incidentTypeRecord = await db.incidentType.findUnique({
+        where: { name: incidentType }
+      });
+
+      // If not found, create new incident type
+      if (!incidentTypeRecord) {
+        incidentTypeRecord = await db.incidentType.create({
+          data: {
+            name: incidentType,
+            description: null,
+            isActive: true
+          }
+        });
+      }
+
+      incidentTypeId = incidentTypeRecord.id;
+    } catch (error) {
+      console.error("Error handling incident type:", error);
+      return NextResponse.json(
+        { error: "Error processing incident type" },
+        { status: 500 }
       );
     }
 
@@ -84,8 +113,8 @@ export async function POST(request: NextRequest) {
       description,
       reporterId,
       handlerId,
-      incidentType,
-      priority,
+      incidentTypeId,
+      customerId,
       startDate,
       endDate,
       status,
@@ -98,8 +127,8 @@ export async function POST(request: NextRequest) {
         description,
         reporterId,
         handlerId,
-        incidentType,
-        priority: priority || "MEDIUM",
+        incidentTypeId,
+        customerId: customerId || null,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         status: status || "REPORTED",
@@ -128,15 +157,56 @@ export async function POST(request: NextRequest) {
             position: true,
             department: true
           }
+        },
+        customer: {
+          select: {
+            id: true,
+            fullCompanyName: true,
+            shortName: true,
+            contactPerson: true,
+            contactPhone: true
+          }
+        },
+        incidentType: {
+          select: {
+            id: true,
+            name: true,
+            description: true
+          }
         }
       }
     });
 
     console.log("Incident created successfully:", incident);
 
+    // Transform the created incident to match frontend interface
+    console.log("Transforming created incident...");
+    let transformedIncident;
+    try {
+      if (!incident.incidentType || !incident.incidentType.name) {
+        console.error("Created incident missing incidentType:", incident.id);
+        throw new Error(`Created incident ${incident.id} is missing incidentType`);
+      }
+      
+      transformedIncident = {
+        ...incident,
+        incidentType: incident.incidentType.name, // Convert incidentType object to string
+        startDate: incident.startDate.toISOString(),
+        endDate: incident.endDate?.toISOString() || null,
+        createdAt: incident.createdAt.toISOString(),
+        updatedAt: incident.updatedAt.toISOString(),
+        userAssessmentDate: incident.userAssessmentDate?.toISOString() || null,
+        adminAssessmentDate: incident.adminAssessmentDate?.toISOString() || null
+      };
+      console.log("Created incident transformation successful");
+    } catch (transformError) {
+      console.error("Created incident transformation error:", transformError);
+      throw transformError;
+    }
+
     return NextResponse.json({
       message: "Incident created successfully",
-      data: incident
+      data: transformedIncident
     }, { status: 201 });
 
   } catch (error) {
@@ -150,58 +220,140 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("=== GET Incidents API Called ===");
+    console.log("Request headers:", Object.fromEntries(request.headers.entries()));
+    
     const session = await getSession();
+    console.log("Session found:", session ? "Yes" : "No");
+    console.log("Session details:", session);
     
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      console.log("No session found, returning 401");
+      return NextResponse.json({ 
+        error: "Unauthorized",
+        debug: "No session found. Please ensure you are logged in."
+      }, { status: 401 });
     }
+    
+    console.log("User role:", session.user?.role);
+    console.log("User ID:", session.user?.id);
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const status = searchParams.get("status");
-    const priority = searchParams.get("priority");
     const incidentType = searchParams.get("incidentType");
+    const customerId = searchParams.get("customerId");
 
     const skip = (page - 1) * limit;
 
     // Build where clause
     const where: Record<string, unknown> = {};
     if (status) where.status = status;
-    if (priority) where.priority = priority;
-    if (incidentType) where.incidentType = incidentType;
+    if (incidentType) {
+      // Find incident type by name and use its ID
+      try {
+        const incidentTypeRecord = await db.incidentType.findUnique({
+          where: { name: incidentType }
+        });
+        if (incidentTypeRecord) {
+          where.incidentTypeId = incidentTypeRecord.id;
+        }
+      } catch (error) {
+        console.error("Error finding incident type:", error);
+        // Fallback to old incidentType field if IncidentType table doesn't exist
+        where.incidentType = incidentType;
+      }
+    }
+    if (customerId) where.customerId = customerId;
+
+    console.log("Query parameters:", { page, limit, status, incidentType, customerId });
+    console.log("Where clause:", where);
 
     // Get incidents with pagination
-    const [incidents, total] = await Promise.all([
-      db.incident.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: "asc" },
-        include: {
-          reporter: {
-            select: {
-              id: true,
-              fullName: true,
-              position: true,
-              department: true
-            }
-          },
-          handler: {
-            select: {
-              id: true,
-              fullName: true,
-              position: true,
-              department: true
+    console.log("Fetching incidents from database...");
+    let incidents, total;
+    try {
+      [incidents, total] = await Promise.all([
+        db.incident.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: "asc" },
+          include: {
+            reporter: {
+              select: {
+                id: true,
+                fullName: true,
+                position: true,
+                department: true
+              }
+            },
+            handler: {
+              select: {
+                id: true,
+                fullName: true,
+                position: true,
+                department: true
+              }
+            },
+            customer: {
+              select: {
+                id: true,
+                fullCompanyName: true,
+                shortName: true,
+                contactPerson: true,
+                contactPhone: true
+              }
+            },
+            incidentType: {
+              select: {
+                id: true,
+                name: true,
+                description: true
+              }
             }
           }
+        }),
+        db.incident.count({ where })
+      ]);
+      console.log("Database query successful");
+    } catch (dbError) {
+      console.error("Database query error:", dbError);
+      throw dbError;
+    }
+    
+    // Transform incidents to match frontend interface
+    console.log("Transforming incidents data...");
+    let transformedIncidents;
+    try {
+      transformedIncidents = incidents.map(incident => {
+        if (!incident.incidentType || !incident.incidentType.name) {
+          console.error("Incident missing incidentType:", incident.id);
+          throw new Error(`Incident ${incident.id} is missing incidentType`);
         }
-      }),
-      db.incident.count({ where })
-    ]);
+        return {
+          ...incident,
+          incidentType: incident.incidentType.name, // Convert incidentType object to string
+          startDate: incident.startDate.toISOString(),
+          endDate: incident.endDate?.toISOString() || null,
+          createdAt: incident.createdAt.toISOString(),
+          updatedAt: incident.updatedAt.toISOString(),
+          userAssessmentDate: incident.userAssessmentDate?.toISOString() || null,
+          adminAssessmentDate: incident.adminAssessmentDate?.toISOString() || null
+        };
+      });
+      console.log("Data transformation successful");
+    } catch (transformError) {
+      console.error("Data transformation error:", transformError);
+      throw transformError;
+    }
+    
+    console.log("Incidents fetched:", incidents.length);
+    console.log("Total count:", total);
 
     const response = NextResponse.json({
-      data: incidents,
+      data: transformedIncidents,
       pagination: {
         page,
         limit,
@@ -217,9 +369,17 @@ export async function GET(request: NextRequest) {
     return response;
 
   } catch (error) {
-    console.error("Error fetching incidents:", error);
+    console.error("=== ERROR in GET Incidents API ===");
+    console.error("Error type:", typeof error);
+    console.error("Error message:", error instanceof Error ? error.message : String(error));
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
+    console.error("Full error object:", error);
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }

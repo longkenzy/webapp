@@ -17,7 +17,7 @@ export default async function UserLayout({ children }: { children: React.ReactNo
   return (
     <>
       <UserNavbar />
-      <main className="min-h-screen bg-gray-50 pt-16">
+      <main className="min-h-screen bg-gray-50">
         {children}
       </main>
     </>

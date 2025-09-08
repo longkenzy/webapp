@@ -9,7 +9,7 @@ export const db: PrismaClient = globalThis.prisma ?? new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['error'] : [],
   datasources: {
     db: {
-      url: process.env.DATABASE_URL || "postgresql://neondb_owner:npg_jzQACkco0T8S@ep-rapid-dream-a1b4rn5j-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+      url: process.env.DATABASE_URL,
     },
   },
 });

@@ -89,6 +89,7 @@ model Partner {
   shortName       String          @unique
   deliveryCases   DeliveryCase[]
   receivingCases  ReceivingCase[]
+  incidents       Incident[]
 }
 
 model CaseType {
@@ -314,17 +315,27 @@ model EvaluationOption {
   config    EvaluationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
 }
 
+model IncidentType {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  incidents   Incident[]
+}
+
 model Incident {
   id                   String           @id @default(cuid())
   title                String
   description          String
   reporterId           String
   handlerId            String
-  incidentType         String
-  priority             IncidentPriority @default(MEDIUM)
+  incidentTypeId       String
+  customerId           String?
   startDate            DateTime
   endDate              DateTime?
-  status               IncidentStatus   @default(REPORTED)
+  status               IncidentStatus   @default(RECEIVED)
   notes                String?
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
@@ -342,6 +353,8 @@ model Incident {
   userFormScore        Int?
   reporter             Employee         @relation("ReporterIncidents", fields: [reporterId], references: [id])
   handler              Employee         @relation("HandlerIncidents", fields: [handlerId], references: [id])
+  customer             Partner?         @relation(fields: [customerId], references: [id])
+  incidentType         IncidentType     @relation(fields: [incidentTypeId], references: [id])
   comments             IncidentComment[]
   worklogs             IncidentWorklog[]
 }
@@ -409,16 +422,9 @@ enum EvaluationCategory {
 }
 
 enum IncidentStatus {
-  REPORTED
-  INVESTIGATING
-  RESOLVED
-  CLOSED
-  ESCALATED
+  RECEIVED
+  PROCESSING
+  COMPLETED
+  CANCELLED
 }
 
-enum IncidentPriority {
-  CRITICAL
-  HIGH
-  MEDIUM
-  LOW
-}

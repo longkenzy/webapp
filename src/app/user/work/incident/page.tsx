@@ -21,7 +21,13 @@ interface Incident {
   reporter: Employee;
   handler: Employee;
   incidentType: string;
-  priority: string;
+  customer?: {
+    id: string;
+    fullCompanyName: string;
+    shortName: string;
+    contactPerson?: string;
+    contactPhone?: string;
+  };
   status: string;
   startDate: string;
   endDate?: string;
@@ -52,15 +58,15 @@ export default function IncidentPage() {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
   // Filter states
   const [filters, setFilters] = useState({
-    reporter: '',
     handler: '',
     incidentType: '',
-    priority: '',
+    customer: '',
     status: '',
     startDate: '',
     endDate: ''
@@ -75,14 +81,23 @@ export default function IncidentPage() {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
+          'Content-Type': 'application/json',
         },
+        credentials: 'include',
       });
       
       if (response.ok) {
         const data = await response.json();
+        console.log('Incidents API response:', data);
         setIncidents(data.data || []);
       } else {
         console.error('Failed to fetch incidents:', response.status, response.statusText);
+        try {
+          const errorData = await response.json();
+          console.error('Error details:', errorData);
+        } catch (e) {
+          console.error('Could not parse error response');
+        }
         setIncidents([]);
       }
     } catch (error) {
@@ -90,6 +105,29 @@ export default function IncidentPage() {
       setIncidents([]);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // Fetch customers from API
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/partners/list', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=300',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCustomers(data || []);
+      } else {
+        console.error('Failed to fetch customers:', response.status, response.statusText);
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setCustomers([]);
     }
   }, []);
 
@@ -130,12 +168,13 @@ export default function IncidentPage() {
     );
   };
 
-  // Load incidents on component mount
+  // Load incidents and customers on component mount
   useEffect(() => {
     if (status === 'authenticated') {
       fetchIncidents();
+      fetchCustomers();
     }
-  }, [status, fetchIncidents]);
+  }, [status, fetchIncidents, fetchCustomers]);
 
   // Filter incidents based on search term and filters
   const filteredIncidents = incidents.filter(incident => {
@@ -148,10 +187,6 @@ export default function IncidentPage() {
       incident.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
-    // Reporter filter
-    const matchesReporter = filters.reporter === '' || 
-      incident.reporter.fullName.toLowerCase().includes(filters.reporter.toLowerCase());
-    
     // Handler filter
     const matchesHandler = filters.handler === '' || 
       incident.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
@@ -160,9 +195,9 @@ export default function IncidentPage() {
     const matchesIncidentType = filters.incidentType === '' || 
       incident.incidentType === filters.incidentType;
     
-    // Priority filter
-    const matchesPriority = filters.priority === '' || 
-      incident.priority === filters.priority;
+    // Customer filter
+    const matchesCustomer = filters.customer === '' || 
+      incident.customer?.id === filters.customer;
     
     // Status filter
     const matchesStatus = filters.status === '' || 
@@ -176,8 +211,8 @@ export default function IncidentPage() {
     const matchesDateRange = (!startDate || incidentDate >= startDate) && 
       (!endDate || incidentDate <= endDate);
     
-    return matchesSearch && matchesReporter && matchesHandler && 
-           matchesIncidentType && matchesPriority && matchesStatus && matchesDateRange;
+    return matchesSearch && matchesHandler && 
+           matchesIncidentType && matchesCustomer && matchesStatus && matchesDateRange;
   });
 
   const getStatusColor = (status: string) => {
@@ -219,39 +254,6 @@ export default function IncidentPage() {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'CRITICAL':
-      case 'Nghiêm trọng':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'HIGH':
-      case 'Cao':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'MEDIUM':
-      case 'Trung bình':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'LOW':
-      case 'Thấp':
-        return 'bg-green-100 text-green-800 border-green-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'CRITICAL':
-        return 'Nghiêm trọng';
-      case 'HIGH':
-        return 'Cao';
-      case 'MEDIUM':
-        return 'Trung bình';
-      case 'LOW':
-        return 'Thấp';
-      default:
-        return priority;
-    }
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -284,11 +286,6 @@ export default function IncidentPage() {
   };
 
   // Get unique values for filter dropdowns
-  const getUniqueReporters = () => {
-    const reporters = incidents.map(incident => incident.reporter.fullName);
-    return [...new Set(reporters)].sort();
-  };
-
   const getUniqueHandlers = () => {
     const handlers = incidents.map(incident => incident.handler.fullName);
     return [...new Set(handlers)].sort();
@@ -299,10 +296,6 @@ export default function IncidentPage() {
     return [...new Set(incidentTypes)].sort();
   };
 
-  const getUniquePriorities = () => {
-    const priorities = incidents.map(incident => incident.priority);
-    return [...new Set(priorities)].sort();
-  };
 
   const getUniqueStatuses = () => {
     const statuses = incidents.map(incident => incident.status);
@@ -312,10 +305,9 @@ export default function IncidentPage() {
   // Clear all filters
   const clearFilters = () => {
     setFilters({
-      reporter: '',
       handler: '',
       incidentType: '',
-      priority: '',
+      customer: '',
       status: '',
       startDate: '',
       endDate: ''
@@ -359,7 +351,7 @@ export default function IncidentPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50 p-6 pt-4">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-full mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -369,10 +361,10 @@ export default function IncidentPage() {
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-3 rounded-md font-medium hover:from-red-700 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="flex items-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-red-700 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <AlertTriangle className="h-5 w-5" />
-              <span>Báo Cáo Sự Cố</span>
+              <AlertTriangle className="h-4 w-4" />
+              <span>Tạo Case Xử Lý Sự Cố</span>
             </button>
           </div>
         </div>
@@ -414,7 +406,7 @@ export default function IncidentPage() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tên sự cố, người báo cáo, người xử lý, loại sự cố..."
+                    placeholder="Tìm kiếm theo tên sự cố, người xử lý, loại sự cố..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
@@ -427,27 +419,7 @@ export default function IncidentPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Bộ lọc
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-                  {/* Người báo cáo */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                        <span>Người báo cáo</span>
-                      </div>
-                    </label>
-                    <select
-                      value={filters.reporter}
-                      onChange={(e) => setFilters(prev => ({ ...prev, reporter: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả người báo cáo</option>
-                      {getUniqueReporters().map(reporter => (
-                        <option key={reporter} value={reporter}>{reporter}</option>
-                      ))}
-                    </select>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
                   {/* Người xử lý */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -488,22 +460,24 @@ export default function IncidentPage() {
                     </select>
                   </div>
 
-                  {/* Mức độ ưu tiên */}
+                  {/* Khách hàng */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       <div className="flex items-center space-x-1.5">
                         <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                        <span>Mức độ ưu tiên</span>
+                        <span>Khách hàng</span>
                       </div>
                     </label>
                     <select
-                      value={filters.priority}
-                      onChange={(e) => setFilters(prev => ({ ...prev, priority: e.target.value }))}
+                      value={filters.customer}
+                      onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                     >
-                      <option value="">Tất cả mức độ</option>
-                      {getUniquePriorities().map(priority => (
-                        <option key={priority} value={priority}>{getPriorityText(priority)}</option>
+                      <option value="">Tất cả khách hàng</option>
+                      {customers.map(customer => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.fullCompanyName} ({customer.shortName})
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -583,12 +557,6 @@ export default function IncidentPage() {
                             &quot;{searchTerm}&quot;
                           </span>
                         )}
-                        {filters.reporter && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                            <div className="w-1.5 h-1.5 bg-red-500 rounded-full mr-1"></div>
-                            Báo cáo: {filters.reporter}
-                          </span>
-                        )}
                         {filters.handler && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
@@ -601,10 +569,10 @@ export default function IncidentPage() {
                             Loại: {formatIncidentType(filters.incidentType)}
                           </span>
                         )}
-                        {filters.priority && (
+                        {filters.customer && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
                             <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
-                            Ưu tiên: {getPriorityText(filters.priority)}
+                            Khách hàng: {customers.find(c => c.id === filters.customer)?.fullCompanyName || filters.customer}
                           </span>
                         )}
                         {filters.status && (
@@ -665,19 +633,16 @@ export default function IncidentPage() {
                     STT
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Thông tin Sự cố
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Người báo cáo
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Người xử lý
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Khách hàng
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Loại sự cố
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Mức độ ưu tiên
+                    Thông tin Sự cố
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Trạng thái
@@ -693,7 +658,7 @@ export default function IncidentPage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="px-3 py-8 text-center">
+                    <td colSpan={8} className="px-3 py-8 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-red-600" />
                         <span className="text-slate-600">Đang tải danh sách sự cố...</span>
@@ -703,11 +668,41 @@ export default function IncidentPage() {
                 ) : filteredIncidents.length > 0 ? (
                   filteredIncidents.map((incident, index) => (
                     <tr key={incident.id} className="hover:bg-slate-50/50 transition-colors duration-150">
+                      {/* STT */}
                       <td className="px-3 py-2 text-center">
                         <span className="text-sm font-medium text-slate-600">
                           {index + 1}
                         </span>
                       </td>
+                      
+                      {/* Người xử lý */}
+                      <td className="px-3 py-2">
+                        <div>
+                          <div className="text-sm text-slate-900">{incident.handler.fullName}</div>
+                          <div className="text-xs text-slate-500">{incident.handler.position}</div>
+                        </div>
+                      </td>
+                      
+                      {/* Khách hàng */}
+                      <td className="px-3 py-2">
+                        <div className="text-sm text-slate-700">
+                          {incident.customer ? (
+                            <div>
+                              <div className="font-medium">{incident.customer.fullCompanyName}</div>
+                              <div className="text-xs text-slate-500">({incident.customer.shortName})</div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Loại sự cố */}
+                      <td className="px-3 py-2">
+                        <div className="text-sm text-slate-700">{formatIncidentType(incident.incidentType)}</div>
+                      </td>
+                      
+                      {/* Thông tin Sự cố */}
                       <td className="px-3 py-2">
                         <div>
                           <div className="text-sm font-medium text-slate-900 mb-1">
@@ -721,31 +716,15 @@ export default function IncidentPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-2">
-                        <div>
-                          <div className="text-sm text-slate-900">{incident.reporter.fullName}</div>
-                          <div className="text-xs text-slate-500">{incident.reporter.position}</div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div>
-                          <div className="text-sm text-slate-900">{incident.handler.fullName}</div>
-                          <div className="text-xs text-slate-500">{incident.handler.position}</div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="text-sm text-slate-700">{formatIncidentType(incident.incidentType)}</div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getPriorityColor(incident.priority)}`}>
-                          {getPriorityText(incident.priority)}
-                        </span>
-                      </td>
+                      
+                      {/* Trạng thái */}
                       <td className="px-3 py-2">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(incident.status)}`}>
                           {getStatusText(incident.status)}
                         </span>
                       </td>
+                      
+                      {/* Thời gian */}
                       <td className="px-3 py-2">
                         <div className="text-sm text-slate-700">
                           <div>Bắt đầu: {formatDate(incident.startDate)}</div>
@@ -754,6 +733,8 @@ export default function IncidentPage() {
                           )}
                         </div>
                       </td>
+                      
+                      {/* Hành động */}
                       <td className="px-3 py-2">
                         <div className="flex items-center space-x-1">
                           <button 
@@ -776,12 +757,12 @@ export default function IncidentPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className="px-3 py-8 text-center">
+                    <td colSpan={8} className="px-3 py-8 text-center">
                       <div className="text-slate-400 mb-4">
                         <AlertTriangle className="h-16 w-16 mx-auto" />
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-2">Không tìm thấy sự cố nào</h3>
-                      <p className="text-slate-500">Thử thay đổi từ khóa tìm kiếm hoặc báo cáo sự cố mới</p>
+                      <p className="text-slate-500">Thử thay đổi từ khóa tìm kiếm hoặc tạo case xử lý sự cố mới</p>
                     </td>
                   </tr>
                 )}

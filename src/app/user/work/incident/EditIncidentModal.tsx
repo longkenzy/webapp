@@ -9,7 +9,13 @@ interface Incident {
   description: string;
   endDate?: string;
   status: string;
-  priority: string;
+  customer?: {
+    id: string;
+    fullCompanyName: string;
+    shortName: string;
+    contactPerson?: string;
+    contactPhone?: string;
+  };
   reporter: {
     id: string;
     fullName: string;
@@ -55,10 +61,11 @@ export default function EditIncidentModal({
   incidentData 
 }: EditIncidentModalProps) {
   const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     endDate: '',
     status: 'REPORTED',
-    priority: 'MEDIUM',
+    customer: '',
     notes: ''
   });
 
@@ -68,11 +75,41 @@ export default function EditIncidentModal({
       setFormData({
         endDate: incidentData.endDate ? new Date(incidentData.endDate).toISOString().slice(0, 16) : '',
         status: incidentData.status,
-        priority: incidentData.priority,
+        customer: incidentData.customer?.id || '',
         notes: incidentData.notes || ''
       });
     }
   }, [isOpen, incidentData]);
+
+  // Fetch customers
+  const fetchCustomers = async () => {
+    try {
+      const response = await fetch('/api/partners/list', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=300',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCustomers(data || []);
+      } else {
+        console.error('Failed to fetch customers:', response.status, response.statusText);
+        setCustomers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      setCustomers([]);
+    }
+  };
+
+  // Fetch customers when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchCustomers();
+    }
+  }, [isOpen]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -98,38 +135,10 @@ export default function EditIncidentModal({
     }
   };
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'CRITICAL':
-        return 'Nghiêm trọng';
-      case 'HIGH':
-        return 'Cao';
-      case 'MEDIUM':
-        return 'Trung bình';
-      case 'LOW':
-        return 'Thấp';
-      default:
-        return priority;
-    }
-  };
 
   const formatIncidentType = (incidentType: string) => {
-    switch (incidentType) {
-      case 'security-breach':
-        return 'Vi phạm bảo mật';
-      case 'system-failure':
-        return 'Lỗi hệ thống';
-      case 'data-loss':
-        return 'Mất dữ liệu';
-      case 'network-issue':
-        return 'Sự cố mạng';
-      case 'hardware-failure':
-        return 'Lỗi phần cứng';
-      case 'software-bug':
-        return 'Lỗi phần mềm';
-      default:
-        return incidentType;
-    }
+    // Return the incident type as is since it's now managed by admin config
+    return incidentType;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,7 +164,7 @@ export default function EditIncidentModal({
       const updateData = {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
-        priority: formData.priority,
+        customerId: formData.customer || null,
         notes: formData.notes || null
       };
 
@@ -242,6 +251,18 @@ export default function EditIncidentModal({
                 <span className="text-sm font-medium text-gray-600">Người xử lý:</span>
                 <p className="text-sm text-gray-900 mt-1">{incidentData.handler.fullName}</p>
               </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600">Khách hàng:</span>
+                <p className="text-sm text-gray-900 mt-1">
+                  {incidentData.customer ? (
+                    <span>
+                      {incidentData.customer.fullCompanyName} ({incidentData.customer.shortName})
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </p>
+              </div>
               <div className="md:col-span-2">
                 <span className="text-sm font-medium text-gray-600">Mô tả:</span>
                 <p className="text-sm text-gray-900 mt-1">{incidentData.description}</p>
@@ -269,21 +290,23 @@ export default function EditIncidentModal({
               </p>
             </div>
 
-            {/* Priority */}
+            {/* Customer */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <AlertTriangle className="w-4 h-4 inline mr-2" />
-                Mức độ ưu tiên
+                Khách hàng
               </label>
               <select
-                value={formData.priority}
-                onChange={(e) => handleInputChange('priority', e.target.value)}
+                value={formData.customer}
+                onChange={(e) => handleInputChange('customer', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
-                <option value="CRITICAL">Nghiêm trọng</option>
-                <option value="HIGH">Cao</option>
-                <option value="MEDIUM">Trung bình</option>
-                <option value="LOW">Thấp</option>
+                <option value="">Chọn khách hàng</option>
+                {customers.map(customer => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.fullCompanyName} ({customer.shortName})
+                  </option>
+                ))}
               </select>
             </div>
 

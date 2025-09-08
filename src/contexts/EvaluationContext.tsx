@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { EvaluationType, EvaluationCategory } from '@prisma/client';
 
 // Re-export enums for easier importing
@@ -55,7 +55,7 @@ export const EvaluationProvider: React.FC<EvaluationProviderProps> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchConfigs = async () => {
+  const fetchConfigs = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -74,20 +74,20 @@ export const EvaluationProvider: React.FC<EvaluationProviderProps> = ({ children
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getConfig = (type: EvaluationType, category: EvaluationCategory): EvaluationConfig | null => {
+  const getConfig = useCallback((type: EvaluationType, category: EvaluationCategory): EvaluationConfig | null => {
     return configs.find(config => 
       config.type === type && 
       config.category === category && 
       config.isActive
     ) || null;
-  };
+  }, [configs]);
 
-  const getConfigOptions = (type: EvaluationType, category: EvaluationCategory): EvaluationOption[] => {
+  const getConfigOptions = useCallback((type: EvaluationType, category: EvaluationCategory): EvaluationOption[] => {
     const config = getConfig(type, category);
     return config ? config.options.filter(option => option.isActive) : [];
-  };
+  }, [getConfig]);
 
   const updateConfig = async (
     configId: string, 

@@ -11,3 +11,4 @@ VALUES
     ('clx0000000000000000000008', 'Từ chối truy cập', 'Không thể truy cập vào hệ thống', true, NOW(), NOW()),
     ('clx0000000000000000000009', 'Khác', 'Các sự cố khác không thuộc danh mục trên', true, NOW(), NOW())
 ON CONFLICT ("name") DO NOTHING;
+

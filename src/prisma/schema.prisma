@@ -29,6 +29,8 @@ model User {
   receivingCaseWorklogs ReceivingCaseWorklog[]
   incidentComments      IncidentComment[]
   incidentWorklogs      IncidentWorklog[]
+  maintenanceCaseComments MaintenanceCaseComment[]
+  maintenanceCaseWorklogs MaintenanceCaseWorklog[]
   schedules             Schedule[]
   employee              Employee?              @relation(fields: [employeeId], references: [id])
 }
@@ -64,6 +66,8 @@ model Employee {
   receivingCasesRequester ReceivingCase[] @relation("RequesterReceivingCases")
   incidentsReporter       Incident[]      @relation("ReporterIncidents")
   incidentsHandler        Incident[]      @relation("HandlerIncidents")
+  maintenanceCasesReporter MaintenanceCase[] @relation("ReporterMaintenanceCases")
+  maintenanceCasesHandler  MaintenanceCase[] @relation("HandlerMaintenanceCases")
   user                    User?
 }
 
@@ -380,6 +384,75 @@ model IncidentWorklog {
   user       User     @relation(fields: [userId], references: [id])
 }
 
+model Equipment {
+  id              String            @id @default(cuid())
+  name            String
+  model           String?
+  serialNumber    String?
+  location        String?
+  status          String            @default("active")
+  purchaseDate    DateTime?
+  warrantyExpiry  DateTime?
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  maintenanceCases MaintenanceCase[]
+}
+
+model MaintenanceCase {
+  id                   String                 @id @default(cuid())
+  title                String
+  description          String
+  reporterId           String
+  handlerId            String
+  equipmentId          String
+  maintenanceType      MaintenanceType
+  startDate            DateTime
+  endDate              DateTime?
+  status               MaintenanceCaseStatus  @default(RECEIVED)
+  notes                String?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  userAssessmentDate   DateTime?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  reporter             Employee               @relation("ReporterMaintenanceCases", fields: [reporterId], references: [id])
+  handler              Employee               @relation("HandlerMaintenanceCases", fields: [handlerId], references: [id])
+  equipment            Equipment              @relation(fields: [equipmentId], references: [id])
+  comments             MaintenanceCaseComment[]
+  worklogs             MaintenanceCaseWorklog[]
+}
+
+model MaintenanceCaseComment {
+  id                String           @id @default(cuid())
+  maintenanceCaseId String
+  userId            String
+  content           String
+  createdAt         DateTime         @default(now())
+  maintenanceCase   MaintenanceCase  @relation(fields: [maintenanceCaseId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+}
+
+model MaintenanceCaseWorklog {
+  id                String           @id @default(cuid())
+  maintenanceCaseId String
+  userId            String
+  duration          Int
+  description       String
+  createdAt         DateTime         @default(now())
+  maintenanceCase   MaintenanceCase  @relation(fields: [maintenanceCaseId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+}
+
 enum Role {
   ADMIN
   IT_LEAD
@@ -426,5 +499,21 @@ enum IncidentStatus {
   PROCESSING
   COMPLETED
   CANCELLED
+}
+
+enum MaintenanceCaseStatus {
+  RECEIVED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceType {
+  PREVENTIVE
+  CORRECTIVE
+  EMERGENCY
+  ROUTINE
+  UPGRADE
+  INSPECTION
 }
 

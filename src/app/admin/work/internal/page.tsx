@@ -221,7 +221,10 @@ export default function AdminInternalWorkPage() {
 
   const handleSaveNewCaseType = async () => {
     if (!newCaseTypeName.trim()) {
-      alert('Vui lòng nhập tên loại case');
+      toast.error('Vui lòng nhập tên loại case', {
+        duration: 3000,
+        position: 'top-right',
+      });
       return;
     }
 
@@ -267,11 +270,17 @@ export default function AdminInternalWorkPage() {
         setNewCaseTypeName('');
       } else {
         const error = await response.json();
-        alert(error.message || 'Có lỗi xảy ra khi thêm loại case');
+        toast.error(error.message || 'Có lỗi xảy ra khi thêm loại case', {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error adding case type:', error);
-      alert('Có lỗi xảy ra khi thêm loại case');
+      toast.error('Có lỗi xảy ra khi thêm loại case', {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setSaving(false);
     }
@@ -345,15 +354,24 @@ export default function AdminInternalWorkPage() {
           }
         }
         
-        alert(editingCaseType ? 'Cập nhật loại case thành công!' : 'Tạo loại case thành công!');
+        toast.success(editingCaseType ? 'Cập nhật loại case thành công!' : 'Tạo loại case thành công!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         handleCloseCaseTypeModal();
       } else {
         const error = await response.json();
-        alert(`Lỗi: ${error.error || 'Không thể lưu loại case'}`);
+        toast.error(`Lỗi: ${error.error || 'Không thể lưu loại case'}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error saving case type:', error);
-      alert('Lỗi kết nối. Vui lòng thử lại!');
+      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
     }
   };
 
@@ -372,7 +390,10 @@ export default function AdminInternalWorkPage() {
         setCaseTypes(prevCaseTypes => 
           prevCaseTypes.filter(ct => ct.id !== caseType.id)
         );
-        alert('Xóa loại case thành công!');
+        toast.success('Xóa loại case thành công!', {
+          duration: 3000,
+          position: 'top-right',
+        });
       } else {
         const error = await response.json();
         if (response.status === 404) {
@@ -380,14 +401,23 @@ export default function AdminInternalWorkPage() {
           setCaseTypes(prevCaseTypes => 
             prevCaseTypes.filter(ct => ct.id !== caseType.id)
           );
-          alert('Case type đã được xóa hoặc không tồn tại');
+          toast.error('Case type đã được xóa hoặc không tồn tại', {
+            duration: 3000,
+            position: 'top-right',
+          });
         } else {
-          alert(`Lỗi: ${error.error || 'Không thể xóa loại case'}`);
+          toast.error(`Lỗi: ${error.error || 'Không thể xóa loại case'}`, {
+            duration: 4000,
+            position: 'top-right',
+          });
         }
       }
     } catch (error) {
       console.error('Error deleting case type:', error);
-      alert('Lỗi kết nối. Vui lòng thử lại!');
+      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
     }
   };
 
@@ -413,14 +443,23 @@ export default function AdminInternalWorkPage() {
               : ct
           )
         );
-        alert(`Đã ${caseType.isActive ? 'tắt' : 'bật'} loại case thành công!`);
+        toast.success(`Đã ${caseType.isActive ? 'tắt' : 'bật'} loại case thành công!`, {
+          duration: 3000,
+          position: 'top-right',
+        });
       } else {
         const error = await response.json();
-        alert(`Lỗi: ${error.error || 'Không thể cập nhật trạng thái'}`);
+        toast.error(`Lỗi: ${error.error || 'Không thể cập nhật trạng thái'}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error toggling case type status:', error);
-      alert('Lỗi kết nối. Vui lòng thử lại!');
+      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
     }
   };
 
@@ -543,14 +582,25 @@ export default function AdminInternalWorkPage() {
           )
         );
         
+        toast.success('Cập nhật đánh giá thành công!', {
+          duration: 3000,
+          position: 'top-right',
+        });
+        
         handleCloseEvaluationModal();
       } else {
         const error = await response.json();
-        alert(`Lỗi: ${error.error || 'Không thể cập nhật đánh giá'}`);
+        toast.error(`Lỗi: ${error.error || 'Không thể cập nhật đánh giá'}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error updating evaluation:', error);
-      alert('Lỗi kết nối. Vui lòng thử lại!');
+      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setEvaluating(false);
     }
@@ -1237,31 +1287,31 @@ export default function AdminInternalWorkPage() {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-gray-50 to-blue-50">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       STT
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Thông tin Case
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Người xử lý
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Trạng thái
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Thời gian
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Tổng điểm User
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Điểm Admin
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Tổng điểm
                     </th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Hành động
                     </th>
                   </tr>
@@ -1310,13 +1360,13 @@ export default function AdminInternalWorkPage() {
                             </div>
                           </div>
                         </td>
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 text-center">
                           <div>
                             <div className="text-sm text-gray-900">{case_.handler.fullName}</div>
                             <div className="text-xs text-gray-500">{case_.handler.position}</div>
                           </div>
                         </td>
-                            <td className="px-3 py-2">
+                            <td className="px-3 py-2 text-center">
                               <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
                             {getStatusText(case_.status)}
                           </span>
@@ -1370,8 +1420,8 @@ export default function AdminInternalWorkPage() {
                                 {grandTotal}
                               </span>
                             </td>
-                                                            <td className="px-3 py-2">
-                                  <div className="flex items-center space-x-1">
+                                                            <td className="px-3 py-2 text-center">
+                                  <div className="flex items-center justify-center space-x-1">
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -1665,34 +1715,6 @@ export default function AdminInternalWorkPage() {
               </div>
             </div>
 
-            {/* Work Form Configuration */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-purple-100 rounded-md">
-                    <Settings className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Hình thức làm việc</h3>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  Cấu hình các hình thức xử lý case
-                </p>
-              </div>
-              <div className="p-6">
-                <div className="space-y-3">
-                  {['Onsite', 'Offsite', 'Remote'].map((form) => (
-                    <label key={form} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        defaultChecked={true}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <span className="ml-2 text-sm text-gray-700">{form}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>

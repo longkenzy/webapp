@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, Plus, Trash2, Package } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -111,6 +112,31 @@ export default function EditReceivingCaseModal({
     }
   }, [isOpen, caseData]);
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      
+      // Prevent body scroll
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        // Restore body scroll
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -166,7 +192,10 @@ export default function EditReceivingCaseModal({
       const endDate = new Date(formData.endDate);
       
       if (endDate <= startDate) {
-        alert('Ngày kết thúc phải lớn hơn ngày bắt đầu!');
+        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         return;
       }
     }
@@ -206,6 +235,16 @@ export default function EditReceivingCaseModal({
         const result = await response.json();
         console.log('Case updated successfully:', result);
         
+        // Show success notification
+        toast.success('Cập nhật case nhận hàng thành công!', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
+        
         // Close modal and pass updated data
         onClose();
         if (onSuccess && result) {
@@ -214,11 +253,29 @@ export default function EditReceivingCaseModal({
       } else {
         const errorData = await response.json();
         console.error('Failed to update case:', errorData);
-        alert('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.');
+        
+        // Show error notification
+        toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
+        });
       }
     } catch (error) {
       console.error('Error updating case:', error);
-      alert('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.');
+      
+      // Show error notification
+      toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -236,7 +293,7 @@ export default function EditReceivingCaseModal({
   if (!isOpen || !caseData) return null;
 
   return (
-    <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -276,39 +333,42 @@ export default function EditReceivingCaseModal({
             </div>
           </div>
 
-          {/* End Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Calendar className="inline h-4 w-4 mr-1" />
-              Ngày kết thúc
-            </label>
-            <input
-              type="datetime-local"
-              value={formData.endDate}
-              onChange={(e) => handleInputChange('endDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Để trống nếu chưa hoàn thành
-            </p>
-          </div>
+          {/* End Date and Status */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* End Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Calendar className="inline h-4 w-4 mr-1" />
+                Ngày kết thúc
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.endDate}
+                onChange={(e) => handleInputChange('endDate', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Để trống nếu chưa hoàn thành
+              </p>
+            </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <CheckCircle className="inline h-4 w-4 mr-1" />
-              Trạng thái
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => handleInputChange('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="RECEIVED">Tiếp nhận</option>
-              <option value="IN_PROGRESS">Đang xử lý</option>
-              <option value="COMPLETED">Hoàn thành</option>
-              <option value="CANCELLED">Hủy</option>
-            </select>
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <CheckCircle className="inline h-4 w-4 mr-1" />
+                Trạng thái
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => handleInputChange('status', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="RECEIVED">Tiếp nhận</option>
+                <option value="IN_PROGRESS">Đang xử lý</option>
+                <option value="COMPLETED">Hoàn thành</option>
+                <option value="CANCELLED">Hủy</option>
+              </select>
+            </div>
           </div>
 
           {/* Products */}

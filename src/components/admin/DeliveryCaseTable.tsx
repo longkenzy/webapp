@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { DeliveryCaseStatus, EvaluationType, EvaluationCategory } from '@prisma/client';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -265,11 +266,17 @@ export default function DeliveryCaseTable({
         handleCloseEvaluationModal();
       } else {
         const error = await response.json();
-        alert(`Lỗi: ${error.error || 'Không thể cập nhật đánh giá'}`);
+        toast.error(`Lỗi: ${error.error || 'Không thể cập nhật đánh giá'}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error updating evaluation:', error);
-      alert('Lỗi kết nối. Vui lòng thử lại!');
+      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setEvaluating(false);
     }

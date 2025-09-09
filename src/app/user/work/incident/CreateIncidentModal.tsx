@@ -6,6 +6,7 @@ import { X, User, AlertTriangle, FileText, Calendar, Settings, CheckCircle, Refr
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -297,7 +298,10 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
       const endDate = new Date(formData.endDate);
       
       if (endDate <= startDate) {
-        alert('Ngày kết thúc phải lớn hơn ngày bắt đầu!');
+        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         return;
       }
     }
@@ -343,7 +347,10 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
         console.log('Incident created successfully:', result);
         
         // Show success message
-        alert('Tạo case xử lý sự cố thành công!');
+        toast.success('Tạo case xử lý sự cố thành công!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         
         // Reset form data
         resetForm();
@@ -367,11 +374,17 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
         }
          
         console.error('Failed to create incident:', error);
-        alert(`Lỗi: ${error.error || 'Không thể tạo sự cố'}`);
+        toast.error(`Lỗi: ${error.error || 'Không thể tạo sự cố'}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Lỗi kết nối. Vui lòng thử lại!');
+      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
     }
   };
 
@@ -432,7 +445,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                     {employees.length > 0 ? (
                       employees.map((employee) => (
                         <option key={employee.id} value={employee.id}>
-                          {employee.fullName} - {employee.position} ({employee.department})
+                          {employee.fullName}
                         </option>
                       ))
                     ) : (
@@ -475,7 +488,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                     {employees.length > 0 ? (
                       employees.map((employee) => (
                         <option key={employee.id} value={employee.id}>
-                          {employee.fullName} - {employee.position} ({employee.department})
+                          {employee.fullName}
                         </option>
                       ))
                     ) : (

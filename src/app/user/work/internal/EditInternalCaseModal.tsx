@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface InternalCase {
   id: string;
@@ -103,7 +104,10 @@ export default function EditInternalCaseModal({
       const endDate = new Date(formData.endDate);
       
       if (endDate <= startDate) {
-        alert('Ngày kết thúc phải lớn hơn ngày bắt đầu!');
+        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         return;
       }
     }
@@ -144,11 +148,17 @@ export default function EditInternalCaseModal({
       } else {
         const errorData = await response.json();
         console.error('Failed to update case:', errorData);
-        alert('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.');
+        toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error updating case:', error);
-      alert('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.');
+      toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setLoading(false);
     }

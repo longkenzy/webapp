@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, Calendar, CheckCircle, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface Incident {
+interface Warranty {
   id: string;
   title: string;
   description: string;
@@ -29,7 +29,7 @@ interface Incident {
     position: string;
     department: string;
   };
-  incidentType: string;
+  warrantyType: string;
   startDate: string;
   notes?: string;
   userDifficultyLevel?: number;
@@ -48,19 +48,19 @@ interface Incident {
   updatedAt: string;
 }
 
-interface EditIncidentModalProps {
+interface EditWarrantyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (updatedIncident: Incident) => void;
-  incidentData: Incident | null;
+  onSuccess?: (updatedWarranty: Warranty) => void;
+  warrantyData: Warranty | null;
 }
 
-export default function EditIncidentModal({ 
+export default function EditWarrantyModal({ 
   isOpen, 
   onClose, 
   onSuccess, 
-  incidentData 
-}: EditIncidentModalProps) {
+  warrantyData 
+}: EditWarrantyModalProps) {
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -72,15 +72,15 @@ export default function EditIncidentModal({
 
   // Initialize form data when modal opens
   useEffect(() => {
-    if (isOpen && incidentData) {
+    if (isOpen && warrantyData) {
       setFormData({
-        endDate: incidentData.endDate ? new Date(incidentData.endDate).toISOString().slice(0, 16) : '',
-        status: incidentData.status,
-        customer: incidentData.customer?.id || '',
-        notes: incidentData.notes || ''
+        endDate: warrantyData.endDate ? new Date(warrantyData.endDate).toISOString().slice(0, 16) : '',
+        status: warrantyData.status,
+        customer: warrantyData.customer?.id || '',
+        notes: warrantyData.notes || ''
       });
     }
-  }, [isOpen, incidentData]);
+  }, [isOpen, warrantyData]);
 
   // Fetch customers
   const fetchCustomers = async () => {
@@ -136,20 +136,33 @@ export default function EditIncidentModal({
     }
   };
 
-
-  const formatIncidentType = (incidentType: string) => {
-    // Return the incident type as is since it's now managed by admin config
-    return incidentType;
+  const formatWarrantyType = (warrantyType: string) => {
+    switch (warrantyType) {
+      case 'hardware-warranty':
+        return 'Bảo hành phần cứng';
+      case 'software-warranty':
+        return 'Bảo hành phần mềm';
+      case 'service-warranty':
+        return 'Bảo hành dịch vụ';
+      case 'extended-warranty':
+        return 'Bảo hành mở rộng';
+      case 'replacement-warranty':
+        return 'Bảo hành thay thế';
+      case 'repair-warranty':
+        return 'Bảo hành sửa chữa';
+      default:
+        return warrantyType;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!incidentData) return;
+    if (!warrantyData) return;
 
     // Validate end date
     if (formData.endDate) {
-      const startDate = new Date(incidentData.startDate);
+      const startDate = new Date(warrantyData.startDate);
       const endDate = new Date(formData.endDate);
       
       if (endDate <= startDate) {
@@ -172,12 +185,12 @@ export default function EditIncidentModal({
         notes: formData.notes || null
       };
 
-      console.log('=== Updating Incident ===');
-      console.log('Incident ID:', incidentData.id);
+      console.log('=== Updating Warranty ===');
+      console.log('Warranty ID:', warrantyData.id);
       console.log('Update data:', updateData);
 
       // Send to API
-      const response = await fetch(`/api/incidents/${incidentData.id}`, {
+      const response = await fetch(`/api/warranties/${warrantyData.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -189,7 +202,7 @@ export default function EditIncidentModal({
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Incident updated successfully:', result);
+        console.log('Warranty updated successfully:', result);
         
         // Close modal and pass updated data
         onClose();
@@ -198,15 +211,15 @@ export default function EditIncidentModal({
         }
       } else {
         const errorData = await response.json();
-        console.error('Failed to update incident:', errorData);
-        toast.error('Có lỗi xảy ra khi cập nhật sự cố. Vui lòng thử lại.', {
+        console.error('Failed to update warranty:', errorData);
+        toast.error('Có lỗi xảy ra khi cập nhật case bảo hành. Vui lòng thử lại.', {
           duration: 4000,
           position: 'top-right',
         });
       }
     } catch (error) {
-      console.error('Error updating incident:', error);
-      toast.error('Có lỗi xảy ra khi cập nhật sự cố. Vui lòng thử lại.', {
+      console.error('Error updating warranty:', error);
+      toast.error('Có lỗi xảy ra khi cập nhật case bảo hành. Vui lòng thử lại.', {
         duration: 4000,
         position: 'top-right',
       });
@@ -215,20 +228,20 @@ export default function EditIncidentModal({
     }
   };
 
-  if (!isOpen || !incidentData) return null;
+  if (!isOpen || !warrantyData) return null;
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-red-50 to-orange-50">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-red-100 rounded-md">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="p-2 bg-blue-100 rounded-md">
+              <Shield className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Chỉnh sửa Sự cố</h2>
-              <p className="text-sm text-gray-600">Cập nhật thông tin sự cố</p>
+              <h2 className="text-xl font-semibold text-gray-900">Chỉnh sửa Case Bảo Hành</h2>
+              <p className="text-sm text-gray-600">Cập nhật thông tin case bảo hành</p>
             </div>
           </div>
           <button
@@ -241,32 +254,32 @@ export default function EditIncidentModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Incident Info (Read-only) */}
+          {/* Warranty Info (Read-only) */}
           <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Thông tin Sự cố</h3>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Thông tin Case Bảo Hành</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <span className="text-sm font-medium text-gray-600">Tiêu đề:</span>
-                <p className="text-sm text-gray-900 mt-1">{incidentData.title}</p>
+                <p className="text-sm text-gray-900 mt-1">{warrantyData.title}</p>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-600">Loại sự cố:</span>
-                <p className="text-sm text-gray-900 mt-1">{formatIncidentType(incidentData.incidentType)}</p>
+                <span className="text-sm font-medium text-gray-600">Loại bảo hành:</span>
+                <p className="text-sm text-gray-900 mt-1">{formatWarrantyType(warrantyData.warrantyType)}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-600">Người báo cáo:</span>
-                <p className="text-sm text-gray-900 mt-1">{incidentData.reporter.fullName}</p>
+                <p className="text-sm text-gray-900 mt-1">{warrantyData.reporter.fullName}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-600">Người xử lý:</span>
-                <p className="text-sm text-gray-900 mt-1">{incidentData.handler.fullName}</p>
+                <p className="text-sm text-gray-900 mt-1">{warrantyData.handler.fullName}</p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-600">Khách hàng:</span>
                 <p className="text-sm text-gray-900 mt-1">
-                  {incidentData.customer ? (
+                  {warrantyData.customer ? (
                     <span>
-                      {incidentData.customer.fullCompanyName} ({incidentData.customer.shortName})
+                      {warrantyData.customer.fullCompanyName} ({warrantyData.customer.shortName})
                     </span>
                   ) : (
                     <span className="text-gray-400">-</span>
@@ -275,7 +288,7 @@ export default function EditIncidentModal({
               </div>
               <div className="md:col-span-2">
                 <span className="text-sm font-medium text-gray-600">Mô tả:</span>
-                <p className="text-sm text-gray-900 mt-1">{incidentData.description}</p>
+                <p className="text-sm text-gray-900 mt-1">{warrantyData.description}</p>
               </div>
             </div>
           </div>
@@ -286,30 +299,30 @@ export default function EditIncidentModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-2" />
-                Thời gian giải quyết
+                Thời gian kết thúc
               </label>
               <input
                 type="datetime-local"
                 value={formData.endDate}
                 onChange={(e) => handleInputChange('endDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Chọn thời gian giải quyết"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Chọn thời gian kết thúc"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Để trống nếu chưa có thời gian giải quyết
+                Để trống nếu chưa có thời gian kết thúc
               </p>
             </div>
 
             {/* Customer */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                <AlertTriangle className="w-4 h-4 inline mr-2" />
+                <Shield className="w-4 h-4 inline mr-2" />
                 Khách hàng
               </label>
               <select
                 value={formData.customer}
                 onChange={(e) => handleInputChange('customer', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Chọn khách hàng</option>
                 {customers.map(customer => (
@@ -329,7 +342,7 @@ export default function EditIncidentModal({
               <select
                 value={formData.status}
                 onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="REPORTED">Báo cáo</option>
                 <option value="INVESTIGATING">Đang điều tra</option>
@@ -348,8 +361,8 @@ export default function EditIncidentModal({
                 value={formData.notes}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-                placeholder="Thêm ghi chú về sự cố..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                placeholder="Thêm ghi chú về case bảo hành..."
               />
             </div>
           </div>
@@ -366,7 +379,7 @@ export default function EditIncidentModal({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
               {loading ? (
                 <>
@@ -375,7 +388,7 @@ export default function EditIncidentModal({
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  <Shield className="h-4 w-4 mr-2" />
                   Cập nhật
                 </>
               )}

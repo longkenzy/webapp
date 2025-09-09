@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Building2, Phone, MapPin, User, Edit, Trash2, Save, X, Search, Plus } from "lucide-react";
+import toast from 'react-hot-toast';
 
 interface Partner {
   id: string;
@@ -130,11 +131,17 @@ export default function PartnersPage() {
         cancelEditing(partnerId);
       } else {
         const error = await response.json();
-        alert(`Lỗi: ${error.error}`);
+        toast.error(`Lỗi: ${error.error}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error saving partner:', error);
-      alert('Có lỗi xảy ra khi lưu thay đổi');
+      toast.error('Có lỗi xảy ra khi lưu thay đổi', {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setSaving(null);
     }
@@ -156,11 +163,17 @@ export default function PartnersPage() {
         setFilteredPartners(prev => prev.filter(p => p.id !== partnerId));
       } else {
         const error = await response.json();
-        alert(`Lỗi: ${error.error}`);
+        toast.error(`Lỗi: ${error.error}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error deleting partner:', error);
-      alert('Có lỗi xảy ra khi xóa nhà cung cấp');
+      toast.error('Có lỗi xảy ra khi xóa nhà cung cấp', {
+        duration: 4000,
+        position: 'top-right',
+      });
     }
   };
 
@@ -199,7 +212,10 @@ export default function PartnersPage() {
   // Save new partner
   const saveNewPartner = async () => {
     if (!newPartnerData.fullCompanyName || !newPartnerData.shortName || !newPartnerData.address) {
-      alert('Vui lòng điền đầy đủ tên công ty, tên viết tắt và địa chỉ');
+      toast.error('Vui lòng điền đầy đủ tên công ty, tên viết tắt và địa chỉ', {
+        duration: 3000,
+        position: 'top-right',
+      });
       return;
     }
 
@@ -220,11 +236,17 @@ export default function PartnersPage() {
         cancelAddingNew();
       } else {
         const error = await response.json();
-        alert(`Lỗi: ${error.error}`);
+        toast.error(`Lỗi: ${error.error}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error creating partner:', error);
-      alert('Có lỗi xảy ra khi tạo nhà cung cấp mới');
+      toast.error('Có lỗi xảy ra khi tạo nhà cung cấp mới', {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setSaving(null);
     }

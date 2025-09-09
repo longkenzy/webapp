@@ -29,3 +29,6 @@ Write-Host "  .\setup-db-prod.ps1  - Switch to PRODUCTION database" -ForegroundC
 Write-Host "  .\check-current-db.ps1 - Check current environment" -ForegroundColor White
 
 
+
+
+

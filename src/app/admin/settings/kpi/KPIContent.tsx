@@ -5,6 +5,7 @@ import { BarChart3, Settings, Plus, Edit, Trash, Save, X, RefreshCw, Database } 
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { useEvaluationConfig } from '@/hooks/useEvaluation';
 import { EvaluationType, EvaluationCategory } from '@prisma/client';
+import toast from 'react-hot-toast';
 
 interface EvaluationOption {
   id: string;
@@ -123,14 +124,23 @@ const KPIContent: React.FC = () => {
       const result = await response.json();
       
       if (result.success) {
-        alert('Dữ liệu mẫu đã được tạo thành công!');
+        toast.success('Dữ liệu mẫu đã được tạo thành công!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         await fetchConfigs();
       } else {
-        alert(result.error || 'Có lỗi xảy ra khi tạo dữ liệu mẫu');
+        toast.error(result.error || 'Có lỗi xảy ra khi tạo dữ liệu mẫu', {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error seeding data:', error);
-      alert('Có lỗi xảy ra khi tạo dữ liệu mẫu');
+      toast.error('Có lỗi xảy ra khi tạo dữ liệu mẫu', {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setIsSeeding(false);
     }

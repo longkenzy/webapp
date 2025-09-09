@@ -6,6 +6,7 @@ import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import { useSession } from 'next-auth/react';
 import { ReceivingCaseStatus } from '@prisma/client';
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -346,7 +347,10 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
     try {
       // Check if we have current employee
       if (!currentEmployee) {
-        alert('Không tìm thấy thông tin nhân viên. Vui lòng thử lại.');
+        toast.error('Không tìm thấy thông tin nhân viên. Vui lòng thử lại.', {
+          duration: 4000,
+          position: 'top-right',
+        });
         return;
       }
 

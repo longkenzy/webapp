@@ -391,12 +391,46 @@ export default function AdminMaintenanceWorkPage() {
     }
   };
 
+  // Helper functions to get evaluation text
+  const getDifficultyText = (level: number) => {
+    const options = getFieldOptions(EvaluationCategory.DIFFICULTY);
+    const option = options.find(opt => opt.points === level);
+    return option ? `${option.points} - ${option.label}` : 'Chưa đánh giá';
+  };
+
+  const getEstimatedTimeText = (level: number) => {
+    const options = getFieldOptions(EvaluationCategory.TIME);
+    const option = options.find(opt => opt.points === level);
+    return option ? `${option.points} - ${option.label}` : 'Chưa đánh giá';
+  };
+
+  const getImpactText = (level: number) => {
+    const options = getFieldOptions(EvaluationCategory.IMPACT);
+    const option = options.find(opt => opt.points === level);
+    return option ? `${option.points} - ${option.label}` : 'Chưa đánh giá';
+  };
+
+  const getUrgencyText = (level: number) => {
+    const options = getFieldOptions(EvaluationCategory.URGENCY);
+    const option = options.find(opt => opt.points === level);
+    return option ? `${option.points} - ${option.label}` : 'Chưa đánh giá';
+  };
+
+  const getFormText = (score?: number) => {
+    if (score === undefined || score === null) return 'Chưa đánh giá';
+    return `${score} điểm`;
+  };
+
   // Check if maintenance case is evaluated by admin
   const isMaintenanceCaseEvaluatedByAdmin = (case_: MaintenanceCase) => {
-    return case_.adminDifficultyLevel && 
-           case_.adminEstimatedTime && 
-           case_.adminImpactLevel && 
-           case_.adminUrgencyLevel;
+    return case_.adminDifficultyLevel !== null && 
+           case_.adminDifficultyLevel !== undefined &&
+           case_.adminEstimatedTime !== null && 
+           case_.adminEstimatedTime !== undefined &&
+           case_.adminImpactLevel !== null && 
+           case_.adminImpactLevel !== undefined &&
+           case_.adminUrgencyLevel !== null && 
+           case_.adminUrgencyLevel !== undefined;
   };
 
   // Check if there are active filters
@@ -722,137 +756,262 @@ export default function AdminMaintenanceWorkPage() {
             {/* Maintenance Cases Table */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               {loading ? (
-                <div className="p-8 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Đang tải...</p>
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                  <span className="ml-2 text-gray-600">Đang tải...</span>
                 </div>
               ) : filteredMaintenanceCases.length === 0 ? (
-                <div className="p-8 text-center">
-                  <Wrench className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Không có case bảo trì nào</p>
+                <div className="text-center py-12">
+                  <Wrench className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">Không có case bảo trì nào</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {hasActiveFilters
+                      ? 'Không tìm thấy case bảo trì phù hợp với bộ lọc.'
+                      : 'Chưa có case bảo trì nào được tạo.'}
+                  </p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Case Bảo Trì
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Người Xử Lý
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Thiết Bị
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Trạng Thái
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Thời Gian
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Thao Tác
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredMaintenanceCases.map((case_) => (
-                        <React.Fragment key={case_.id}>
-                          <tr className={`hover:bg-gray-50 ${deletedMaintenanceCases.has(case_.id) ? 'opacity-50' : ''}`}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <button
-                                  onClick={() => toggleRowExpansion(case_.id)}
-                                  className="mr-2 p-1 hover:bg-gray-200 rounded"
-                                >
-                                  {expandedRows.has(case_.id) ? (
-                                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                                  ) : (
-                                    <ChevronRight className="h-4 w-4 text-gray-500" />
-                                  )}
-                                </button>
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {case_.title}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {formatMaintenanceType(case_.maintenanceType)}
-                                  </div>
-                                </div>
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        STT
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thông tin case
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Người xử lý
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thiết bị
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Trạng thái
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Thời gian
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tổng điểm User
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Điểm Admin
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Tổng điểm
+                      </th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Hành động
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredMaintenanceCases.map((case_, index) => (
+                      <React.Fragment key={case_.id}>
+                        <tr 
+                          className={`hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer ${
+                            !isMaintenanceCaseEvaluatedByAdmin(case_) ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                          }`}
+                          onClick={() => toggleRowExpansion(case_.id)}
+                        >
+                          {/* STT */}
+                          <td className="px-3 py-2 whitespace-nowrap text-center">
+                            <span className="text-xs font-medium text-gray-600">
+                              {index + 1}
+                            </span>
+                          </td>
+                          
+                          {/* Thông tin case */}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <div>
+                              <div className="text-xs font-medium text-gray-900">
+                                {case_.title}
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{case_.handler.fullName}</div>
-                              <div className="text-sm text-gray-500">{case_.handler.position}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{case_.equipment.name}</div>
-                              <div className="text-sm text-gray-500">{case_.equipment.location}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(case_.status)}`}>
-                                {getStatusLabel(case_.status)}
+                              <div className="text-xs text-gray-500">
+                                Tạo: {new Date(case_.createdAt).toLocaleString('vi-VN')}
+                              </div>
+                            </div>
+                          </td>
+                          
+                          {/* Người xử lý */}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <div className="text-xs text-gray-900">{case_.handler.fullName}</div>
+                            <div className="text-xs text-gray-500">{case_.handler.position}</div>
+                          </td>
+                          
+                          {/* Thiết bị */}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <div className="text-xs text-gray-900">{case_.equipment.name}</div>
+                            <div className="text-xs text-gray-500">{case_.equipment.location}</div>
+                          </td>
+                          
+                          {/* Trạng thái */}
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(case_.status)}`}>
+                              {getStatusLabel(case_.status)}
+                            </span>
+                          </td>
+                          
+                          {/* Thời gian */}
+                          <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+                            <div>Bắt đầu: {new Date(case_.startDate).toLocaleString('vi-VN', { 
+                              year: 'numeric', 
+                              month: '2-digit', 
+                              day: '2-digit', 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}</div>
+                            {case_.endDate && (
+                              <div>Kết thúc: {new Date(case_.endDate).toLocaleString('vi-VN', { 
+                                year: 'numeric', 
+                                month: '2-digit', 
+                                day: '2-digit', 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}</div>
+                            )}
+                          </td>
+                          
+                          {/* Tổng điểm User */}
+                          <td className="px-3 py-2 whitespace-nowrap text-center">
+                            {case_.userDifficultyLevel && case_.userEstimatedTime && case_.userImpactLevel && case_.userUrgencyLevel ? (
+                              <span className="text-xs font-medium text-blue-600">
+                                {case_.userDifficultyLevel + case_.userEstimatedTime + case_.userImpactLevel + case_.userUrgencyLevel}
                               </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <div>{new Date(case_.startDate).toLocaleDateString('vi-VN')}</div>
-                              {case_.endDate && (
-                                <div className="text-gray-500">
-                                  {new Date(case_.endDate).toLocaleDateString('vi-VN')}
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
+                          </td>
+                          
+                          {/* Điểm Admin */}
+                          <td className="px-3 py-2 whitespace-nowrap text-center">
+                            {isMaintenanceCaseEvaluatedByAdmin(case_) ? (
+                              <span className="text-xs font-medium text-green-600">
+                                {(case_.adminDifficultyLevel || 0) + (case_.adminEstimatedTime || 0) + (case_.adminImpactLevel || 0) + (case_.adminUrgencyLevel || 0)}
+                              </span>
+                            ) : (
+                              <div className="flex items-center justify-center space-x-1">
+                                <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                <span className="text-xs font-medium text-yellow-600">
+                                  Chưa đánh giá
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                          
+                          {/* Tổng điểm */}
+                          <td className="px-3 py-2 whitespace-nowrap text-center">
+                            {(() => {
+                              const userScore = case_.userDifficultyLevel && case_.userEstimatedTime && case_.userImpactLevel && case_.userUrgencyLevel 
+                                ? case_.userDifficultyLevel + case_.userEstimatedTime + case_.userImpactLevel + case_.userUrgencyLevel 
+                                : 0;
+                              const adminScore = case_.adminDifficultyLevel && case_.adminEstimatedTime && case_.adminImpactLevel && case_.adminUrgencyLevel 
+                                ? case_.adminDifficultyLevel + case_.adminEstimatedTime + case_.adminImpactLevel + case_.adminUrgencyLevel 
+                                : 0;
+                              const totalScore = userScore + adminScore;
+                              const isAdminEvaluated = isMaintenanceCaseEvaluatedByAdmin(case_);
+                              
+                              if (totalScore > 0) {
+                                return (
+                                  <span className="text-xs font-bold text-purple-600">
+                                    {totalScore}
+                                  </span>
+                                );
+                              } else if (!isAdminEvaluated) {
+                                return (
+                                  <div className="flex items-center justify-center space-x-1">
+                                    <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                    <span className="text-xs font-medium text-yellow-600">
+                                      Chưa đánh giá
+                                    </span>
+                                  </div>
+                                );
+                              } else {
+                                return <span className="text-xs text-gray-400">-</span>;
+                              }
+                            })()}
+                          </td>
+                          
+                          {/* Hành động */}
+                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMaintenanceCase(case_);
+                                  setShowEvaluationModal(true);
+                                }}
+                                className={`p-1.5 rounded-md transition-colors duration-200 ${
+                                  isMaintenanceCaseEvaluatedByAdmin(case_) 
+                                    ? 'text-green-600 hover:bg-green-50' 
+                                    : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
+                                }`}
+                                title={isMaintenanceCaseEvaluatedByAdmin(case_) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
+                              >
+                                {isMaintenanceCaseEvaluatedByAdmin(case_) ? <Edit className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMaintenanceCase(case_);
+                                  setShowDeleteModal(true);
+                                }}
+                                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200"
+                                title="Xóa"
+                              >
+                                <Trash className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        
+                        {/* Expanded Row Content */}
+                        {expandedRows.has(case_.id) && (
+                          <tr>
+                            <td colSpan={10} className="px-3 py-2 bg-gray-50" onClick={(e) => e.stopPropagation()}>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Mô tả chi tiết */}
+                                <div>
+                                  <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
+                                    <FileText className="h-3 w-3 mr-2 text-blue-600" />
+                                    Mô tả chi tiết
+                                  </h4>
+                                  <p className="text-xs text-gray-600 leading-relaxed">{case_.description}</p>
                                 </div>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => {
-                                    setSelectedMaintenanceCase(case_);
-                                    setShowEvaluationModal(true);
-                                  }}
-                                  className="text-orange-600 hover:text-orange-900"
-                                  title="Đánh giá"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setSelectedMaintenanceCase(case_);
-                                    setShowDeleteModal(true);
-                                  }}
-                                  className="text-red-600 hover:text-red-900"
-                                  title="Xóa"
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </button>
+                                
+                                {/* Thông tin thiết bị */}
+                                <div>
+                                  <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
+                                    <Wrench className="h-3 w-3 mr-2 text-orange-600" />
+                                    Thông tin thiết bị
+                                  </h4>
+                                  <div className="text-xs text-gray-600">
+                                    <div className="font-medium text-gray-900">
+                                      {case_.equipment.name}
+                                    </div>
+                                    {case_.equipment.model && (
+                                      <div className="mt-1 text-gray-500">
+                                        Model: {case_.equipment.model}
+                                      </div>
+                                    )}
+                                    {case_.equipment.serialNumber && (
+                                      <div className="text-gray-500">
+                                        Số serial: {case_.equipment.serialNumber}
+                                      </div>
+                                    )}
+                                    {case_.equipment.location && (
+                                      <div className="text-gray-500">
+                                        Vị trí: {case_.equipment.location}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </td>
                           </tr>
-                          {expandedRows.has(case_.id) && (
-                            <tr>
-                              <td colSpan={6} className="px-6 py-4 bg-gray-50">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div>
-                                    <h4 className="text-sm font-medium text-gray-900 mb-2">Thông tin chi tiết</h4>
-                                    <div className="space-y-1 text-sm text-gray-600">
-                                      <p><span className="font-medium">Mô tả:</span> {case_.description}</p>
-                                      <p><span className="font-medium">Người báo cáo:</span> {case_.reporter.fullName}</p>
-                                      <p><span className="font-medium">Ghi chú:</span> {case_.notes || 'Không có'}</p>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <h4 className="text-sm font-medium text-gray-900 mb-2">Đánh giá</h4>
-                                    <div className="space-y-1 text-sm text-gray-600">
-                                      <p><span className="font-medium">Khó (User):</span> {case_.userDifficultyLevel || 'Chưa đánh giá'}</p>
-                                      <p><span className="font-medium">Thời gian (User):</span> {case_.userEstimatedTime || 'Chưa đánh giá'}</p>
-                                      <p><span className="font-medium">Ảnh hưởng (User):</span> {case_.userImpactLevel || 'Chưa đánh giá'}</p>
-                                      <p><span className="font-medium">Khẩn cấp (User):</span> {case_.userUrgencyLevel || 'Chưa đánh giá'}</p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
+                        )}
                         </React.Fragment>
                       ))}
                     </tbody>
@@ -873,140 +1032,223 @@ export default function AdminMaintenanceWorkPage() {
         </div>
       </div>
 
-      {/* Evaluation Modal */}
-      {showEvaluationModal && selectedMaintenanceCase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Đánh giá Case Bảo Trì
-              </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Mức độ khó
-                  </label>
-                  <select
-                    value={evaluationForm.adminDifficultyLevel}
-                    onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminDifficultyLevel: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  >
-                    <option value="">Chọn mức độ khó</option>
-                    {getFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Thời gian ước tính
-                  </label>
-                  <select
-                    value={evaluationForm.adminEstimatedTime}
-                    onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminEstimatedTime: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  >
-                    <option value="">Chọn thời gian ước tính</option>
-                    {getFieldOptions(EvaluationCategory.TIME).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Mức độ ảnh hưởng
-                  </label>
-                  <select
-                    value={evaluationForm.adminImpactLevel}
-                    onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminImpactLevel: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  >
-                    <option value="">Chọn mức độ ảnh hưởng</option>
-                    {getFieldOptions(EvaluationCategory.IMPACT).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Mức độ khẩn cấp
-                  </label>
-                  <select
-                    value={evaluationForm.adminUrgencyLevel}
-                    onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminUrgencyLevel: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  >
-                    <option value="">Chọn mức độ khẩn cấp</option>
-                    {getFieldOptions(EvaluationCategory.URGENCY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
+        {/* Evaluation Modal */}
+        {showEvaluationModal && selectedMaintenanceCase && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Đánh giá Case: {selectedMaintenanceCase.title}</h3>
+                <p className="text-sm text-gray-600">Đánh giá mức độ khó, thời gian, ảnh hưởng và khẩn cấp</p>
+              </div>
+              
+              <div className="p-6">
+                <div className="space-y-6">
+                  {/* User Assessment Display */}
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-blue-800">Đánh giá của User</h4>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>Mức độ khó: {getDifficultyText(selectedMaintenanceCase.userDifficultyLevel || 0)}</div>
+                      <div>Thời gian ước tính: {getEstimatedTimeText(selectedMaintenanceCase.userEstimatedTime || 0)}</div>
+                      <div>Mức độ ảnh hưởng: {getImpactText(selectedMaintenanceCase.userImpactLevel || 0)}</div>
+                      <div>Mức độ khẩn cấp: {getUrgencyText(selectedMaintenanceCase.userUrgencyLevel || 0)}</div>
+                      <div>Hình thức: {getFormText(selectedMaintenanceCase.userFormScore)}</div>
+                      <div className="font-medium text-blue-600">
+                        Tổng: {((selectedMaintenanceCase.userDifficultyLevel || 0) + (selectedMaintenanceCase.userEstimatedTime || 0) + (selectedMaintenanceCase.userImpactLevel || 0) + (selectedMaintenanceCase.userUrgencyLevel || 0) + (selectedMaintenanceCase.userFormScore || 0))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Admin Assessment Form */}
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-green-800">Đánh giá của Admin</h4>
+                      <button
+                        type="button"
+                        onClick={fetchConfigs}
+                        className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                        title="Làm mới options đánh giá"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                        <span>Làm mới</span>
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Mức độ khó */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Mức độ khó
+                        </label>
+                        <select
+                          value={evaluationForm.adminDifficultyLevel}
+                          onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminDifficultyLevel: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        >
+                          <option value="">Chọn mức độ khó</option>
+                          {getFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
+                            <option key={option.id} value={option.points}>
+                              {option.points} - {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Thời gian ước tính */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Thời gian ước tính
+                        </label>
+                        <select
+                          value={evaluationForm.adminEstimatedTime}
+                          onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminEstimatedTime: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        >
+                          <option value="">Chọn thời gian ước tính</option>
+                          {getFieldOptions(EvaluationCategory.TIME).map((option) => (
+                            <option key={option.id} value={option.points}>
+                              {option.points} - {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Mức độ ảnh hưởng */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Mức độ ảnh hưởng
+                        </label>
+                        <select
+                          value={evaluationForm.adminImpactLevel}
+                          onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminImpactLevel: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        >
+                          <option value="">Chọn mức độ ảnh hưởng</option>
+                          {getFieldOptions(EvaluationCategory.IMPACT).map((option) => (
+                            <option key={option.id} value={option.points}>
+                              {option.points} - {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Mức độ khẩn cấp */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Mức độ khẩn cấp
+                        </label>
+                        <select
+                          value={evaluationForm.adminUrgencyLevel}
+                          onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminUrgencyLevel: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        >
+                          <option value="">Chọn mức độ khẩn cấp</option>
+                          {getFieldOptions(EvaluationCategory.URGENCY).map((option) => (
+                            <option key={option.id} value={option.points}>
+                              {option.points} - {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Ghi chú đánh giá */}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-end space-x-3 mt-6">
+              
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
                 <button
-                  onClick={() => setShowEvaluationModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  onClick={() => {
+                    setShowEvaluationModal(false);
+                    setSelectedMaintenanceCase(null);
+                    setEvaluationForm({
+                      adminDifficultyLevel: '',
+                      adminEstimatedTime: '',
+                      adminImpactLevel: '',
+                      adminUrgencyLevel: ''
+                    });
+                  }}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleEvaluation}
                   disabled={evaluating}
-                  className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {evaluating ? 'Đang đánh giá...' : 'Đánh giá'}
+                  {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedMaintenanceCase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="p-2 bg-red-100 rounded-lg mr-3">
-                  <Trash className="h-6 w-6 text-red-600" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900">
-                  Xác nhận xóa
-                </h3>
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && selectedMaintenanceCase && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">Xác nhận xóa case bảo trì</h3>
               </div>
-              <p className="text-gray-600 mb-6">
-                Bạn có chắc chắn muốn xóa case bảo trì "{selectedMaintenanceCase.title}"? 
-                Hành động này không thể hoàn tác.
-              </p>
-              <div className="flex items-center justify-end space-x-3">
+              <div className="p-6">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <Trash className="h-5 w-5 text-red-600" />
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-700 mb-2">
+                      Bạn có chắc chắn muốn xóa case bảo trì này không?
+                    </p>
+                    <div className="bg-gray-50 rounded-md p-3 text-sm">
+                      <div className="font-medium text-gray-900">{selectedMaintenanceCase.title}</div>
+                      <div className="text-gray-600 mt-1">
+                        <div>Người báo cáo: {selectedMaintenanceCase.reporter.fullName}</div>
+                        <div>Người xử lý: {selectedMaintenanceCase.handler.fullName}</div>
+                        <div>Thiết bị: {selectedMaintenanceCase.equipment.name}</div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-red-600 mt-2">
+                      ⚠️ Hành động này không thể hoàn tác. Tất cả dữ liệu liên quan sẽ bị xóa vĩnh viễn.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
                 <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setSelectedMaintenanceCase(null);
+                  }}
+                  disabled={deleting}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center"
                 >
-                  {deleting ? 'Đang xóa...' : 'Xóa'}
+                  {deleting ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Đang xóa...
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="h-4 w-4 mr-2" />
+                      Xóa case bảo trì
+                    </>
+                  )}
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

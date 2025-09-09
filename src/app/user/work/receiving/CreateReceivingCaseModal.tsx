@@ -7,6 +7,7 @@ import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import { useSession } from 'next-auth/react';
 import { ReceivingCaseStatus } from '@prisma/client';
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -246,7 +247,10 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
     try {
       // Check if we have current employee
       if (!currentEmployee) {
-        alert('Không tìm thấy thông tin nhân viên. Vui lòng thử lại.');
+        toast.error('Không tìm thấy thông tin nhân viên. Vui lòng thử lại.', {
+          duration: 4000,
+          position: 'top-right',
+        });
         return;
       }
 
@@ -289,6 +293,17 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
       if (response.ok) {
         const result = await response.json();
         console.log('Created receiving case:', result);
+        
+        // Show success notification
+        toast.success('Tạo case nhận hàng thành công!', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
+        
         onSuccess(result);
         handleClose();
       } else {
@@ -306,11 +321,29 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         }
         
         const fullErrorMessage = errorDetails ? `${errorMessage} (${errorDetails})` : errorMessage;
-        alert(`Lỗi tạo case: ${fullErrorMessage}`);
+        
+        // Show error notification
+        toast.error(`Lỗi tạo case: ${fullErrorMessage}`, {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
+        });
       }
     } catch (error) {
       console.error('Error creating case:', error);
-      alert('Có lỗi xảy ra khi tạo case. Vui lòng thử lại.');
+      
+      // Show error notification
+      toast.error('Có lỗi xảy ra khi tạo case. Vui lòng thử lại.', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -407,7 +440,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                 <h3 className="text-sm font-semibold text-gray-700">Người thực hiện</h3>
               </div>
               <div className="text-sm text-gray-600">
-                Tự động lấy từ tài khoản hiện tại: <span className="font-medium text-gray-900">
+                <span className="font-medium text-gray-900">
                   {currentEmployee ? currentEmployee.fullName : 'Đang tải...'}
                 </span>
                 {currentEmployee && (
@@ -641,7 +674,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Ngày giờ giao</span>
+                    <span className="w-32">Ngày giờ giao</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
@@ -661,8 +694,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600">
-                    <span className="w-24">Ngày giờ hoàn thành</span>
+                  <label className="text-xs font-medium text-gray-600 flex items-center">
+                    <span className="w-32">Ngày giờ hoàn thành</span>
                   </label>
                   <input
                     type="datetime-local"

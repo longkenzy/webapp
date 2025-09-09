@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, User, Lock, Mail, Shield } from "lucide-react";
 import Link from "next/link";
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -93,15 +94,24 @@ export default function CreateAccountPage({ params }: { params: { id: string } }
       });
 
       if (response.ok) {
-        alert("Tạo tài khoản thành công!");
+        toast.success("Tạo tài khoản thành công!", {
+          duration: 3000,
+          position: 'top-right',
+        });
         router.push("/admin/personnel/permissions");
       } else {
         const error = await response.json();
-        alert(`Lỗi: ${error.message || "Không thể tạo tài khoản"}`);
+        toast.error(`Lỗi: ${error.message || "Không thể tạo tài khoản"}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error("Error creating account:", error);
-      alert("Có lỗi xảy ra khi tạo tài khoản");
+      toast.error("Có lỗi xảy ra khi tạo tài khoản", {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setSubmitting(false);
     }

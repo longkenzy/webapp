@@ -6,6 +6,7 @@ import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw }
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -15,13 +16,6 @@ interface Employee {
   companyEmail: string;
 }
 
-interface Equipment {
-  id: string;
-  name: string;
-  model?: string;
-  serialNumber?: string;
-  location?: string;
-}
 
 interface CreateMaintenanceModalProps {
   isOpen: boolean;
@@ -32,7 +26,6 @@ interface CreateMaintenanceModalProps {
 export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: CreateMaintenanceModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(false);
 
   // User evaluation categories
@@ -51,7 +44,6 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
     position: '',
     handler: '',
     maintenanceType: '',
-    equipmentId: '',
     title: '',
     description: '',
     startDate: new Date().toLocaleString('vi-VN', {
@@ -95,26 +87,6 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
     }
   }, []);
 
-  const fetchEquipment = useCallback(async () => {
-    try {
-      const response = await fetch('/api/equipment/list', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=300',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEquipment(data || []);
-      } else {
-        console.error('Failed to fetch equipment:', response.status, response.statusText);
-        setEquipment([]);
-      }
-    } catch (error) {
-      console.error('Error fetching equipment:', error);
-      setEquipment([]);
-    }
-  }, []);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -122,7 +94,6 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       position: '',
       handler: '',
       maintenanceType: '',
-      equipmentId: '',
       title: '',
       description: '',
       startDate: new Date().toLocaleString('vi-VN', {
@@ -157,11 +128,10 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
   useEffect(() => {
     if (isOpen) {
       fetchEmployees();
-      fetchEquipment();
       // Refresh evaluation configs to get latest options
       fetchConfigs();
     }
-  }, [isOpen, fetchEmployees, fetchEquipment, fetchConfigs]);
+  }, [isOpen, fetchEmployees, fetchConfigs]);
 
   // Auto-fill handler with current user when employees are loaded
   useEffect(() => {
@@ -230,7 +200,10 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       const endDate = new Date(formData.endDate);
       
       if (endDate <= startDate) {
-        alert('Ngày kết thúc phải lớn hơn ngày bắt đầu!');
+        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         return;
       }
     }
@@ -243,7 +216,6 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         reporterId: formData.reporter,
         handlerId: formData.handler,
         maintenanceType: formData.maintenanceType,
-        equipmentId: formData.equipmentId,
         startDate: formData.startDate,
         endDate: formData.endDate || null,
         status: formData.status,
@@ -276,7 +248,10 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         console.log('Maintenance case created successfully:', result);
         
         // Show success message
-        alert('Tạo case bảo trì thành công!');
+        toast.success('Tạo case bảo trì thành công!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         
         // Reset form data
         resetForm();
@@ -300,11 +275,17 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         }
          
         console.error('Failed to create maintenance case:', error);
-        alert(`Lỗi: ${error.error || 'Không thể tạo case bảo trì'}`);
+        toast.error(`Lỗi: ${error.error || 'Không thể tạo case bảo trì'}`, {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      alert('Lỗi kết nối. Vui lòng thử lại!');
+      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
     }
   };
 
@@ -365,7 +346,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                     {employees.length > 0 ? (
                       employees.map((employee) => (
                         <option key={employee.id} value={employee.id}>
-                          {employee.fullName} - {employee.position} ({employee.department})
+                          {employee.fullName}
                         </option>
                       ))
                     ) : (
@@ -408,7 +389,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                     {employees.length > 0 ? (
                       employees.map((employee) => (
                         <option key={employee.id} value={employee.id}>
-                          {employee.fullName} - {employee.position} ({employee.department})
+                          {employee.fullName}
                         </option>
                       ))
                     ) : (
@@ -445,25 +426,6 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Thiết bị</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.equipmentId}
-                    onChange={(e) => handleInputChange('equipmentId', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn thiết bị</option>
-                    {equipment.map(eq => (
-                      <option key={eq.id} value={eq.id}>
-                        {eq.name} {eq.model && `(${eq.model})`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
 

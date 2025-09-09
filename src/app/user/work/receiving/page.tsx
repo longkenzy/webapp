@@ -193,40 +193,42 @@ export default function ReceivingCasePage() {
     }
   }, [status, fetchCases]);
 
-  // Filter cases based on search term and filters
-  const filteredCases = cases.filter(case_ => {
-    // Search term filter
-    const matchesSearch = searchTerm === '' || (
-    case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.requester.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (case_.supplier?.shortName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-    
-    // Receiver filter
-    const matchesReceiver = filters.receiver === '' || 
-      case_.requester.fullName.toLowerCase().includes(filters.receiver.toLowerCase());
-    
-    // Supplier filter
-    const matchesSupplier = filters.supplier === '' || 
-      (case_.supplier?.shortName || '').toLowerCase().includes(filters.supplier.toLowerCase());
-    
-    // Status filter
-    const matchesStatus = filters.status === '' || 
-      case_.status === filters.status;
-    
-    // Date range filter
-    const caseDate = new Date(case_.startDate);
-    const startDate = filters.startDate ? new Date(filters.startDate) : null;
-    const endDate = filters.endDate ? new Date(filters.endDate) : null;
-    
-    const matchesDateRange = (!startDate || caseDate >= startDate) && 
-      (!endDate || caseDate <= endDate);
-    
-    return matchesSearch && matchesReceiver && matchesSupplier && 
-           matchesStatus && matchesDateRange;
-  });
+  // Filter and sort cases based on search term and filters
+  const filteredCases = cases
+    .filter(case_ => {
+      // Search term filter
+      const matchesSearch = searchTerm === '' || (
+      case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      case_.requester.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      case_.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (case_.supplier?.shortName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      case_.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+      
+      // Receiver filter
+      const matchesReceiver = filters.receiver === '' || 
+        case_.requester.fullName.toLowerCase().includes(filters.receiver.toLowerCase());
+      
+      // Supplier filter
+      const matchesSupplier = filters.supplier === '' || 
+        (case_.supplier?.shortName || '').toLowerCase().includes(filters.supplier.toLowerCase());
+      
+      // Status filter
+      const matchesStatus = filters.status === '' || 
+        case_.status === filters.status;
+      
+      // Date range filter
+      const caseDate = new Date(case_.startDate);
+      const startDate = filters.startDate ? new Date(filters.startDate) : null;
+      const endDate = filters.endDate ? new Date(filters.endDate) : null;
+      
+      const matchesDateRange = (!startDate || caseDate >= startDate) && 
+        (!endDate || caseDate <= endDate);
+      
+      return matchesSearch && matchesReceiver && matchesSupplier && 
+             matchesStatus && matchesDateRange;
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -649,7 +651,7 @@ export default function ReceivingCasePage() {
                       {/* STT */}
                       <td className="px-3 py-2 text-center">
                         <span className="text-sm font-medium text-slate-600">
-                          {index + 1}
+                          {filteredCases.length - index}
                         </span>
                       </td>
                       
@@ -760,7 +762,7 @@ export default function ReceivingCasePage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(newCase) => {
-          setCases(prevCases => [...prevCases, newCase]);
+          setCases(prevCases => [newCase, ...prevCases]);
           setIsCreateModalOpen(false);
         }}
       />

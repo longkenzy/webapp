@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Filter, MoreVertical, Edit, RefreshCw, X } from 'lucide-react';
-import CreateInternalCaseModal from './CreateInternalCaseModal';
-import EditInternalCaseModal from './EditInternalCaseModal';
+import { Plus, Search, Filter, MoreVertical, Eye, Edit, RefreshCw, X, Shield } from 'lucide-react';
+import CreateWarrantyModal from './CreateWarrantyModal';
+import EditWarrantyModal from './EditWarrantyModal';
+import ViewWarrantyModal from './ViewWarrantyModal';
 
 interface Employee {
   id: string;
@@ -13,14 +14,20 @@ interface Employee {
   department: string;
 }
 
-interface InternalCase {
+interface Warranty {
   id: string;
   title: string;
   description: string;
-  requester: Employee;
+  reporter: Employee;
   handler: Employee;
-  caseType: string;
-  form: string;
+  warrantyType: string;
+  customer?: {
+    id: string;
+    fullCompanyName: string;
+    shortName: string;
+    contactPerson?: string;
+    contactPhone?: string;
+  };
   status: string;
   startDate: string;
   endDate?: string;
@@ -43,142 +50,188 @@ interface InternalCase {
   adminAssessmentNotes?: string;
 }
 
-export default function InternalCasePage() {
+export default function WarrantyPage() {
   const { data: session, status } = useSession();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedCase, setSelectedCase] = useState<InternalCase | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedWarranty, setSelectedWarranty] = useState<Warranty | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [cases, setCases] = useState<InternalCase[]>([]);
+  const [warranties, setWarranties] = useState<Warranty[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
   // Filter states
   const [filters, setFilters] = useState({
-    requester: '',
     handler: '',
-    caseType: '',
+    warrantyType: '',
+    customer: '',
     status: '',
     startDate: '',
     endDate: ''
   });
 
-  // Fetch internal cases from API with caching
-  const fetchCases = useCallback(async () => {
+  // Fetch warranties from API with caching
+  const fetchWarranties = useCallback(async () => {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/internal-cases', {
+      const response = await fetch('/api/warranties', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Warranties API response:', data);
+        setWarranties(data.data || []);
+      } else {
+        console.error('Failed to fetch warranties:', response.status, response.statusText);
+        try {
+          const errorData = await response.json();
+          console.error('Error details:', errorData);
+        } catch (e) {
+          console.error('Could not parse error response');
+        }
+        setWarranties([]);
+      }
+    } catch (error) {
+      console.error('Error fetching warranties:', error);
+      setWarranties([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch customers from API
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const response = await fetch('/api/partners/list', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=300',
         },
       });
       
       if (response.ok) {
         const data = await response.json();
-        setCases(data.data || []);
+        setCustomers(data || []);
       } else {
-        console.error('Failed to fetch cases:', response.status, response.statusText);
-        setCases([]);
+        console.error('Failed to fetch customers:', response.status, response.statusText);
+        setCustomers([]);
       }
     } catch (error) {
-      console.error('Error fetching cases:', error);
-      setCases([]);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching customers:', error);
+      setCustomers([]);
     }
-  }, []); // Empty dependency array since it doesn't depend on any props/state
+  }, []);
 
-  // Refresh cases
-  const refreshCases = async () => {
+  // Refresh warranties
+  const refreshWarranties = async () => {
     setRefreshing(true);
-    await fetchCases();
+    await fetchWarranties();
     setRefreshing(false);
   };
 
+  // Handle view modal
+  const handleOpenViewModal = (warrantyData: Warranty) => {
+    setSelectedWarranty(warrantyData);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedWarranty(null);
+  };
+
   // Handle edit modal
-  const handleOpenEditModal = (caseData: InternalCase) => {
-    setSelectedCase(caseData);
+  const handleOpenEditModal = (warrantyData: Warranty) => {
+    setSelectedWarranty(warrantyData);
     setIsEditModalOpen(true);
   };
 
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
-    setSelectedCase(null);
+    setSelectedWarranty(null);
   };
 
-  const handleEditSuccess = (updatedCase: InternalCase) => {
-    // Update the case in the current list instead of refetching
-    setCases(prevCases => 
-      prevCases.map(case_ => 
-        case_.id === updatedCase.id ? updatedCase : case_
+  const handleEditSuccess = (updatedWarranty: Warranty) => {
+    setWarranties(prevWarranties => 
+      prevWarranties.map(warranty => 
+        warranty.id === updatedWarranty.id ? updatedWarranty : warranty
       )
     );
   };
 
-  // Load cases on component mount
+  // Load warranties and customers on component mount
   useEffect(() => {
     if (status === 'authenticated') {
-      fetchCases();
+      fetchWarranties();
+      fetchCustomers();
     }
-  }, [status, fetchCases]); // Include fetchCases in dependencies
+  }, [status, fetchWarranties, fetchCustomers]);
 
-  // Filter cases based on search term and filters
-  const filteredCases = cases.filter(case_ => {
+  // Filter warranties based on search term and filters
+  const filteredWarranties = warranties.filter(warranty => {
     // Search term filter
     const matchesSearch = searchTerm === '' || (
-    case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.requester.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      case_.caseType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      case_.description.toLowerCase().includes(searchTerm.toLowerCase())
+      warranty.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warranty.reporter.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warranty.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warranty.warrantyType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warranty.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    
-    // Requester filter
-    const matchesRequester = filters.requester === '' || 
-      case_.requester.fullName.toLowerCase().includes(filters.requester.toLowerCase());
     
     // Handler filter
     const matchesHandler = filters.handler === '' || 
-      case_.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
+      warranty.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
     
-    // Case type filter
-    const matchesCaseType = filters.caseType === '' || 
-      case_.caseType === filters.caseType;
+    // Warranty type filter
+    const matchesWarrantyType = filters.warrantyType === '' || 
+      warranty.warrantyType === filters.warrantyType;
+    
+    // Customer filter
+    const matchesCustomer = filters.customer === '' || 
+      warranty.customer?.id === filters.customer;
     
     // Status filter
     const matchesStatus = filters.status === '' || 
-      case_.status === filters.status;
+      warranty.status === filters.status;
     
     // Date range filter
-    const caseDate = new Date(case_.startDate);
+    const warrantyDate = new Date(warranty.startDate);
     const startDate = filters.startDate ? new Date(filters.startDate) : null;
     const endDate = filters.endDate ? new Date(filters.endDate) : null;
     
-    const matchesDateRange = (!startDate || caseDate >= startDate) && 
-      (!endDate || caseDate <= endDate);
+    const matchesDateRange = (!startDate || warrantyDate >= startDate) && 
+      (!endDate || warrantyDate <= endDate);
     
-    return matchesSearch && matchesRequester && matchesHandler && 
-           matchesCaseType && matchesStatus && matchesDateRange;
+    return matchesSearch && matchesHandler && 
+           matchesWarrantyType && matchesCustomer && matchesStatus && matchesDateRange;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'RECEIVED':
-      case 'Tiếp nhận':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'IN_PROGRESS':
-      case 'Đang xử lý':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'COMPLETED':
-      case 'Hoàn thành':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'CANCELLED':
-      case 'Hủy':
+      case 'REPORTED':
+      case 'Báo cáo':
         return 'bg-red-100 text-red-800 border-red-200';
-      case 'Tạm dừng':
+      case 'INVESTIGATING':
+      case 'Đang điều tra':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'RESOLVED':
+      case 'Đã giải quyết':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'CLOSED':
+      case 'Đóng':
         return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'ESCALATED':
+      case 'Nâng cấp':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -186,14 +239,16 @@ export default function InternalCasePage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'RECEIVED':
-        return 'Tiếp nhận';
-      case 'IN_PROGRESS':
-        return 'Đang xử lý';
-      case 'COMPLETED':
-        return 'Hoàn thành';
-      case 'CANCELLED':
-        return 'Hủy';
+      case 'REPORTED':
+        return 'Báo cáo';
+      case 'INVESTIGATING':
+        return 'Đang điều tra';
+      case 'RESOLVED':
+        return 'Đã giải quyết';
+      case 'CLOSED':
+        return 'Đóng';
+      case 'ESCALATED':
+        return 'Nâng cấp';
       default:
         return status;
     }
@@ -210,50 +265,47 @@ export default function InternalCasePage() {
     });
   };
 
-  const formatCaseType = (caseType: string) => {
-    switch (caseType) {
-      case 'cai-dat-phan-mem':
-        return 'Cài đặt phần mềm';
-      case 'bao-tri':
-        return 'Bảo trì';
-      case 'kiem-tra-bao-mat':
-        return 'Kiểm tra bảo mật';
-      case 'cai-dat-thiet-bi':
-        return 'Cài đặt thiết bị';
-      case 'ho-tro-ky-thuat':
-        return 'Hỗ trợ kỹ thuật';
+  const formatWarrantyType = (warrantyType: string) => {
+    switch (warrantyType) {
+      case 'hardware-warranty':
+        return 'Bảo hành phần cứng';
+      case 'software-warranty':
+        return 'Bảo hành phần mềm';
+      case 'service-warranty':
+        return 'Bảo hành dịch vụ';
+      case 'extended-warranty':
+        return 'Bảo hành mở rộng';
+      case 'replacement-warranty':
+        return 'Bảo hành thay thế';
+      case 'repair-warranty':
+        return 'Bảo hành sửa chữa';
       default:
-        return caseType;
+        return warrantyType;
     }
   };
 
   // Get unique values for filter dropdowns
-  const getUniqueRequesters = () => {
-    const requesters = cases.map(case_ => case_.requester.fullName);
-    return [...new Set(requesters)].sort();
-  };
-
   const getUniqueHandlers = () => {
-    const handlers = cases.map(case_ => case_.handler.fullName);
+    const handlers = warranties.map(warranty => warranty.handler.fullName);
     return [...new Set(handlers)].sort();
   };
 
-  const getUniqueCaseTypes = () => {
-    const caseTypes = cases.map(case_ => case_.caseType);
-    return [...new Set(caseTypes)].sort();
+  const getUniqueWarrantyTypes = () => {
+    const warrantyTypes = warranties.map(warranty => warranty.warrantyType);
+    return [...new Set(warrantyTypes)].sort();
   };
 
   const getUniqueStatuses = () => {
-    const statuses = cases.map(case_ => case_.status);
+    const statuses = warranties.map(warranty => warranty.status);
     return [...new Set(statuses)].sort();
   };
 
   // Clear all filters
   const clearFilters = () => {
     setFilters({
-      requester: '',
       handler: '',
-      caseType: '',
+      warrantyType: '',
+      customer: '',
       status: '',
       startDate: '',
       endDate: ''
@@ -302,15 +354,15 @@ export default function InternalCasePage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Case Nội Bộ</h1>
-              <p className="text-slate-600">Quản lý và theo dõi các case nội bộ của công ty</p>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">Quản Lý Bảo Hành</h1>
+              <p className="text-slate-600">Theo dõi và xử lý các case bảo hành sản phẩm và dịch vụ</p>
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <Plus className="h-4 w-4" />
-              <span>Tạo Case Nội Bộ</span>
+              <Shield className="h-4 w-4" />
+              <span>Tạo Case Bảo Hành</span>
             </button>
           </div>
         </div>
@@ -326,11 +378,11 @@ export default function InternalCasePage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
-                  <p className="text-xs text-gray-600">Tìm kiếm và lọc case nội bộ theo nhiều tiêu chí</p>
+                  <p className="text-xs text-gray-600">Tìm kiếm và lọc case bảo hành theo nhiều tiêu chí</p>
+                </div>
               </div>
-            </div>
               <button 
-                onClick={refreshCases}
+                onClick={refreshWarranties}
                 disabled={refreshing}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
@@ -352,7 +404,7 @@ export default function InternalCasePage() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tên case, người yêu cầu, người xử lý, loại case..."
+                    placeholder="Tìm kiếm theo tên case, người xử lý, loại bảo hành..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
@@ -366,26 +418,6 @@ export default function InternalCasePage() {
                   Bộ lọc
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-                  {/* Người yêu cầu */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <span>Người yêu cầu</span>
-                      </div>
-                    </label>
-                    <select
-                      value={filters.requester}
-                      onChange={(e) => setFilters(prev => ({ ...prev, requester: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả người yêu cầu</option>
-                      {getUniqueRequesters().map(requester => (
-                        <option key={requester} value={requester}>{requester}</option>
-                      ))}
-                    </select>
-                  </div>
-
                   {/* Người xử lý */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -406,22 +438,44 @@ export default function InternalCasePage() {
                     </select>
                   </div>
 
-                  {/* Loại case */}
+                  {/* Loại bảo hành */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       <div className="flex items-center space-x-1.5">
                         <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                        <span>Loại case</span>
+                        <span>Loại bảo hành</span>
                       </div>
                     </label>
                     <select
-                      value={filters.caseType}
-                      onChange={(e) => setFilters(prev => ({ ...prev, caseType: e.target.value }))}
+                      value={filters.warrantyType}
+                      onChange={(e) => setFilters(prev => ({ ...prev, warrantyType: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                     >
-                      <option value="">Tất cả loại case</option>
-                      {getUniqueCaseTypes().map(caseType => (
-                        <option key={caseType} value={caseType}>{formatCaseType(caseType)}</option>
+                      <option value="">Tất cả loại bảo hành</option>
+                      {getUniqueWarrantyTypes().map(warrantyType => (
+                        <option key={warrantyType} value={warrantyType}>{formatWarrantyType(warrantyType)}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Khách hàng */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                        <span>Khách hàng</span>
+                      </div>
+                    </label>
+                    <select
+                      value={filters.customer}
+                      onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    >
+                      <option value="">Tất cả khách hàng</option>
+                      {customers.map(customer => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.fullCompanyName} ({customer.shortName})
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -430,14 +484,14 @@ export default function InternalCasePage() {
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
                         <span>Trạng thái</span>
                       </div>
                     </label>
                     <select
                       value={filters.status}
                       onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                     >
                       <option value="">Tất cả trạng thái</option>
                       {getUniqueStatuses().map(status => (
@@ -450,7 +504,7 @@ export default function InternalCasePage() {
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                        <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
                         <span>Từ ngày</span>
                       </div>
                     </label>
@@ -458,7 +512,7 @@ export default function InternalCasePage() {
                       type="date"
                       value={filters.startDate}
                       onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                     />
                   </div>
 
@@ -466,7 +520,7 @@ export default function InternalCasePage() {
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
+                        <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
                         <span>Đến ngày</span>
                       </div>
                     </label>
@@ -474,7 +528,7 @@ export default function InternalCasePage() {
                       type="date"
                       value={filters.endDate}
                       onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm ${
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm ${
                         !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
                       }`}
                     />
@@ -501,39 +555,39 @@ export default function InternalCasePage() {
                             &quot;{searchTerm}&quot;
                           </span>
                         )}
-                        {filters.requester && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></div>
-                            Yêu cầu: {filters.requester}
-                          </span>
-                        )}
                         {filters.handler && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
                             Xử lý: {filters.handler}
                           </span>
                         )}
-                        {filters.caseType && (
+                        {filters.warrantyType && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
                             <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
-                            Loại: {formatCaseType(filters.caseType)}
+                            Loại: {formatWarrantyType(filters.warrantyType)}
+                          </span>
+                        )}
+                        {filters.customer && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
+                            Khách hàng: {customers.find(c => c.id === filters.customer)?.fullCompanyName || filters.customer}
                           </span>
                         )}
                         {filters.status && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
                             Trạng thái: {getStatusText(filters.status)}
                           </span>
                         )}
                         {filters.startDate && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
-                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
+                            <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
                             Từ: {new Date(filters.startDate).toLocaleDateString('vi-VN')}
                           </span>
                         )}
                         {filters.endDate && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
-                            <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                            <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
                             Đến: {new Date(filters.endDate).toLocaleDateString('vi-VN')}
                           </span>
                         )}
@@ -546,7 +600,7 @@ export default function InternalCasePage() {
                       >
                         <X className="h-3 w-3" />
                         <span>Xóa tất cả</span>
-              </button>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -555,7 +609,7 @@ export default function InternalCasePage() {
               {/* Results Summary */}
               <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                 <div className="text-sm text-gray-600">
-                  Hiển thị <span className="font-medium text-gray-900">{filteredCases.length}</span> trong tổng số <span className="font-medium text-gray-900">{cases.length}</span> case
+                  Hiển thị <span className="font-medium text-gray-900">{filteredWarranties.length}</span> trong tổng số <span className="font-medium text-gray-900">{warranties.length}</span> case bảo hành
                   {hasActiveFilters() && (
                     <span className="ml-2 text-blue-600 font-medium">
                       (đã lọc)
@@ -567,34 +621,34 @@ export default function InternalCasePage() {
           </div>
         </div>
 
-        {/* Cases Table */}
+        {/* Warranties Table */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-blue-50">
                 <tr>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     STT
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Thông tin Case
-                  </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Người yêu cầu
-                  </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Người xử lý
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Loại case
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Khách hàng
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Loại bảo hành
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Thông tin Case
+                  </th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Trạng thái
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Thời gian
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Hành động
                   </th>
                 </tr>
@@ -605,63 +659,91 @@ export default function InternalCasePage() {
                     <td colSpan={8} className="px-3 py-8 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
-                        <span className="text-slate-600">Đang tải danh sách case...</span>
+                        <span className="text-slate-600">Đang tải danh sách case bảo hành...</span>
                       </div>
                     </td>
                   </tr>
-                ) : filteredCases.length > 0 ? (
-                  filteredCases.map((case_, index) => (
-                    <tr key={case_.id} className="hover:bg-slate-50/50 transition-colors duration-150">
+                ) : filteredWarranties.length > 0 ? (
+                  filteredWarranties.map((warranty, index) => (
+                    <tr key={warranty.id} className="hover:bg-slate-50/50 transition-colors duration-150">
+                      {/* STT */}
                       <td className="px-3 py-2 text-center">
                         <span className="text-sm font-medium text-slate-600">
                           {index + 1}
                         </span>
                       </td>
+                      
+                      {/* Người xử lý */}
                       <td className="px-3 py-2">
                         <div>
-                          <div className="text-sm font-medium text-slate-900 mb-1">
-                            {case_.title}
-                          </div>
-                          <div className="text-xs text-slate-500 mb-1 line-clamp-2">
-                            {case_.description}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            Tạo: {formatDate(case_.createdAt)}
-                          </div>
+                          <div className="text-sm text-slate-900">{warranty.handler.fullName}</div>
+                          <div className="text-xs text-slate-500">{warranty.handler.position}</div>
                         </div>
                       </td>
-                      <td className="px-3 py-2">
-                        <div>
-                          <div className="text-sm text-slate-900">{case_.requester.fullName}</div>
-                          <div className="text-xs text-slate-500">{case_.requester.position}</div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div>
-                          <div className="text-sm text-slate-900">{case_.handler.fullName}</div>
-                          <div className="text-xs text-slate-500">{case_.handler.position}</div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="text-sm text-slate-700">{formatCaseType(case_.caseType)}</div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
-                          {getStatusText(case_.status)}
-                        </span>
-                      </td>
+                      
+                      {/* Khách hàng */}
                       <td className="px-3 py-2">
                         <div className="text-sm text-slate-700">
-                          <div>Bắt đầu: {formatDate(case_.startDate)}</div>
-                          {case_.endDate && (
-                            <div className="text-slate-500">Kết thúc: {formatDate(case_.endDate)}</div>
+                          {warranty.customer ? (
+                            <div>
+                              <div className="font-medium">{warranty.customer.fullCompanyName}</div>
+                              <div className="text-xs text-slate-500">({warranty.customer.shortName})</div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">-</span>
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-center">
-                        <div className="flex items-center justify-center space-x-1">
+                      
+                      {/* Loại bảo hành */}
+                      <td className="px-3 py-2">
+                        <div className="text-sm text-slate-700">{formatWarrantyType(warranty.warrantyType)}</div>
+                      </td>
+                      
+                      {/* Thông tin Case */}
+                      <td className="px-3 py-2">
+                        <div>
+                          <div className="text-sm font-medium text-slate-900 mb-1">
+                            {warranty.title}
+                          </div>
+                          <div className="text-xs text-slate-500 mb-1 line-clamp-2">
+                            {warranty.description}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            Tạo: {formatDate(warranty.createdAt)}
+                          </div>
+                        </div>
+                      </td>
+                      
+                      {/* Trạng thái */}
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(warranty.status)}`}>
+                          {getStatusText(warranty.status)}
+                        </span>
+                      </td>
+                      
+                      {/* Thời gian */}
+                      <td className="px-3 py-2">
+                        <div className="text-sm text-slate-700">
+                          <div>Bắt đầu: {formatDate(warranty.startDate)}</div>
+                          {warranty.endDate && (
+                            <div className="text-slate-500">Kết thúc: {formatDate(warranty.endDate)}</div>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Hành động */}
+                      <td className="px-3 py-2">
+                        <div className="flex items-center space-x-1">
                           <button 
-                            onClick={() => handleOpenEditModal(case_)}
+                            onClick={() => handleOpenViewModal(warranty)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleOpenEditModal(warranty)}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
                             title="Chỉnh sửa"
                           >
@@ -675,36 +757,41 @@ export default function InternalCasePage() {
                   <tr>
                     <td colSpan={8} className="px-3 py-8 text-center">
                       <div className="text-slate-400 mb-4">
-                        <Search className="h-16 w-16 mx-auto" />
+                        <Shield className="h-16 w-16 mx-auto" />
                       </div>
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">Không tìm thấy case nào</h3>
-                      <p className="text-slate-500">Thử thay đổi từ khóa tìm kiếm hoặc tạo case mới</p>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">Không tìm thấy case bảo hành nào</h3>
+                      <p className="text-slate-500">Thử thay đổi từ khóa tìm kiếm hoặc tạo case bảo hành mới</p>
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-          
         </div>
       </div>
 
-      {/* Create Case Modal */}
-      <CreateInternalCaseModal
+      {/* Create Warranty Modal */}
+      <CreateWarrantyModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newCase: any) => {
-          // Add new case to the end of the list (since we sort by createdAt ASC)
-          setCases(prevCases => [...prevCases, newCase as InternalCase]);
+        onSuccess={(newWarranty: any) => {
+          setWarranties(prevWarranties => [...prevWarranties, newWarranty as Warranty]);
         }}
       />
 
-      {/* Edit Case Modal */}
-      <EditInternalCaseModal
+      {/* Edit Warranty Modal */}
+      <EditWarrantyModal
         isOpen={isEditModalOpen}
         onClose={handleCloseEditModal}
         onSuccess={handleEditSuccess}
-        caseData={selectedCase}
+        warrantyData={selectedWarranty}
+      />
+
+      {/* View Warranty Modal */}
+      <ViewWarrantyModal
+        isOpen={isViewModalOpen}
+        onClose={handleCloseViewModal}
+        warrantyData={selectedWarranty}
       />
     </div>
   );

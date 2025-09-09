@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -32,11 +32,14 @@ export default function UserNavbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isWorkDropdownOpen, setIsWorkDropdownOpen] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  
+  // Timeout refs for consistent hover behavior
+  const workDropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const profileDropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const navigation = [
     { name: 'Dashboard', href: '/user/dashboard', icon: Home },
     { name: 'Lịch làm việc', href: '/user/schedule', icon: Calendar },
-    { name: 'Hồ sơ', href: '/user/profile', icon: User },
   ];
 
   const workMenuItems = [
@@ -52,6 +55,35 @@ export default function UserNavbar() {
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/login' });
+  };
+
+  // Helper functions for consistent hover behavior
+  const handleWorkDropdownEnter = () => {
+    if (workDropdownTimeoutRef.current) {
+      clearTimeout(workDropdownTimeoutRef.current);
+      workDropdownTimeoutRef.current = null;
+    }
+    setIsWorkDropdownOpen(true);
+  };
+
+  const handleWorkDropdownLeave = () => {
+    workDropdownTimeoutRef.current = setTimeout(() => {
+      setIsWorkDropdownOpen(false);
+    }, 150);
+  };
+
+  const handleProfileDropdownEnter = () => {
+    if (profileDropdownTimeoutRef.current) {
+      clearTimeout(profileDropdownTimeoutRef.current);
+      profileDropdownTimeoutRef.current = null;
+    }
+    setIsProfileDropdownOpen(true);
+  };
+
+  const handleProfileDropdownLeave = () => {
+    profileDropdownTimeoutRef.current = setTimeout(() => {
+      setIsProfileDropdownOpen(false);
+    }, 150);
   };
 
   // Fetch user avatar
@@ -92,6 +124,18 @@ export default function UserNavbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isWorkDropdownOpen, isProfileDropdownOpen]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (workDropdownTimeoutRef.current) {
+        clearTimeout(workDropdownTimeoutRef.current);
+      }
+      if (profileDropdownTimeoutRef.current) {
+        clearTimeout(profileDropdownTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -139,12 +183,8 @@ export default function UserNavbar() {
             {/* Work Dropdown */}
             <div 
               className="relative work-dropdown"
-              onMouseEnter={() => setIsWorkDropdownOpen(true)}
-              onMouseLeave={() => {
-                setTimeout(() => {
-                  setIsWorkDropdownOpen(false);
-                }, 200);
-              }}
+              onMouseEnter={handleWorkDropdownEnter}
+              onMouseLeave={handleWorkDropdownLeave}
             >
               <button
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -159,36 +199,37 @@ export default function UserNavbar() {
               </button>
 
               {/* Work Dropdown Menu */}
-              {isWorkDropdownOpen && (
-                <div 
-                  className="absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 overflow-hidden"
-                  onMouseEnter={() => setIsWorkDropdownOpen(true)}
-                  onMouseLeave={() => {
-                    setTimeout(() => {
-                      setIsWorkDropdownOpen(false);
-                    }, 200);
-                  }}
-                >
-                  {workMenuItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className={`flex items-center space-x-3 px-4 py-2.5 text-sm transition-colors duration-150 ${
-                          isActive(item.href)
-                            ? 'bg-gray-100 text-gray-900'
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                        onClick={() => setIsWorkDropdownOpen(false)}
-                      >
-                        <Icon className={`h-4 w-4 ${isActive(item.href) ? 'text-gray-700' : 'text-gray-500'}`} />
-                        <span className="font-medium">{item.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
+              <div 
+                className={`absolute top-full left-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 overflow-hidden transition-all duration-200 ${
+                  isWorkDropdownOpen 
+                    ? 'opacity-100 visible transform scale-100 translate-y-0' 
+                    : 'opacity-0 invisible transform scale-95 -translate-y-2 pointer-events-none'
+                }`}
+                onMouseEnter={handleWorkDropdownEnter}
+                onMouseLeave={handleWorkDropdownLeave}
+              >
+                {workMenuItems.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`flex items-center space-x-3 px-4 py-2.5 text-sm transition-all duration-150 ${
+                        isActive(item.href)
+                          ? 'bg-gray-100 text-gray-900'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                      onClick={() => setIsWorkDropdownOpen(false)}
+                      style={{
+                        animationDelay: isWorkDropdownOpen ? `${index * 50}ms` : '0ms'
+                      }}
+                    >
+                      <Icon className={`h-4 w-4 transition-colors duration-150 ${isActive(item.href) ? 'text-gray-700' : 'text-gray-500'}`} />
+                      <span className="font-medium">{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -202,12 +243,8 @@ export default function UserNavbar() {
             {/* Profile Dropdown */}
             <div 
               className="relative profile-dropdown"
-              onMouseEnter={() => setIsProfileDropdownOpen(true)}
-              onMouseLeave={() => {
-                setTimeout(() => {
-                  setIsProfileDropdownOpen(false);
-                }, 150);
-              }}
+              onMouseEnter={handleProfileDropdownEnter}
+              onMouseLeave={handleProfileDropdownLeave}
             >
               <button
                 onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
@@ -240,46 +277,52 @@ export default function UserNavbar() {
               </button>
 
               {/* Profile Dropdown Menu */}
-              {isProfileDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <p className="text-sm font-medium text-gray-900">
-                      {session?.user?.name || 'User'}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {session?.user?.email}
-                    </p>
-                  </div>
-                  
-                  <Link
-                    href="/user/profile"
-                    className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-150"
-                    onClick={() => setIsProfileDropdownOpen(false)}
-                  >
-                    <User className="h-4 w-4 text-gray-500" />
-                    <span>Hồ sơ cá nhân</span>
-                  </Link>
-                  
-                  <Link
-                    href="/user/settings"
-                    className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-150"
-                    onClick={() => setIsProfileDropdownOpen(false)}
-                  >
-                    <Settings className="h-4 w-4 text-gray-500" />
-                    <span>Cài đặt</span>
-                  </Link>
-                  
-                  <div className="border-t border-gray-100 mt-1 pt-1">
-                    <button
-                      onClick={handleSignOut}
-                      className="flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 w-full text-left transition-colors duration-150"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      <span>Đăng xuất</span>
-                    </button>
-                  </div>
+              <div 
+                className={`absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 overflow-hidden transition-all duration-200 ${
+                  isProfileDropdownOpen 
+                    ? 'opacity-100 visible transform scale-100 translate-y-0' 
+                    : 'opacity-0 invisible transform scale-95 -translate-y-2 pointer-events-none'
+                }`}
+                onMouseEnter={handleProfileDropdownEnter}
+                onMouseLeave={handleProfileDropdownLeave}
+              >
+                <div className="px-4 py-3 border-b border-gray-100">
+                  <p className="text-sm font-medium text-gray-900">
+                    {session?.user?.name || 'User'}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {session?.user?.email}
+                  </p>
                 </div>
-              )}
+                
+                <Link
+                  href="/user/profile"
+                  className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all duration-150"
+                  onClick={() => setIsProfileDropdownOpen(false)}
+                >
+                  <User className="h-4 w-4 text-gray-500 transition-colors duration-150" />
+                  <span>Hồ sơ cá nhân</span>
+                </Link>
+                
+                <Link
+                  href="/user/settings"
+                  className="flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-all duration-150"
+                  onClick={() => setIsProfileDropdownOpen(false)}
+                >
+                  <Settings className="h-4 w-4 text-gray-500 transition-colors duration-150" />
+                  <span>Cài đặt</span>
+                </Link>
+                
+                <div className="border-t border-gray-100 mt-1 pt-1">
+                  <button
+                    onClick={handleSignOut}
+                    className="flex items-center space-x-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 w-full text-left transition-all duration-150"
+                  >
+                    <LogOut className="h-4 w-4 transition-colors duration-150" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Mobile menu button */}

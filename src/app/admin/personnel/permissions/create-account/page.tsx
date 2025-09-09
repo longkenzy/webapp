@@ -218,7 +218,7 @@ export default function CreateAccountPage() {
                     <option value="">Chọn nhân sự</option>
                     {employees.map((employee) => (
                       <option key={employee.id} value={employee.id}>
-                        {employee.fullName} - {employee.position || 'Chưa phân công'} - {employee.department || 'Chưa phân công'}
+                        {employee.fullName}
                       </option>
                     ))}
                   </select>

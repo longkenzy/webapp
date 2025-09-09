@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
+import { X, User, Shield, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
@@ -16,24 +16,19 @@ interface Employee {
   companyEmail: string;
 }
 
-interface CaseType {
-  id: string;
-  name: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CreateInternalCaseModalProps {
+interface CreateWarrantyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newCase: unknown) => void;
+  onSuccess?: (newWarranty: unknown) => void;
 }
 
-export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: CreateInternalCaseModalProps) {
+export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: CreateWarrantyModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
+  const [warrantyTypes, setWarrantyTypes] = useState<string[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // User evaluation categories
@@ -48,22 +43,30 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
   const [formData, setFormData] = useState({
-    requester: '',
+    reporter: '',
     position: '',
     handler: '',
-    caseType: '',
-    form: 'Onsite',
+    warrantyType: '',
+    customer: '',
     title: '',
     description: '',
-    startDate: '03/09/2025 08:31 AM',
+    startDate: new Date().toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }),
     endDate: '',
-    status: 'Tiếp nhận',
+    status: 'RECEIVED',
     notes: '',
     // User self-assessment fields
     difficultyLevel: '',
     estimatedTime: '',
     impactLevel: '',
     urgencyLevel: '',
+    form: 'Onsite',
     formScore: '2' // Default for Onsite
   });
 
@@ -88,43 +91,57 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
     }
   }, []);
 
-  const fetchCaseTypes = useCallback(async () => {
+  const fetchPartners = useCallback(async () => {
     try {
-      const response = await fetch('/api/case-types', {
+      const response = await fetch('/api/partners/list', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=300',
         },
       });
       if (response.ok) {
-        const result = await response.json();
-        
-        // Check if response has data array
-        if (result.success && Array.isArray(result.data)) {
-          // Filter only active case types
-          const activeCaseTypes = result.data.filter((caseType: CaseType) => caseType.isActive);
-          setCaseTypes(activeCaseTypes);
-        } else {
-          console.error('Invalid response format:', result);
-          setCaseTypes([]);
-        }
+        const data = await response.json();
+        setPartners(data || []);
       } else {
-        console.error('Failed to fetch case types:', response.status, response.statusText);
-        setCaseTypes([]);
+        console.error('Failed to fetch partners:', response.status, response.statusText);
+        setPartners([]);
       }
     } catch (error) {
-      console.error('Error fetching case types:', error);
-      setCaseTypes([]);
+      console.error('Error fetching partners:', error);
+      setPartners([]);
+    }
+  }, []);
+
+  const fetchWarrantyTypes = useCallback(async () => {
+    try {
+      const response = await fetch('/api/warranty-types', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=300',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Convert to array of strings for backward compatibility
+        const typeNames = data.data?.map((type: any) => type.name) || [];
+        setWarrantyTypes(typeNames);
+      } else {
+        console.error('Failed to fetch warranty types:', response.status, response.statusText);
+        setWarrantyTypes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching warranty types:', error);
+      setWarrantyTypes([]);
     }
   }, []);
 
   const resetForm = useCallback(() => {
     setFormData({
-      requester: '',
+      reporter: '',
       position: '',
       handler: '',
-      caseType: '',
-      form: 'Onsite',
+      warrantyType: '',
+      customer: '',
       title: '',
       description: '',
       startDate: new Date().toLocaleString('vi-VN', {
@@ -136,15 +153,18 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         hour12: true
       }),
       endDate: '',
-      status: 'Tiếp nhận',
+      status: 'RECEIVED',
       notes: '',
       // User self-assessment fields
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
       urgencyLevel: '',
+      form: 'Onsite',
       formScore: '2' // Default for Onsite
     });
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
   }, []);
 
   // Reset form when modal opens
@@ -154,15 +174,31 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
     }
   }, [isOpen, resetForm]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.customer-dropdown-container')) {
+        setShowCustomerDropdown(false);
+      }
+    };
+
+    if (showCustomerDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCustomerDropdown]);
+
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchEmployees();
-      fetchCaseTypes();
+      fetchPartners();
+      fetchWarrantyTypes();
       // Refresh evaluation configs to get latest options
       fetchConfigs();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchEmployees, fetchPartners, fetchWarrantyTypes]);
 
   // Auto-fill handler with current user when employees are loaded
   useEffect(() => {
@@ -209,16 +245,47 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
       [field]: value
     }));
 
-    // Auto-fill position when requester is selected
-    if (field === 'requester') {
+    // Auto-fill position when reporter is selected
+    if (field === 'reporter') {
       const selectedEmployee = employees.find(emp => emp.id === value);
       if (selectedEmployee) {
         setFormData(prev => ({
           ...prev,
-          requester: value,
+          reporter: value,
           position: selectedEmployee.position || ''
         }));
       }
+    }
+  };
+
+  // Filter partners based on search
+  const filteredPartners = partners.filter(partner =>
+    partner.fullCompanyName.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    partner.shortName.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  // Handle customer selection
+  const handleCustomerSelect = (partnerId: string) => {
+    const selectedPartner = partners.find(p => p.id === partnerId);
+    setFormData(prev => ({
+      ...prev,
+      customer: partnerId
+    }));
+    setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
+    setShowCustomerDropdown(false);
+  };
+
+  // Handle customer search change
+  const handleCustomerSearchChange = (value: string) => {
+    setCustomerSearch(value);
+    setShowCustomerDropdown(true);
+    
+    // If search is cleared, clear customer selection
+    if (!value) {
+      setFormData(prev => ({
+        ...prev,
+        customer: ''
+      }));
     }
   };
 
@@ -241,18 +308,16 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
     
     try {
       // Prepare data for API
-      const caseData = {
+      const warrantyData = {
         title: formData.title,
         description: formData.description,
-        requesterId: formData.requester,
+        reporterId: formData.reporter,
         handlerId: formData.handler,
-        caseType: formData.caseType,
-        form: formData.form,
+        warrantyType: formData.warrantyType,
+        customerId: formData.customer || null,
         startDate: formData.startDate,
         endDate: formData.endDate || null,
-        status: formData.status === 'Tiếp nhận' ? 'RECEIVED' : 
-                formData.status === 'Đang xử lý' ? 'IN_PROGRESS' :
-                formData.status === 'Hoàn thành' ? 'COMPLETED' : 'CANCELLED',
+        status: formData.status,
         notes: formData.notes || null,
         // User self-assessment data
         userDifficultyLevel: formData.difficultyLevel,
@@ -262,27 +327,27 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         userFormScore: formData.formScore
       };
 
-      console.log('=== Submitting Internal Case ===');
+      console.log('=== Submitting Warranty ===');
       console.log('Form data:', formData);
-      console.log('Case data to send:', caseData);
+      console.log('Warranty data to send:', warrantyData);
 
       // Send to API
-      const response = await fetch('/api/internal-cases', {
+      const response = await fetch('/api/warranties', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(caseData),
+        body: JSON.stringify(warrantyData),
       });
 
       console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Case created successfully:', result);
+        console.log('Warranty created successfully:', result);
         
-        // Show success message (you can add a toast notification here)
-        toast.success('Tạo case nội bộ thành công!', {
+        // Show success message
+        toast.success('Tạo case bảo hành thành công!', {
           duration: 3000,
           position: 'top-right',
         });
@@ -290,7 +355,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         // Reset form data
         resetForm();
         
-        // Call onSuccess callback with new case data
+        // Call onSuccess callback with new warranty data
         if (onSuccess && result.data) {
           onSuccess(result.data);
         }
@@ -308,8 +373,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
           error = { error: 'Invalid JSON response' };
         }
          
-        console.error('Failed to create case:', error);
-        toast.error(`Lỗi: ${error.error || 'Không thể tạo case'}`, {
+        console.error('Failed to create warranty:', error);
+        toast.error(`Lỗi: ${error.error || 'Không thể tạo case bảo hành'}`, {
           duration: 4000,
           position: 'top-right',
         });
@@ -333,11 +398,11 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-white/20 rounded-md">
-                <Wrench className="h-5 w-5" />
+                <Shield className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Tạo Case Nội Bộ</h2>
-                <p className="text-blue-100 text-sm">Hệ thống quản lý case</p>
+                <h2 className="text-lg font-semibold">Tạo Case Bảo Hành</h2>
+                <p className="text-blue-100 text-sm">Hệ thống quản lý bảo hành</p>
               </div>
             </div>
             <button
@@ -363,13 +428,13 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Người yêu cầu</span>
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-24">Người báo cáo</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
-                    value={formData.requester}
-                    onChange={(e) => handleInputChange('requester', e.target.value)}
+                    value={formData.reporter}
+                    onChange={(e) => handleInputChange('reporter', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
                     disabled={loading}
@@ -392,8 +457,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Chức danh</span>
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-24">Chức danh</span>
                   </label>
                   <input
                     type="text"
@@ -407,7 +472,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Người xử lý</span>
+                    <span className="w-24">Người xử lý</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
@@ -441,55 +506,81 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Loại case</span>
+                    <span className="w-24">Loại bảo hành</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
-                    value={formData.caseType}
-                    onChange={(e) => handleInputChange('caseType', e.target.value)}
+                    value={formData.warrantyType}
+                    onChange={(e) => handleInputChange('warrantyType', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
-                    disabled={loading}
                   >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn loại case'}
-                    </option>
-                    {caseTypes.length > 0 ? (
-                      caseTypes.map((caseType) => (
-                        <option key={caseType.id} value={caseType.name}>
-                          {caseType.name}
-                        </option>
-                      ))
-                    ) : (
+                    <option value="">Chọn loại bảo hành</option>
+                    {warrantyTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                    {warrantyTypes.length === 0 && (
                       <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Chưa có loại case nào'}
+                        Chưa có loại bảo hành nào được cấu hình
                       </option>
                     )}
                   </select>
-                  {caseTypes.length === 0 && !loading && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      ⚠️ Chưa có loại case nào. Vui lòng liên hệ admin để tạo loại case.
-                    </p>
-                  )}
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center">
+                    <span className="w-24">Khách hàng</span>
+                    <span className="ml-1 w-2"></span>
+                  </label>
+                  <div className="relative customer-dropdown-container">
+                    <input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Tìm kiếm khách hàng..."
+                    />
+                    {showCustomerDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {filteredPartners.length > 0 ? (
+                          filteredPartners.map((partner) => (
+                            <div
+                              key={partner.id}
+                              onClick={() => handleCustomerSelect(partner.id)}
+                              className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium">{partner.fullCompanyName}</div>
+                              <div className="text-gray-500 text-xs">{partner.shortName}</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Không tìm thấy khách hàng
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
-
-            {/* Section 3: Chi tiết case */}
+            {/* Section 2: Chi tiết bảo hành */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-purple-100 rounded-md">
                   <FileText className="h-4 w-4 text-purple-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Chi tiết case</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Chi tiết bảo hành</h3>
               </div>
               
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Vụ việc</span>
+                    <span className="w-24">Tiêu đề case</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
@@ -497,14 +588,14 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                     value={formData.title}
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Nhập tiêu đề vụ việc"
+                    placeholder="Nhập tiêu đề case bảo hành"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Mô tả chi tiết</span>
+                    <span className="w-24">Mô tả chi tiết</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <textarea
@@ -512,14 +603,14 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                    placeholder="Mô tả chi tiết vấn đề..."
+                    placeholder="Mô tả chi tiết vấn đề bảo hành..."
                     required
                   />
                 </div>
               </div>
             </div>
 
-            {/* Section 4: Thời gian */}
+            {/* Section 3: Thời gian */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-orange-100 rounded-md">
@@ -530,36 +621,35 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Bắt đầu</span>
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-32">Thời gian bắt đầu</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Kết thúc</span>
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-32">Thời gian kết thúc</span>
+                    <span className="ml-1 w-2"></span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="dd/mm/yyyy --:--"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
                   />
                 </div>
               </div>
             </div>
 
-
-            {/* Section 5: Đánh giá của User */}
+            {/* Section 4: Đánh giá của User */}
             <div className="bg-yellow-50 rounded-md p-4 border border-yellow-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
@@ -694,10 +784,9 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                   </select>
                 </div>
               </div>
-
             </div>
 
-            {/* Section 6: Trạng thái & Ghi chú */}
+            {/* Section 5: Trạng thái & Ghi chú */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-gray-100 rounded-md">
@@ -709,7 +798,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Trạng thái</span>
+                    <span className="w-24">Trạng thái</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
@@ -718,16 +807,17 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
                   >
-                    <option value="Tiếp nhận">Tiếp nhận</option>
-                    <option value="Đang xử lý">Đang xử lý</option>
-                    <option value="Hoàn thành">Hoàn thành</option>
-                    <option value="Hủy">Hủy</option>
+                    <option value="RECEIVED">Tiếp nhận</option>
+                    <option value="PROCESSING">Đang xử lý</option>
+                    <option value="COMPLETED">Hoàn thành</option>
+                    <option value="CANCELLED">Hủy</option>
                   </select>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Ghi chú</span>
+                    <span className="w-24">Ghi chú</span>
+                    <span className="ml-1 w-2"></span>
                   </label>
                   <textarea
                     value={formData.notes}
@@ -754,8 +844,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
               type="submit"
               className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Tạo Case
+              <Shield className="h-4 w-4 mr-2" />
+              Tạo Case Bảo Hành
             </button>
           </div>
         </form>

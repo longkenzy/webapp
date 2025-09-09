@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, User, Building } from "lucide-react";
 import Link from "next/link";
+import toast from 'react-hot-toast';
 
 export default function AddPersonnelPage() {
   const router = useRouter();
@@ -79,11 +80,17 @@ export default function AddPersonnelPage() {
         router.push("/admin/personnel/list");
       } else {
         const error = await response.json();
-        alert(error.message || "Có lỗi xảy ra khi thêm nhân sự");
+        toast.error(error.message || "Có lỗi xảy ra khi thêm nhân sự", {
+          duration: 4000,
+          position: 'top-right',
+        });
       }
     } catch (error) {
       console.error("Error adding employee:", error);
-      alert("Có lỗi xảy ra khi thêm nhân sự");
+      toast.error("Có lỗi xảy ra khi thêm nhân sự", {
+        duration: 4000,
+        position: 'top-right',
+      });
     } finally {
       setIsLoading(false);
     }

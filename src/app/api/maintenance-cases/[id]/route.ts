@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Temporarily disable authentication for testing
@@ -18,7 +18,7 @@ export async function GET(
     //   );
     // }
 
-    const { id } = params;
+    const { id } = await params;
 
     const maintenanceCase = await prisma.maintenanceCase.findUnique({
       where: { id },
@@ -73,7 +73,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Temporarily disable authentication for testing
@@ -86,7 +86,7 @@ export async function PUT(
     //   );
     // }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { title, description, maintenanceType, equipmentId, startDate, endDate, status, notes } = body;
 
@@ -154,7 +154,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Temporarily disable authentication for testing
@@ -167,7 +167,7 @@ export async function DELETE(
     //   );
     // }
 
-    const { id } = params;
+    const { id } = await params;
 
     await prisma.maintenanceCase.delete({
       where: { id }

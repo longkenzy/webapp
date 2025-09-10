@@ -12,6 +12,7 @@ export const db: PrismaClient = globalThis.prisma ?? new PrismaClient({
       url: process.env.DATABASE_URL,
     },
   },
+  errorFormat: 'pretty',
 });
 
 if (process.env.NODE_ENV !== "production") globalThis.prisma = db;

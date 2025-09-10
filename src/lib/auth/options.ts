@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 
 export const authOptions: NextAuthOptions = {
-  debug: false,
+  debug: process.env.NODE_ENV === 'development',
   session: { 
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days - keep session active for a long time
@@ -15,6 +15,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days - keep JWT active for a long time
   },
   pages: {},
+  adapter: undefined, // Explicitly set to undefined to avoid adapter issues
   providers: [
     Credentials({
       name: "Credentials",
@@ -53,6 +54,9 @@ export const authOptions: NextAuthOptions = {
                 }
               }
             }
+          }).catch((dbError) => {
+            console.error('Database error during authentication:', dbError);
+            throw new Error('DATABASE_ERROR');
           });
           
           if (!user) {
@@ -81,9 +85,16 @@ export const authOptions: NextAuthOptions = {
             employee: user.employee
           };
         } catch (error) {
+          console.error('Authentication error:', error);
+          
           // Return specific error for inactive account
           if (error instanceof Error && error.message === 'ACCOUNT_INACTIVE') {
             throw new Error('ACCOUNT_INACTIVE');
+          }
+          
+          // Return specific error for database issues
+          if (error instanceof Error && error.message === 'DATABASE_ERROR') {
+            throw new Error('DATABASE_ERROR');
           }
           
           return null;

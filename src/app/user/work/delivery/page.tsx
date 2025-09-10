@@ -54,7 +54,7 @@ interface DeliveryCase {
   updatedAt: string;
   requester: Employee;
   handler: Employee;
-  supplier: Partner | null;
+  customer: Partner | null;
   products: Product[];
   _count: {
     comments: number;
@@ -195,7 +195,7 @@ export default function DeliveryCasePage() {
 
   // Filter cases based on search term and filters
   const filteredCases = cases.filter(case_ => {
-    const customer = case_.supplier;
+    const customer = case_.customer;
     
     // Search term filter
     const matchesSearch = searchTerm === '' || (
@@ -228,7 +228,7 @@ export default function DeliveryCasePage() {
     
     return matchesSearch && matchesDeliveryPerson && matchesCustomer && 
            matchesStatus && matchesDateRange;
-  });
+  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -288,7 +288,7 @@ export default function DeliveryCasePage() {
 
   const getUniqueCustomers = () => {
     const customers = cases.map(case_ => {
-      const customer = case_.supplier;
+      const customer = case_.customer;
       return customer?.shortName || '';
     }).filter(name => name !== '');
     return [...new Set(customers)].sort();
@@ -598,25 +598,25 @@ export default function DeliveryCasePage() {
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-green-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">
                     STT
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
                     Người giao hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-48">
                     Khách hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-64">
                     Nội dung giao hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">
                     Thời gian
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Trạng thái
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">
                     Hành động
                   </th>
                 </tr>
@@ -624,7 +624,7 @@ export default function DeliveryCasePage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center">
+                    <td colSpan={7} className="px-2 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-green-600" />
                         <span className="text-slate-600">Đang tải danh sách case...</span>
@@ -633,7 +633,7 @@ export default function DeliveryCasePage() {
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center">
+                    <td colSpan={7} className="px-2 py-4 text-center">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <div className="text-red-600 text-sm font-medium">
                           Lỗi tải dữ liệu: {error}
@@ -652,14 +652,14 @@ export default function DeliveryCasePage() {
                   filteredCases.map((case_, index) => (
                     <tr key={case_.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       {/* STT */}
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-2 py-1 text-center w-16">
                         <span className="text-sm font-medium text-slate-600">
-                          {index + 1}
+                          {filteredCases.length - index}
                         </span>
                       </td>
                       
                       {/* Người giao hàng */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-32">
                         <div>
                           <div className="text-sm text-slate-900">{case_.requester.fullName}</div>
                           <div className="text-xs text-slate-500">{case_.requester.position}</div>
@@ -667,10 +667,10 @@ export default function DeliveryCasePage() {
                       </td>
 
                       {/* Khách hàng */}
-                      <td className="px-3 py-2 w-48">
+                      <td className="px-2 py-1 w-48">
                         <div className="max-w-48">
                           {(() => {
-                            const customer = case_.supplier;
+                            const customer = case_.customer;
                             return (
                               <>
                                 <div className="text-sm text-slate-900 font-medium truncate" title={customer?.shortName || 'Không xác định'}>
@@ -686,8 +686,8 @@ export default function DeliveryCasePage() {
                       </td>
 
                       {/* Nội dung giao hàng */}
-                      <td className="px-3 py-2">
-                        <div className="max-w-md">
+                      <td className="px-2 py-1 w-64">
+                        <div className="max-w-64">
                           {(() => {
                             const products = getCaseProducts(case_);
                             if (products.length > 0) {
@@ -719,7 +719,7 @@ export default function DeliveryCasePage() {
                       </td>
 
                       {/* Thời gian */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-28">
                         <div className="text-sm text-slate-700">
                           <div>Bắt đầu: {formatDate(case_.startDate)}</div>
                           {case_.endDate && (
@@ -729,15 +729,15 @@ export default function DeliveryCasePage() {
                       </td>
 
                       {/* Trạng thái */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-24">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
                           {getStatusText(case_.status)}
                         </span>
                       </td>
 
                       {/* Hành động */}
-                      <td className="px-3 py-2">
-                        <div className="flex items-center space-x-1">
+                      <td className="px-2 py-1 text-center w-20">
+                        <div className="flex items-center justify-center space-x-1">
                           <button 
                             onClick={() => handleOpenEditModal(case_)}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
@@ -751,7 +751,7 @@ export default function DeliveryCasePage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center">
+                    <td colSpan={7} className="px-2 py-4 text-center">
                       <div className="text-slate-400 mb-4">
                         <Search className="h-16 w-16 mx-auto" />
                       </div>
@@ -776,7 +776,7 @@ export default function DeliveryCasePage() {
           // Transform the new case to match the expected format
           const transformedCase = {
             ...newCase,
-            supplier: newCase.customer || null // Map customer to supplier for consistency
+            customer: newCase.customer || null // Use customer field directly
           };
           console.log('Transformed case:', transformedCase);
           setCases(prevCases => [transformedCase, ...prevCases]);

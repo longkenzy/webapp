@@ -29,8 +29,8 @@ export async function GET(request: NextRequest) {
       data: incidentTypes
     });
 
-    // Add caching headers
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    // Disable caching to ensure fresh data
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     
     return response;
 

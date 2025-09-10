@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, Plus, Trash2, Package } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -59,7 +60,7 @@ interface DeliveryCase {
   updatedAt: string;
   requester: Employee;
   handler: Employee;
-  supplier: Partner | null;
+  customer: Partner | null;
   products: Product[];
   _count: {
     comments: number;
@@ -78,14 +79,7 @@ interface EditDeliveryCaseModalProps {
 export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, caseData }: EditDeliveryCaseModalProps) {
   const [formData, setFormData] = useState({
     status: '',
-    endDate: '',
-    notes: '',
-    difficultyLevel: '',
-    estimatedTime: '',
-    impactLevel: '',
-    urgencyLevel: '',
-    formScore: '',
-    assessmentNotes: ''
+    endDate: ''
   });
 
   const [products, setProducts] = useState<ProductItem[]>([]);
@@ -97,14 +91,7 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
     if (caseData && isOpen) {
       setFormData({
         status: caseData.status || '',
-        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
-        notes: caseData.notes || '',
-        difficultyLevel: caseData.userDifficultyLevel?.toString() || '',
-        estimatedTime: caseData.userEstimatedTime?.toString() || '',
-        impactLevel: caseData.userImpactLevel?.toString() || '',
-        urgencyLevel: caseData.userUrgencyLevel?.toString() || '',
-        formScore: caseData.userFormScore?.toString() || '',
-        assessmentNotes: caseData.adminAssessmentNotes || ''
+        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : ''
       });
 
       // Load products from case data
@@ -180,6 +167,21 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
     setError(null);
 
     try {
+      // Validate end date
+      if (formData.endDate) {
+        const startDate = new Date(caseData.startDate);
+        const endDate = new Date(formData.endDate);
+        
+        if (endDate <= startDate) {
+          toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+            duration: 3000,
+            position: 'top-right',
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       // Validate required fields
       if (products.some(p => !p.name.trim())) {
         setError('Vui lòng nhập tên sản phẩm cho tất cả các sản phẩm');
@@ -199,13 +201,6 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
       const updateData = {
         status: formData.status,
         endDate: formData.endDate || null,
-        notes: formData.notes || null,
-        userDifficultyLevel: formData.difficultyLevel ? parseInt(formData.difficultyLevel) : null,
-        userEstimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : null,
-        userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
-        userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
-        userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
-        userAssessmentDate: new Date().toISOString(),
         description: JSON.stringify(productData),
         products: productData
       };
@@ -223,15 +218,48 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
       if (response.ok) {
         const updatedCase = await response.json();
         console.log('Delivery case updated successfully:', updatedCase);
+        
+        // Show success notification
+        toast.success('Cập nhật case giao hàng thành công!', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
+        
         onSuccess(updatedCase);
         onClose();
       } else {
         const errorData = await response.json();
         console.error('Error updating delivery case:', errorData);
+        
+        // Show error notification
+        toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
+        });
+        
         setError(errorData.error || 'Có lỗi xảy ra khi cập nhật case giao hàng');
       }
     } catch (error) {
       console.error('Error updating delivery case:', error);
+      
+      // Show error notification
+      toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
+      
       setError('Có lỗi xảy ra khi cập nhật case giao hàng');
     } finally {
       setLoading(false);
@@ -241,24 +269,16 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
   if (!isOpen || !caseData) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Package className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Chỉnh sửa Case Giao Hàng</h2>
-              <p className="text-sm text-gray-500">Cập nhật thông tin case giao hàng</p>
-            </div>
-          </div>
+          <h2 className="text-xl font-semibold text-gray-900">Chỉnh sửa Case Giao Hàng</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
@@ -272,37 +292,67 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
           )}
 
           {/* Case Info */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Thông tin Case</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+            <h3 className="font-medium text-gray-900">Thông tin Case</h3>
+            <div className="space-y-2 text-sm">
               <div>
-                <span className="font-medium text-gray-700">Tiêu đề:</span>
+                <span className="font-medium text-gray-600">Tiêu đề:</span>
                 <span className="ml-2 text-gray-900">{caseData.title}</span>
               </div>
               <div>
-                <span className="font-medium text-gray-700">Người tạo:</span>
-                <span className="ml-2 text-gray-900">{caseData.requester.fullName}</span>
+                <span className="font-medium text-gray-600">Khách hàng:</span>
+                <span className="ml-2 text-gray-900">{caseData.customer?.shortName || 'Không xác định'}</span>
               </div>
               <div>
-                <span className="font-medium text-gray-700">Người giao hàng:</span>
+                <span className="font-medium text-gray-600">Người giao hàng:</span>
                 <span className="ml-2 text-gray-900">{caseData.handler.fullName}</span>
               </div>
               <div>
-                <span className="font-medium text-gray-700">Khách hàng:</span>
-                <span className="ml-2 text-gray-900">{caseData.supplier?.shortName || 'Không xác định'}</span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Ngày tạo:</span>
+                <span className="font-medium text-gray-600">Ngày bắt đầu:</span>
                 <span className="ml-2 text-gray-900">
-                  {new Date(caseData.createdAt).toLocaleDateString('vi-VN')}
+                  {new Date(caseData.startDate).toLocaleString('vi-VN')}
                 </span>
               </div>
-              <div>
-                <span className="font-medium text-gray-700">Thời gian bắt đầu:</span>
-                <span className="ml-2 text-gray-900">
-                  {new Date(caseData.startDate).toLocaleDateString('vi-VN')}
-                </span>
-              </div>
+            </div>
+          </div>
+
+          {/* End Date and Status */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* End Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Calendar className="inline h-4 w-4 mr-1" />
+                Ngày kết thúc
+              </label>
+              <input
+                type="datetime-local"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Để trống nếu chưa hoàn thành
+              </p>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <CheckCircle className="inline h-4 w-4 mr-1" />
+                Trạng thái
+              </label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="RECEIVED">Tiếp nhận</option>
+                <option value="IN_PROGRESS">Đang xử lý</option>
+                <option value="COMPLETED">Hoàn thành</option>
+                <option value="CANCELLED">Hủy</option>
+              </select>
             </div>
           </div>
 
@@ -382,114 +432,8 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
             </div>
           </div>
 
-          {/* Status and End Date */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="RECEIVED">Tiếp nhận</option>
-                <option value="IN_PROGRESS">Đang xử lý</option>
-                <option value="COMPLETED">Hoàn thành</option>
-                <option value="CANCELLED">Hủy</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Thời gian hoàn thành
-              </label>
-              <input
-                type="datetime-local"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-            </div>
-          </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Ghi chú</label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleInputChange}
-              rows={3}
-              placeholder="Nhập ghi chú về case giao hàng..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
-          </div>
 
-          {/* User Self-Assessment */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Đánh giá cá nhân</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Mức độ khó khăn</label>
-                <select
-                  name="difficultyLevel"
-                  value={formData.difficultyLevel}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Chọn mức độ</option>
-                  <option value="1">Rất dễ</option>
-                  <option value="2">Dễ</option>
-                  <option value="3">Trung bình</option>
-                  <option value="4">Khó</option>
-                  <option value="5">Rất khó</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Thời gian ước tính (phút)</label>
-                <input
-                  type="number"
-                  name="estimatedTime"
-                  value={formData.estimatedTime}
-                  onChange={handleInputChange}
-                  placeholder="Nhập thời gian ước tính"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Mức độ tác động</label>
-                <select
-                  name="impactLevel"
-                  value={formData.impactLevel}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Chọn mức độ</option>
-                  <option value="1">Rất thấp</option>
-                  <option value="2">Thấp</option>
-                  <option value="3">Trung bình</option>
-                  <option value="4">Cao</option>
-                  <option value="5">Rất cao</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Mức độ khẩn cấp</label>
-                <select
-                  name="urgencyLevel"
-                  value={formData.urgencyLevel}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Chọn mức độ</option>
-                  <option value="1">Rất thấp</option>
-                  <option value="2">Thấp</option>
-                  <option value="3">Trung bình</option>
-                  <option value="4">Cao</option>
-                  <option value="5">Rất cao</option>
-                </select>
-              </div>
-            </div>
-          </div>
 
           {/* Form Actions */}
           <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">

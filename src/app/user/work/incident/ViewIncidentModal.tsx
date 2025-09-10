@@ -60,16 +60,14 @@ export default function ViewIncidentModal({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'REPORTED':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'INVESTIGATING':
+      case 'RECEIVED':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'PROCESSING':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'RESOLVED':
+      case 'COMPLETED':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'CLOSED':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'ESCALATED':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -77,16 +75,14 @@ export default function ViewIncidentModal({
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'REPORTED':
-        return 'Báo cáo';
-      case 'INVESTIGATING':
-        return 'Đang điều tra';
-      case 'RESOLVED':
-        return 'Đã giải quyết';
-      case 'CLOSED':
-        return 'Đóng';
-      case 'ESCALATED':
-        return 'Nâng cấp';
+      case 'RECEIVED':
+        return 'Tiếp nhận';
+      case 'PROCESSING':
+        return 'Đang xử lý';
+      case 'COMPLETED':
+        return 'Hoàn thành';
+      case 'CANCELLED':
+        return 'Hủy';
       default:
         return status;
     }
@@ -189,8 +185,8 @@ export default function ViewIncidentModal({
                 <div className="mt-1">
                   {incidentData.customer ? (
                     <div className="text-sm text-gray-900">
-                      <div className="font-medium">{incidentData.customer.fullCompanyName}</div>
-                      <div className="text-xs text-gray-500">({incidentData.customer.shortName})</div>
+                      <div className="font-medium">{incidentData.customer.shortName}</div>
+                      <div className="text-xs text-gray-500">{incidentData.customer.fullCompanyName}</div>
                       {incidentData.customer.contactPerson && (
                         <div className="text-xs text-gray-500">Liên hệ: {incidentData.customer.contactPerson}</div>
                       )}

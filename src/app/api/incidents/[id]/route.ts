@@ -25,8 +25,6 @@ export async function PUT(
     const {
       endDate,
       status,
-      customerId,
-      notes,
       // Admin assessment fields
       adminDifficultyLevel,
       adminEstimatedTime,
@@ -69,12 +67,6 @@ export async function PUT(
     }
     if (status !== undefined) {
       updateData.status = status;
-    }
-    if (customerId !== undefined) {
-      updateData.customerId = customerId;
-    }
-    if (notes !== undefined) {
-      updateData.notes = notes;
     }
 
     // Admin assessment fields
@@ -136,15 +128,34 @@ export async function PUT(
             contactPerson: true,
             contactPhone: true
           }
+        },
+        incidentType: {
+          select: {
+            id: true,
+            name: true,
+            description: true
+          }
         }
       }
     });
 
     console.log("Incident updated successfully:", updatedIncident);
 
+    // Transform the updated incident to match frontend interface
+    const transformedIncident = {
+      ...updatedIncident,
+      incidentType: updatedIncident.incidentType.name, // Convert incidentType object to string
+      startDate: updatedIncident.startDate.toISOString(),
+      endDate: updatedIncident.endDate?.toISOString() || null,
+      createdAt: updatedIncident.createdAt.toISOString(),
+      updatedAt: updatedIncident.updatedAt.toISOString(),
+      userAssessmentDate: updatedIncident.userAssessmentDate?.toISOString() || null,
+      adminAssessmentDate: updatedIncident.adminAssessmentDate?.toISOString() || null
+    };
+
     return NextResponse.json({
       message: "Incident updated successfully",
-      data: updatedIncident
+      data: transformedIncident
     });
 
   } catch (error) {

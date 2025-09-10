@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Settings, Wrench, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download } from 'lucide-react';
+import { Plus, Settings, Wrench, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
@@ -19,7 +19,7 @@ interface Incident {
   id: string;
   title: string;
   description: string;
-  reporter: Employee;
+  customerName: string;
   handler: Employee;
   incidentType: string;
   customer?: {
@@ -96,10 +96,10 @@ export default function AdminIncidentWorkPage() {
   const [evaluating, setEvaluating] = useState(false);
 
   // Incident Type Management States
-  const [incidentTypes, setIncidentTypes] = useState<string[]>([]);
+  const [incidentTypes, setIncidentTypes] = useState<Array<{id: string, name: string, description?: string}>>([]);
   const [incidentTypesLoading, setIncidentTypesLoading] = useState(true);
   const [showIncidentTypeModal, setShowIncidentTypeModal] = useState(false);
-  const [editingIncidentType, setEditingIncidentType] = useState<string | null>(null);
+  const [editingIncidentType, setEditingIncidentType] = useState<{id: string, name: string} | null>(null);
   const [incidentTypeForm, setIncidentTypeForm] = useState({
     name: '',
     isActive: true
@@ -253,6 +253,17 @@ export default function AdminIncidentWorkPage() {
     });
   }, []);
 
+  // Check if any filters are active
+  const hasActiveFilters = useCallback(() => {
+    return searchTerm !== '' || 
+           selectedHandler !== '' || 
+           selectedStatus !== '' || 
+           selectedIncidentType !== '' || 
+           selectedCustomer !== '' || 
+           dateFrom !== '' || 
+           dateTo !== '';
+  }, [searchTerm, selectedHandler, selectedStatus, selectedIncidentType, selectedCustomer, dateFrom, dateTo]);
+
   // Clear filters
   const clearFilters = useCallback(() => {
     setSearchTerm('');
@@ -269,7 +280,7 @@ export default function AdminIncidentWorkPage() {
     const matchesSearch = !searchTerm || 
       incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       incident.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.reporter.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      incident.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       incident.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       incident.incidentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (incident.customer?.fullCompanyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -348,7 +359,7 @@ export default function AdminIncidentWorkPage() {
     const exportData = filteredIncidents.map(incident => ({
       'Tiêu đề': incident.title,
       'Mô tả': incident.description,
-      'Người báo cáo': incident.reporter.fullName,
+      'Tên khách hàng': incident.customerName,
       'Người xử lý': incident.handler.fullName,
       'Loại sự cố': incident.incidentType,
       'Khách hàng': incident.customer?.fullCompanyName || 'N/A',
@@ -379,17 +390,17 @@ export default function AdminIncidentWorkPage() {
   const fetchIncidentTypes = useCallback(async () => {
     try {
       setIncidentTypesLoading(true);
-      const response = await fetch('/api/incident-types', {
+      const response = await fetch(`/api/incident-types?t=${Date.now()}`, {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=300',
+          'Cache-Control': 'no-cache',
         },
       });
       if (response.ok) {
         const data = await response.json();
-        // Convert to array of strings for backward compatibility
-        const typeNames = data.data?.map((type: any) => type.name) || [];
-        setIncidentTypes(typeNames);
+        // Store full objects with id, name, and description
+        const types = data.data || [];
+        setIncidentTypes(types);
       } else {
         console.error('Failed to fetch incident types');
         setIncidentTypes([]);
@@ -408,19 +419,37 @@ export default function AdminIncidentWorkPage() {
     setNewIncidentTypeName('');
   };
 
-  const handleEditIncidentType = (typeName: string) => {
-    setEditingIncidentType(typeName);
+  const handleEditIncidentType = (type: {id: string, name: string}) => {
+    setEditingIncidentType(type);
     setIncidentTypeForm({
-      name: typeName,
+      name: type.name,
       isActive: true
     });
     setShowIncidentTypeModal(true);
   };
 
-  const handleDeleteIncidentType = (typeName: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa loại sự cố "${typeName}"?`)) {
-      setIncidentTypes(prev => prev.filter(type => type !== typeName));
-      toast.success('Xóa loại sự cố thành công');
+  const handleDeleteIncidentType = async (type: {id: string, name: string}) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa loại sự cố "${type.name}"?`)) {
+      try {
+        const response = await fetch(`/api/incident-types/${type.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          // Remove from local state
+          setIncidentTypes(prev => prev.filter(t => t.id !== type.id));
+          toast.success('Xóa loại sự cố thành công');
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.error || 'Lỗi khi xóa loại sự cố');
+        }
+      } catch (error) {
+        console.error('Error deleting incident type:', error);
+        toast.error('Lỗi khi xóa loại sự cố');
+      }
     }
   };
 
@@ -430,7 +459,7 @@ export default function AdminIncidentWorkPage() {
       return;
     }
 
-    if (incidentTypes.includes(newIncidentTypeName.trim())) {
+    if (incidentTypes.some(type => type.name === newIncidentTypeName.trim())) {
       toast.error('Loại sự cố này đã tồn tại');
       return;
     }
@@ -481,25 +510,59 @@ export default function AdminIncidentWorkPage() {
     try {
       if (editingIncidentType) {
         // Update existing type
-        setIncidentTypes(prev => prev.map(type => 
-          type === editingIncidentType ? incidentTypeForm.name.trim() : type
-        ));
-        toast.success('Cập nhật loại sự cố thành công');
+        const response = await fetch(`/api/incident-types/${editingIncidentType.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: incidentTypeForm.name.trim(),
+            description: null,
+            isActive: incidentTypeForm.isActive
+          }),
+        });
+
+        if (response.ok) {
+          toast.success('Cập nhật loại sự cố thành công');
+          // Refresh the list to sync with API
+          await fetchIncidentTypes();
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.error || 'Lỗi khi cập nhật loại sự cố');
+          return;
+        }
       } else {
         // Add new type
-        if (incidentTypes.includes(incidentTypeForm.name.trim())) {
+        if (incidentTypes.some(type => type.name === incidentTypeForm.name.trim())) {
           toast.error('Loại sự cố này đã tồn tại');
           return;
         }
-        setIncidentTypes(prev => [...prev, incidentTypeForm.name.trim()]);
-        toast.success('Thêm loại sự cố thành công');
+
+        const response = await fetch('/api/incident-types', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: incidentTypeForm.name.trim(),
+            description: null
+          }),
+        });
+
+        if (response.ok) {
+          toast.success('Thêm loại sự cố thành công');
+          // Refresh the list to sync with API
+          await fetchIncidentTypes();
+        } else {
+          const errorData = await response.json();
+          toast.error(errorData.error || 'Lỗi khi thêm loại sự cố');
+          return;
+        }
       }
       
       setShowIncidentTypeModal(false);
       setEditingIncidentType(null);
       setIncidentTypeForm({ name: '', isActive: true });
-      // Refresh the list to sync with API
-      setTimeout(() => fetchIncidentTypes(), 100);
     } catch (error) {
       console.error('Error saving incident type:', error);
       toast.error('Lỗi khi lưu loại sự cố');
@@ -541,20 +604,37 @@ export default function AdminIncidentWorkPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'RECEIVED':
-        return 'Đã nhận';
+        return 'Tiếp nhận';
       case 'PROCESSING':
         return 'Đang xử lý';
       case 'COMPLETED':
-        return 'Đã hoàn thành';
+        return 'Hoàn thành';
       case 'CANCELLED':
-        return 'Đã hủy';
+        return 'Hủy';
       default:
         return status;
     }
   };
 
-  // Check if there are active filters
-  const hasActiveFilters = searchTerm || selectedHandler || selectedStatus || selectedIncidentType || selectedCustomer || dateFrom || dateTo;
+  const formatIncidentType = (incidentType: string) => {
+    switch (incidentType) {
+      case 'security-breach':
+        return 'Vi phạm bảo mật';
+      case 'system-failure':
+        return 'Lỗi hệ thống';
+      case 'data-loss':
+        return 'Mất dữ liệu';
+      case 'network-issue':
+        return 'Sự cố mạng';
+      case 'hardware-failure':
+        return 'Lỗi phần cứng';
+      case 'software-bug':
+        return 'Lỗi phần mềm';
+      default:
+        return incidentType;
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -585,7 +665,7 @@ export default function AdminIncidentWorkPage() {
                         Chưa đánh giá: {filteredIncidents.filter(incident => !isIncidentEvaluatedByAdmin(incident)).length}
                       </span>
                     </div>
-                    {hasActiveFilters && (
+                    {hasActiveFilters() && (
                       <div className="flex items-center space-x-1">
                         <Search className="h-4 w-4 text-blue-500" />
                         <span className="text-blue-600">
@@ -605,7 +685,7 @@ export default function AdminIncidentWorkPage() {
               <nav className="-mb-px flex space-x-8">
                 <button
                   onClick={() => setActiveTab('cases')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                     activeTab === 'cases'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -615,17 +695,17 @@ export default function AdminIncidentWorkPage() {
                     <FileText className="h-4 w-4" />
                     <span>Danh sách sự cố</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      hasActiveFilters 
+                      hasActiveFilters() 
                         ? 'bg-blue-100 text-blue-600' 
                         : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {hasActiveFilters ? `${filteredIncidents.length}/${incidents.length}` : incidents.length}
+                      {hasActiveFilters() ? `${filteredIncidents.length}/${incidents.length}` : incidents.length}
                     </span>
                   </div>
                 </button>
                 <button
                   onClick={() => setActiveTab('config')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                     activeTab === 'config'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -666,7 +746,7 @@ export default function AdminIncidentWorkPage() {
                     <button 
                       onClick={exportToExcel}
                       disabled={filteredIncidents.length === 0}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                     >
                       <Download className="h-3.5 w-3.5" />
                       <span className="text-sm font-medium">Xuất Excel</span>
@@ -674,7 +754,7 @@ export default function AdminIncidentWorkPage() {
                     <button 
                       onClick={refreshIncidents}
                       disabled={refreshing}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 shadow-sm"
+                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                     >
                       <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
                       <span className="text-sm font-medium">Làm mới</span>
@@ -829,16 +909,86 @@ export default function AdminIncidentWorkPage() {
                         />
                       </div>
 
-                      {/* Clear Filters Button */}
-                      <div className="flex items-end">
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Filters & Actions */}
+                {hasActiveFilters() && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md p-2.5 border border-blue-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-1.5 mb-1">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          <span className="text-xs font-semibold text-gray-800">Bộ lọc đang áp dụng</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {searchTerm && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              <Search className="h-2.5 w-2.5 mr-1" />
+                              &quot;{searchTerm}&quot;
+                            </span>
+                          )}
+                          {selectedHandler && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
+                              Xử lý: {uniqueHandlers.find(h => h.id === selectedHandler)?.fullName || selectedHandler}
+                            </span>
+                          )}
+                          {selectedStatus && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
+                              Trạng thái: {getStatusLabel(selectedStatus)}
+                            </span>
+                          )}
+                          {selectedIncidentType && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
+                              Loại: {formatIncidentType(selectedIncidentType)}
+                            </span>
+                          )}
+                          {selectedCustomer && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                              <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
+                              Khách hàng: {uniqueCustomers.find(c => c?.id === selectedCustomer)?.shortName || selectedCustomer}
+                            </span>
+                          )}
+                          {dateFrom && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
+                              <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
+                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
+                            </span>
+                          )}
+                          {dateTo && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                              <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
+                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
                         <button
                           onClick={clearFilters}
-                          className="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-all duration-200 text-sm font-medium"
+                          className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors"
                         >
-                          Xóa bộ lọc
+                          <X className="h-3 w-3" />
+                          <span>Xóa bộ lọc</span>
                         </button>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Results Summary */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                  <div className="text-sm text-gray-600">
+                    Hiển thị <span className="font-medium text-gray-900">{filteredIncidents.length}</span> trong tổng số <span className="font-medium text-gray-900">{incidents.length}</span> sự cố
+                    {hasActiveFilters() && (
+                      <span className="ml-2 text-blue-600 font-medium">
+                        (đã lọc)
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -856,7 +1006,7 @@ export default function AdminIncidentWorkPage() {
                   <AlertTriangle className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">Không có sự cố nào</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    {hasActiveFilters
+                    {hasActiveFilters()
                       ? 'Không tìm thấy sự cố phù hợp với bộ lọc.'
                       : 'Chưa có sự cố nào được tạo.'}
                   </p>
@@ -866,34 +1016,34 @@ export default function AdminIncidentWorkPage() {
                   <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
                         STT
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
                         Thông tin case
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                         Người xử lý
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
                         Khách hàng
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                         Trạng thái
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                         Thời gian
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                         Tổng điểm User
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                         Điểm Admin
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                         Tổng điểm
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                         Hành động
                       </th>
                     </tr>
@@ -908,14 +1058,14 @@ export default function AdminIncidentWorkPage() {
                           onClick={() => toggleRowExpansion(incident.id)}
                         >
                           {/* STT */}
-                          <td className="px-3 py-2 whitespace-nowrap text-center">
+                          <td className="px-2 py-4 whitespace-nowrap text-center w-16">
                             <span className="text-xs font-medium text-gray-600">
-                              {index + 1}
+                              {filteredIncidents.length - index}
                             </span>
                           </td>
                           
                           {/* Thông tin case */}
-                          <td className="px-3 py-2 whitespace-nowrap">
+                          <td className="px-2 py-4 whitespace-nowrap w-64">
                             <div>
                               <div className="text-xs font-medium text-gray-900">
                                 {incident.title}
@@ -927,32 +1077,27 @@ export default function AdminIncidentWorkPage() {
                           </td>
                           
                           {/* Người xử lý */}
-                          <td className="px-3 py-2 whitespace-nowrap">
+                          <td className="px-2 py-4 whitespace-nowrap w-32">
                             <div className="text-xs text-gray-900">{incident.handler.fullName}</div>
                             <div className="text-xs text-gray-500">{incident.handler.position}</div>
                           </td>
                           
                           {/* Khách hàng */}
-                          <td className="px-3 py-2 whitespace-nowrap">
-                            <div className="text-xs text-gray-900">
-                              {incident.customer?.shortName || 'N/A'}
+                          <td className="px-2 py-4 whitespace-nowrap w-48">
+                            <div className="text-xs font-medium text-gray-900">
+                              {incident.customer?.shortName || incident.customerName}
                             </div>
-                            {incident.customer?.contactPerson && (
-                              <div className="text-xs text-gray-500">
-                                {incident.customer.contactPerson}
-                              </div>
-                            )}
                           </td>
                           
                           {/* Trạng thái */}
-                          <td className="px-3 py-2 whitespace-nowrap">
+                          <td className="px-2 py-4 whitespace-nowrap w-24">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(incident.status)}`}>
                               {getStatusLabel(incident.status)}
                             </span>
                           </td>
                           
                           {/* Thời gian */}
-                          <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+                          <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 w-36">
                             <div>Bắt đầu: {new Date(incident.startDate).toLocaleString('vi-VN', { 
                               year: 'numeric', 
                               month: '2-digit', 
@@ -972,7 +1117,7 @@ export default function AdminIncidentWorkPage() {
                           </td>
                           
                           {/* Tổng điểm User */}
-                          <td className="px-3 py-2 whitespace-nowrap text-center">
+                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
                             {incident.userDifficultyLevel && incident.userEstimatedTime && incident.userImpactLevel && incident.userUrgencyLevel ? (
                               <span className="text-xs font-medium text-blue-600">
                                 {incident.userDifficultyLevel + incident.userEstimatedTime + incident.userImpactLevel + incident.userUrgencyLevel}
@@ -983,7 +1128,7 @@ export default function AdminIncidentWorkPage() {
                           </td>
                           
                           {/* Điểm Admin */}
-                          <td className="px-3 py-2 whitespace-nowrap text-center">
+                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
                             {isIncidentEvaluatedByAdmin(incident) ? (
                               <span className="text-xs font-medium text-green-600">
                                 {(incident.adminDifficultyLevel || 0) + (incident.adminEstimatedTime || 0) + (incident.adminImpactLevel || 0) + (incident.adminUrgencyLevel || 0)}
@@ -999,7 +1144,7 @@ export default function AdminIncidentWorkPage() {
                           </td>
                           
                           {/* Tổng điểm */}
-                          <td className="px-3 py-2 whitespace-nowrap text-center">
+                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
                             {(() => {
                               const userScore = incident.userDifficultyLevel && incident.userEstimatedTime && incident.userImpactLevel && incident.userUrgencyLevel 
                                 ? incident.userDifficultyLevel + incident.userEstimatedTime + incident.userImpactLevel + incident.userUrgencyLevel 
@@ -1032,7 +1177,7 @@ export default function AdminIncidentWorkPage() {
                           </td>
                           
                           {/* Hành động */}
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                          <td className="px-2 py-4 whitespace-nowrap text-sm font-medium w-20">
                             <div className="flex items-center space-x-1">
                               <button
                                 onClick={(e) => {
@@ -1073,7 +1218,7 @@ export default function AdminIncidentWorkPage() {
                         {/* Expanded Row Content */}
                         {expandedRows.has(incident.id) && (
                           <tr>
-                            <td colSpan={10} className="px-3 py-2 bg-gray-50" onClick={(e) => e.stopPropagation()}>
+                            <td colSpan={10} className="px-3 py-6 bg-gray-50" onClick={(e) => e.stopPropagation()}>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Mô tả chi tiết */}
                                 <div>
@@ -1128,7 +1273,7 @@ export default function AdminIncidentWorkPage() {
                   </div>
                   <button
                     onClick={handleAddIncidentType}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Thêm loại sự cố</span>
@@ -1164,21 +1309,21 @@ export default function AdminIncidentWorkPage() {
                       <>
                         {/* Existing incident types */}
                         {incidentTypes.map((incidentType, index) => (
-                          <tr key={`incident-type-${index}`} className="hover:bg-gray-50">
+                          <tr key={`incident-type-${incidentType.id}`} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{incidentType}</div>
+                              <div className="text-sm font-medium text-gray-900">{incidentType.name}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex items-center space-x-2">
                                 <button
                                   onClick={() => handleEditIncidentType(incidentType)}
-                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors"
+                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors cursor-pointer"
                                 >
                                   Sửa
                                 </button>
                                 <button
                                   onClick={() => handleDeleteIncidentType(incidentType)}
-                                  className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors"
+                                  className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors cursor-pointer"
                                 >
                                   Xóa
                                 </button>
@@ -1212,14 +1357,14 @@ export default function AdminIncidentWorkPage() {
                                 <button
                                   onClick={handleSaveNewIncidentType}
                                   disabled={saving}
-                                  className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors disabled:opacity-50"
+                                  className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   {saving ? 'Đang lưu...' : 'Lưu'}
                                 </button>
                                 <button
                                   onClick={handleCancelNewIncidentType}
                                   disabled={saving}
-                                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   Hủy
                                 </button>
@@ -1239,7 +1384,7 @@ export default function AdminIncidentWorkPage() {
                               <p className="text-gray-500 mb-4">Thêm loại sự cố đầu tiên để bắt đầu quản lý</p>
                               <button
                                 onClick={handleAddIncidentType}
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Thêm loại sự cố
@@ -1292,7 +1437,7 @@ export default function AdminIncidentWorkPage() {
                       <button
                         type="button"
                         onClick={fetchConfigs}
-                        className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                        className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors cursor-pointer"
                         title="Làm mới options đánh giá"
                       >
                         <RefreshCw className="h-3 w-3" />
@@ -1394,14 +1539,14 @@ export default function AdminIncidentWorkPage() {
                       adminUrgencyLevel: ''
                     });
                   }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleEvaluationSubmit}
                   disabled={evaluating}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
                 </button>
@@ -1431,7 +1576,7 @@ export default function AdminIncidentWorkPage() {
                     <div className="bg-gray-50 rounded-md p-3 text-sm">
                       <div className="font-medium text-gray-900">{selectedIncident.title}</div>
                       <div className="text-gray-600 mt-1">
-                        <div>Người báo cáo: {selectedIncident.reporter.fullName}</div>
+                        <div>Tên khách hàng: {selectedIncident.customerName}</div>
                         <div>Người xử lý: {selectedIncident.handler.fullName}</div>
                         <div>Loại: {selectedIncident.incidentType}</div>
                       </div>
@@ -1449,14 +1594,14 @@ export default function AdminIncidentWorkPage() {
                     setSelectedIncident(null);
                   }}
                   disabled={deleting}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={() => deleteIncident(selectedIncident.id)}
                   disabled={deleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
                 >
                   {deleting ? (
                     <>
@@ -1504,14 +1649,14 @@ export default function AdminIncidentWorkPage() {
                 <button
                   onClick={handleCloseIncidentTypeModal}
                   disabled={saving}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleSubmitIncidentTypeForm}
                   disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
                 >
                   {saving ? (
                     <>

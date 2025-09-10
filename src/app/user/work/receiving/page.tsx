@@ -595,25 +595,25 @@ export default function ReceivingCasePage() {
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-blue-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     STT
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Người nhận hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Nhà cung cấp
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Nội dung nhận hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Thời gian
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Trạng thái
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Hành động
                   </th>
                 </tr>
@@ -726,8 +726,8 @@ export default function ReceivingCasePage() {
                       </td>
 
                       {/* Hành động */}
-                      <td className="px-3 py-2">
-                        <div className="flex items-center space-x-1">
+                      <td className="px-3 py-2 text-center">
+                        <div className="flex items-center justify-center space-x-1">
                           <button 
                             onClick={() => handleOpenEditModal(case_)}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"

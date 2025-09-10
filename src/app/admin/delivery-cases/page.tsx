@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Search, Filter, Download } from 'lucide-react';
+import { Package, Search, Filter, Download, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
 import * as XLSX from 'xlsx';
@@ -44,7 +44,7 @@ interface DeliveryCase {
     department: string;
     companyEmail: string;
   };
-  supplier: {
+  customer: {
     id: string;
     shortName: string;
     fullCompanyName: string;
@@ -197,7 +197,7 @@ export default function DeliveryCasesPage() {
         }
 
         // Customer filter
-        if (customerFilter && case_.supplier?.id !== customerFilter) {
+        if (customerFilter && case_.customer?.id !== customerFilter) {
           return false;
         }
 
@@ -223,7 +223,7 @@ export default function DeliveryCasesPage() {
             case_.description.toLowerCase().includes(searchLower) ||
             case_.requester?.fullName.toLowerCase().includes(searchLower) ||
             case_.handler?.fullName.toLowerCase().includes(searchLower) ||
-            case_.supplier?.shortName.toLowerCase().includes(searchLower);
+            case_.customer?.shortName.toLowerCase().includes(searchLower);
           
           if (!matchesSearch) {
             return false;
@@ -231,7 +231,7 @@ export default function DeliveryCasesPage() {
         }
 
         return true;
-      });
+      }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       // Prepare data for export
       const exportData = filteredCases.map((case_, index) => {
@@ -240,7 +240,7 @@ export default function DeliveryCasesPage() {
         const grandTotal = ((userTotalScore * 0.4) + (adminTotalScore * 0.6)).toFixed(2);
         
         return {
-          'STT': index + 1,
+          'STT': filteredCases.length - index,
           'Tiêu đề Case': case_.title,
           'Mô tả': case_.description,
           'Người yêu cầu': case_.requester.fullName,
@@ -249,10 +249,10 @@ export default function DeliveryCasesPage() {
           'Người giao hàng': case_.handler.fullName,
           'Vị trí người giao': case_.handler.position,
           'Phòng ban người giao': case_.handler.department,
-          'Khách hàng': case_.supplier?.shortName || 'Không xác định',
-          'Tên công ty': case_.supplier?.fullCompanyName || 'Không xác định',
-          'Người liên hệ': case_.supplier?.contactPerson || 'Không xác định',
-          'SĐT liên hệ': case_.supplier?.contactPhone || 'Không xác định',
+          'Khách hàng': case_.customer?.shortName || 'Không xác định',
+          'Tên công ty': case_.customer?.fullCompanyName || 'Không xác định',
+          'Người liên hệ': case_.customer?.contactPerson || 'Không xác định',
+          'SĐT liên hệ': case_.customer?.contactPhone || 'Không xác định',
           'Hình thức': case_.form,
           'Trạng thái': case_.status === 'RECEIVED' ? 'Tiếp nhận' : 
                        case_.status === 'IN_PROGRESS' ? 'Đang xử lý' :
@@ -418,14 +418,23 @@ export default function DeliveryCasesPage() {
                         <p className="text-xs text-gray-600">Tìm kiếm và lọc case giao hàng theo nhiều tiêu chí</p>
                       </div>
                     </div>
-                    <button 
-                      onClick={exportToExcel}
-                      disabled={allCases.length === 0}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      <span className="text-sm font-medium">Xuất Excel</span>
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={exportToExcel}
+                        disabled={allCases.length === 0}
+                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        <span className="text-sm font-medium">Xuất Excel</span>
+                      </button>
+                      <button 
+                        onClick={fetchAllData}
+                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" />
+                        <span className="text-sm font-medium">Làm mới</span>
+                      </button>
+                    </div>
                   </div>
           </div>
 
@@ -613,7 +622,7 @@ export default function DeliveryCasesPage() {
                         setEndDate('');
                         setSearchTerm('');
                       }}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm"
+                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
                     >
                       <span className="text-sm font-medium">Xóa tất cả</span>
                     </button>

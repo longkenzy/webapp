@@ -43,21 +43,13 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
   const [formData, setFormData] = useState({
-    reporter: '',
-    position: '',
+    customerName: '',
     handler: '',
     incidentType: '',
     customer: '',
     title: '',
     description: '',
-    startDate: new Date().toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }),
+    startDate: new Date().toISOString().slice(0, 16),
     endDate: '',
     status: 'RECEIVED',
     notes: '',
@@ -114,12 +106,13 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
 
   const fetchIncidentTypes = useCallback(async () => {
     try {
-      const response = await fetch('/api/incident-types', {
+      const response = await fetch(`/api/incident-types?t=${Date.now()}`, {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=300',
+          'Cache-Control': 'no-cache',
         },
       });
+      
       if (response.ok) {
         const data = await response.json();
         // Convert to array of strings for backward compatibility
@@ -137,21 +130,13 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
 
   const resetForm = useCallback(() => {
     setFormData({
-      reporter: '',
-      position: '',
+      customerName: '',
       handler: '',
       incidentType: '',
       customer: '',
       title: '',
       description: '',
-      startDate: new Date().toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }),
+      startDate: new Date().toISOString().slice(0, 16),
       endDate: '',
       status: 'RECEIVED',
       notes: '',
@@ -200,19 +185,6 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
     }
   }, [isOpen, fetchEmployees, fetchPartners, fetchIncidentTypes]);
 
-  // Auto-fill handler with current user when employees are loaded
-  useEffect(() => {
-    if (employees.length > 0 && session?.user?.email) {
-      // Find current user in employees list
-      const currentUser = employees.find(emp => emp.companyEmail === session.user.email);
-      if (currentUser) {
-        setFormData(prev => ({
-          ...prev,
-          handler: currentUser.id
-        }));
-      }
-    }
-  }, [employees, session?.user?.email]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -311,7 +283,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
       const incidentData = {
         title: formData.title,
         description: formData.description,
-        reporterId: formData.reporter,
+        customerName: formData.customerName,
         handlerId: formData.handler,
         incidentType: formData.incidentType,
         customerId: formData.customer || null,
@@ -327,9 +299,6 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
         userFormScore: formData.formScore
       };
 
-      console.log('=== Submitting Incident ===');
-      console.log('Form data:', formData);
-      console.log('Incident data to send:', incidentData);
 
       // Send to API
       const response = await fetch('/api/incidents', {
@@ -340,11 +309,9 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
         body: JSON.stringify(incidentData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Incident created successfully:', result);
         
         // Show success message
         toast.success('Tạo case xử lý sự cố thành công!', {
@@ -428,49 +395,6 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Người báo cáo</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.reporter}
-                    onChange={(e) => handleInputChange('reporter', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
-                      </option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Chức danh</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.position}
-                    onChange={(e) => handleInputChange('position', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    placeholder="Tự động điền khi chọn nhân viên"
-                    readOnly
-                  />
-                </div>
-
-                <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
                     <span className="w-24">Người xử lý</span>
                     <span className="text-red-500 ml-1">*</span>
@@ -530,7 +454,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
                     <span className="w-24">Khách hàng</span>
                     <span className="ml-1 w-2"></span>
                   </label>
@@ -564,6 +488,21 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-24">Tên khách hàng</span>
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.customerName}
+                    onChange={(e) => handleInputChange('customerName', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
+                    placeholder="Nhập tên khách hàng"
+                    required
+                  />
                 </div>
               </div>
             </div>

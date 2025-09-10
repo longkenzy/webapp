@@ -15,10 +15,9 @@ export async function GET(
 
     const { id } = await params;
 
-    const deliveryCase = await db.receivingCase.findUnique({
+    const deliveryCase = await db.deliveryCase.findUnique({
       where: {
-        id: id,
-        form: 'Giao hàng' // Ensure it's a delivery case
+        id: id
       },
       include: {
         requester: {
@@ -37,7 +36,7 @@ export async function GET(
             department: true
           }
         },
-        supplier: {
+        customer: {
           select: {
             id: true,
             shortName: true,
@@ -95,22 +94,14 @@ export async function PUT(
     const {
       status,
       endDate,
-      notes,
-      userDifficultyLevel,
-      userEstimatedTime,
-      userImpactLevel,
-      userUrgencyLevel,
-      userFormScore,
-      userAssessmentDate,
       description,
       products
     } = body;
 
     // Check if delivery case exists
-    const existingCase = await db.receivingCase.findUnique({
+    const existingCase = await db.deliveryCase.findUnique({
       where: {
-        id: id,
-        form: 'Giao hàng'
+        id: id
       }
     });
 
@@ -119,18 +110,11 @@ export async function PUT(
     }
 
     // Update delivery case
-    const updatedCase = await db.receivingCase.update({
+    const updatedCase = await db.deliveryCase.update({
       where: { id: id },
       data: {
         status,
         endDate: endDate ? new Date(endDate) : null,
-        notes,
-        userDifficultyLevel,
-        userEstimatedTime,
-        userImpactLevel,
-        userUrgencyLevel,
-        userFormScore,
-        userAssessmentDate: userAssessmentDate ? new Date(userAssessmentDate) : null,
         description,
         updatedAt: new Date()
       },
@@ -151,7 +135,7 @@ export async function PUT(
             department: true
           }
         },
-        supplier: {
+        customer: {
           select: {
             id: true,
             shortName: true,
@@ -192,15 +176,15 @@ export async function PUT(
           data: products.map((product: any) => ({
             deliveryCaseId: id,
             name: product.name,
-            code: product.code,
+            code: product.code || null,
             quantity: product.quantity,
-            serialNumber: product.serialNumber
+            serialNumber: product.serialNumber || null
           }))
         });
       }
 
       // Fetch updated case with products
-      const finalCase = await db.receivingCase.findUnique({
+      const finalCase = await db.deliveryCase.findUnique({
         where: { id: id },
         include: {
           requester: {
@@ -219,7 +203,7 @@ export async function PUT(
               department: true
             }
           },
-          supplier: {
+          customer: {
             select: {
               id: true,
               shortName: true,
@@ -273,10 +257,9 @@ export async function DELETE(
 
     const { id } = await params;
     // Check if delivery case exists
-    const existingCase = await db.receivingCase.findUnique({
+    const existingCase = await db.deliveryCase.findUnique({
       where: {
-        id: id,
-        form: 'Giao hàng'
+        id: id
       }
     });
 
@@ -285,7 +268,7 @@ export async function DELETE(
     }
 
     // Delete delivery case (products will be deleted automatically due to cascade)
-    await db.receivingCase.delete({
+    await db.deliveryCase.delete({
       where: { id: id }
     });
 

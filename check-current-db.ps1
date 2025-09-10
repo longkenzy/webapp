@@ -32,3 +32,4 @@ Write-Host "  .\check-current-db.ps1 - Check current environment" -ForegroundCol
 
 
 
+

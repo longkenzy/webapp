@@ -13,7 +13,8 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { ReceivingCaseStatus, EvaluationType, EvaluationCategory } from '@prisma/client';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
@@ -88,6 +89,7 @@ interface ReceivingCaseTableProps {
   startDate?: string;
   endDate?: string;
   allCases?: ReceivingCase[];
+  deletedCases?: Set<string>;
 }
 
 const statusConfig = {
@@ -123,7 +125,8 @@ export default function ReceivingCaseTable({
   supplierFilter = '',
   startDate = '',
   endDate = '',
-  allCases: propAllCases = []
+  allCases: propAllCases = [],
+  deletedCases = new Set()
 }: ReceivingCaseTableProps) {
   const [allCases, setAllCases] = useState<ReceivingCase[]>(propAllCases);
   const [filteredCases, setFilteredCases] = useState<ReceivingCase[]>([]);
@@ -202,6 +205,18 @@ export default function ReceivingCaseTable({
     }
   };
 
+  // Helper function to check if case is evaluated by admin
+  const isCaseEvaluatedByAdmin = (caseItem: ReceivingCase) => {
+    return caseItem.adminDifficultyLevel !== null && 
+           caseItem.adminDifficultyLevel !== undefined &&
+           caseItem.adminEstimatedTime !== null && 
+           caseItem.adminEstimatedTime !== undefined &&
+           caseItem.adminImpactLevel !== null && 
+           caseItem.adminImpactLevel !== undefined &&
+           caseItem.adminUrgencyLevel !== null && 
+           caseItem.adminUrgencyLevel !== undefined;
+  };
+
   // States for evaluation form
   const [evaluationForm, setEvaluationForm] = useState({
     adminDifficultyLevel: '',
@@ -262,6 +277,16 @@ export default function ReceivingCaseTable({
               : case_
           )
         );
+        
+        // Show success toast notification
+        toast.success('Cập nhật đánh giá case thành công!', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
         
         handleCloseEvaluationModal();
       } else {
@@ -370,7 +395,7 @@ export default function ReceivingCaseTable({
 
   // Apply filters and pagination
   useEffect(() => {
-    const filtered = filterCases(allCases);
+    const filtered = filterCases(allCases).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setFilteredCases(filtered);
     
     // Reset to page 1 when filters change
@@ -567,7 +592,7 @@ export default function ReceivingCaseTable({
         <div className="text-red-600 mb-2">Lỗi: {error}</div>
         <button 
           onClick={fetchAllCases}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
         >
           Thử lại
         </button>
@@ -594,13 +619,6 @@ export default function ReceivingCaseTable({
                 </span>
               </div>
             )}
-            <button
-              onClick={refreshData}
-              className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Làm mới
-            </button>
           </div>
         </div>
       </div>
@@ -669,10 +687,17 @@ export default function ReceivingCaseTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {getCurrentPageData().map((caseItem, index) => (
-              <tr key={caseItem.id} className="hover:bg-gray-50">
+            {getCurrentPageData().map((caseItem, index) => {
+              const isEvaluated = isCaseEvaluatedByAdmin(caseItem);
+              
+              return (
+                <tr key={caseItem.id} className={`hover:bg-gray-50 ${
+                  !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                } ${
+                  deletedCases.has(caseItem.id) ? 'opacity-50 bg-red-50/30' : ''
+                }`}>
                 <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-900 text-center">
-                  {(currentPage - 1) * itemsPerPage + index + 1}
+                  {filteredCases.length - ((currentPage - 1) * itemsPerPage + index)}
                 </td>
                 
                 {/* Người nhận hàng */}
@@ -751,24 +776,41 @@ export default function ReceivingCaseTable({
                    <div className="flex items-center justify-center gap-2">
                      <button
                        onClick={() => handleOpenEvaluationModal(caseItem)}
-                       className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
-                       title="Đánh giá case"
+                       disabled={deletedCases.has(caseItem.id)}
+                       className={`p-1 rounded transition-colors ${
+                         deletedCases.has(caseItem.id)
+                           ? 'text-gray-400 cursor-not-allowed'
+                           : isEvaluated 
+                             ? 'text-green-600 hover:text-green-900 hover:bg-green-50 cursor-pointer' 
+                             : 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 bg-yellow-100 cursor-pointer'
+                       }`}
+                       title={deletedCases.has(caseItem.id) ? "Đang xóa..." : (isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá")}
                      >
-                       <Edit className="h-4 w-4" />
+                       {isEvaluated ? <Edit className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
                      </button>
                      {onDelete && (
                        <button
-                         onClick={() => onDelete(caseItem)}
-                         className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                         title="Xóa"
+                         onClick={() => !deletedCases.has(caseItem.id) && onDelete(caseItem)}
+                         disabled={deletedCases.has(caseItem.id)}
+                         className={`p-1 rounded transition-colors ${
+                           deletedCases.has(caseItem.id)
+                             ? 'text-gray-400 cursor-not-allowed'
+                             : 'text-red-600 hover:text-red-900 hover:bg-red-50 cursor-pointer'
+                         }`}
+                         title={deletedCases.has(caseItem.id) ? "Đang xóa..." : "Xóa case"}
                        >
-                         <Trash2 className="h-4 w-4" />
+                         {deletedCases.has(caseItem.id) ? (
+                           <RefreshCw className="h-4 w-4 animate-spin" />
+                         ) : (
+                           <Trash2 className="h-4 w-4" />
+                         )}
                        </button>
                      )}
                    </div>
                  </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -784,14 +826,14 @@ export default function ReceivingCaseTable({
               <button
                 onClick={() => setCurrentPage(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 Trước
               </button>
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 Sau
               </button>
@@ -843,7 +885,7 @@ export default function ReceivingCaseTable({
                     <button
                       type="button"
                       onClick={() => {/* fetchConfigs */}}
-                      className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                      className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors cursor-pointer"
                       title="Làm mới options đánh giá"
                     >
                       <RefreshCw className="h-3 w-3" />
@@ -934,14 +976,14 @@ export default function ReceivingCaseTable({
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
               <button
                 onClick={handleCloseEvaluationModal}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 onClick={handleEvaluationSubmit}
                 disabled={evaluating}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
               </button>

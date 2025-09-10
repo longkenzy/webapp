@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const {
       title,
       description,
-      reporterId,
+      customerName,
       handlerId,
       incidentType,
       customerId,
@@ -37,8 +37,8 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!title || !description || !reporterId || !handlerId || !incidentType) {
-      console.log("Missing required fields:", { title, description, reporterId, handlerId, incidentType });
+    if (!title || !description || !customerName || !handlerId || !incidentType) {
+      console.log("Missing required fields:", { title, description, customerName, handlerId, incidentType });
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -86,12 +86,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate reporter and handler exist
-    console.log("Checking reporter:", reporterId);
-    const reporter = await db.employee.findUnique({
-      where: { id: reporterId }
-    });
-    console.log("Reporter found:", reporter);
+    // Validate handler exists
 
     console.log("Checking handler:", handlerId);
     const handler = await db.employee.findUnique({
@@ -99,10 +94,10 @@ export async function POST(request: NextRequest) {
     });
     console.log("Handler found:", handler);
 
-    if (!reporter || !handler) {
-      console.log("Reporter or handler not found");
+    if (!handler) {
+      console.log("Handler not found");
       return NextResponse.json(
-        { error: "Reporter or handler not found" },
+        { error: "Handler not found" },
         { status: 400 }
       );
     }
@@ -111,7 +106,7 @@ export async function POST(request: NextRequest) {
     console.log("Creating incident with data:", {
       title,
       description,
-      reporterId,
+      customerName,
       handlerId,
       incidentTypeId,
       customerId,
@@ -125,7 +120,8 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description,
-        reporterId,
+        customerName,
+        reporterId: null,
         handlerId,
         incidentTypeId,
         customerId: customerId || null,
@@ -279,7 +275,7 @@ export async function GET(request: NextRequest) {
           where,
           skip,
           take: limit,
-          orderBy: { createdAt: "asc" },
+          orderBy: { createdAt: "desc" },
           include: {
             reporter: {
               select: {

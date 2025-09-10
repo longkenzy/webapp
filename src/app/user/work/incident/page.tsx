@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Filter, MoreVertical, Eye, Edit, RefreshCw, X, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Edit, RefreshCw, X, AlertTriangle } from 'lucide-react';
+import { Toaster } from 'react-hot-toast';
 import CreateIncidentModal from './CreateIncidentModal';
 import EditIncidentModal from './EditIncidentModal';
-import ViewIncidentModal from './ViewIncidentModal';
 
 interface Employee {
   id: string;
@@ -18,7 +18,7 @@ interface Incident {
   id: string;
   title: string;
   description: string;
-  reporter: Employee;
+  reporter?: Employee;
   handler: Employee;
   incidentType: string;
   customer?: {
@@ -54,13 +54,14 @@ export default function IncidentPage() {
   const { data: session, status } = useSession();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -138,16 +139,6 @@ export default function IncidentPage() {
     setRefreshing(false);
   };
 
-  // Handle view modal
-  const handleOpenViewModal = (incidentData: Incident) => {
-    setSelectedIncident(incidentData);
-    setIsViewModalOpen(true);
-  };
-
-  const handleCloseViewModal = () => {
-    setIsViewModalOpen(false);
-    setSelectedIncident(null);
-  };
 
   // Handle edit modal
   const handleOpenEditModal = (incidentData: Incident) => {
@@ -176,20 +167,38 @@ export default function IncidentPage() {
     }
   }, [status, fetchIncidents, fetchCustomers]);
 
+  // Close customer dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.customer-dropdown-container')) {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+
+    if (isCustomerDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCustomerDropdownOpen]);
+
   // Filter incidents based on search term and filters
   const filteredIncidents = incidents.filter(incident => {
     // Search term filter
     const matchesSearch = searchTerm === '' || (
       incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.reporter.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (incident.reporter?.fullName && incident.reporter.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (incident.handler?.fullName && incident.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       incident.incidentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
       incident.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
     // Handler filter
     const matchesHandler = filters.handler === '' || 
-      incident.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
+      (incident.handler?.fullName && incident.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase()));
     
     // Incident type filter
     const matchesIncidentType = filters.incidentType === '' || 
@@ -217,21 +226,18 @@ export default function IncidentPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'REPORTED':
-      case 'Báo cáo':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'INVESTIGATING':
-      case 'Đang điều tra':
+      case 'RECEIVED':
+      case 'Tiếp nhận':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'PROCESSING':
+      case 'Đang xử lý':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'RESOLVED':
-      case 'Đã giải quyết':
+      case 'COMPLETED':
+      case 'Hoàn thành':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'CLOSED':
-      case 'Đóng':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'ESCALATED':
-      case 'Nâng cấp':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'CANCELLED':
+      case 'Hủy':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -239,16 +245,14 @@ export default function IncidentPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'REPORTED':
-        return 'Báo cáo';
-      case 'INVESTIGATING':
-        return 'Đang điều tra';
-      case 'RESOLVED':
-        return 'Đã giải quyết';
-      case 'CLOSED':
-        return 'Đóng';
-      case 'ESCALATED':
-        return 'Nâng cấp';
+      case 'RECEIVED':
+        return 'Tiếp nhận';
+      case 'PROCESSING':
+        return 'Đang xử lý';
+      case 'COMPLETED':
+        return 'Hoàn thành';
+      case 'CANCELLED':
+        return 'Hủy';
       default:
         return status;
     }
@@ -287,18 +291,18 @@ export default function IncidentPage() {
 
   // Get unique values for filter dropdowns
   const getUniqueHandlers = () => {
-    const handlers = incidents.map(incident => incident.handler.fullName);
+    const handlers = incidents.map(incident => incident.handler?.fullName).filter(handler => handler != null);
     return [...new Set(handlers)].sort();
   };
 
   const getUniqueIncidentTypes = () => {
-    const incidentTypes = incidents.map(incident => incident.incidentType);
+    const incidentTypes = incidents.map(incident => incident.incidentType).filter(type => type != null);
     return [...new Set(incidentTypes)].sort();
   };
 
 
   const getUniqueStatuses = () => {
-    const statuses = incidents.map(incident => incident.status);
+    const statuses = incidents.map(incident => incident.status).filter(status => status != null);
     return [...new Set(statuses)].sort();
   };
 
@@ -325,6 +329,36 @@ export default function IncidentPage() {
       return new Date(filters.startDate) <= new Date(filters.endDate);
     }
     return true;
+  };
+
+  // Filter customers based on search term
+  const filteredCustomers = customers.filter(customer => {
+    const searchLower = customerSearchTerm.toLowerCase();
+    return (
+      customer.fullCompanyName.toLowerCase().includes(searchLower) ||
+      customer.shortName.toLowerCase().includes(searchLower) ||
+      (customer.contactPerson && customer.contactPerson.toLowerCase().includes(searchLower))
+    );
+  });
+
+  // Handle customer selection
+  const handleCustomerSelect = (customerId: string) => {
+    setFilters(prev => ({ ...prev, customer: customerId }));
+    setIsCustomerDropdownOpen(false);
+    setCustomerSearchTerm('');
+  };
+
+  // Clear customer filter
+  const clearCustomerFilter = () => {
+    setFilters(prev => ({ ...prev, customer: '' }));
+    setCustomerSearchTerm('');
+  };
+
+  // Get selected customer name for display
+  const getSelectedCustomerName = () => {
+    if (!filters.customer) return '';
+    const customer = customers.find(c => c.id === filters.customer);
+    return customer ? `${customer.shortName} (${customer.fullCompanyName})` : '';
   };
 
   // Show loading while checking session
@@ -395,8 +429,8 @@ export default function IncidentPage() {
           </div>
 
           {/* Content */}
-          <div className="p-6">
-            <div className="space-y-4">
+          <div className="p-4">
+            <div className="space-y-3">
               {/* Search Section */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -419,13 +453,13 @@ export default function IncidentPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Bộ lọc
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
                   {/* Người xử lý */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span>Người xử lý</span>
+                        <span>Xử lý</span>
                       </div>
                     </label>
                     <select
@@ -442,10 +476,10 @@ export default function IncidentPage() {
 
                   {/* Loại sự cố */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                        <span>Loại sự cố</span>
+                        <span>Loại</span>
                       </div>
                     </label>
                     <select
@@ -461,31 +495,67 @@ export default function IncidentPage() {
                   </div>
 
                   {/* Khách hàng */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                  <div className="relative customer-dropdown-container">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
                         <span>Khách hàng</span>
                       </div>
                     </label>
-                    <select
-                      value={filters.customer}
-                      onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả khách hàng</option>
-                      {customers.map(customer => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.fullCompanyName} ({customer.shortName})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Tìm kiếm khách hàng..."
+                        value={filters.customer ? getSelectedCustomerName() : customerSearchTerm}
+                        onChange={(e) => {
+                          setCustomerSearchTerm(e.target.value);
+                          if (filters.customer) {
+                            clearCustomerFilter();
+                          }
+                        }}
+                        onFocus={() => setIsCustomerDropdownOpen(true)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      />
+                      {filters.customer && (
+                        <button
+                          onClick={clearCustomerFilter}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Dropdown */}
+                    {isCustomerDropdownOpen && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                        {filteredCustomers.length > 0 ? (
+                          filteredCustomers.map(customer => (
+                            <div
+                              key={customer.id}
+                              onClick={() => handleCustomerSelect(customer.id)}
+                              className="px-3 py-2 hover:bg-purple-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium text-gray-900">{customer.shortName}</div>
+                              <div className="text-xs text-gray-500">{customer.fullCompanyName}</div>
+                              {customer.contactPerson && (
+                                <div className="text-xs text-gray-400">Liên hệ: {customer.contactPerson}</div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Không tìm thấy khách hàng nào
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Trạng thái */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
                         <span>Trạng thái</span>
                       </div>
@@ -504,10 +574,10 @@ export default function IncidentPage() {
 
                   {/* Từ ngày */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
-                        <span>Từ ngày</span>
+                        <span>Từ</span>
                       </div>
                     </label>
                     <input
@@ -520,10 +590,10 @@ export default function IncidentPage() {
 
                   {/* Đến ngày */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
-                        <span>Đến ngày</span>
+                        <span>Đến</span>
                       </div>
                     </label>
                     <input
@@ -629,28 +699,28 @@ export default function IncidentPage() {
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-red-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">
                     STT
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
                     Người xử lý
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-48">
                     Khách hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
                     Loại sự cố
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-80">
                     Thông tin Sự cố
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Trạng thái
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-36">
                     Thời gian
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">
                     Hành động
                   </th>
                 </tr>
@@ -658,7 +728,7 @@ export default function IncidentPage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-red-600" />
                         <span className="text-slate-600">Đang tải danh sách sự cố...</span>
@@ -669,14 +739,14 @@ export default function IncidentPage() {
                   filteredIncidents.map((incident, index) => (
                     <tr key={incident.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       {/* STT */}
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-2 py-1 text-center w-16">
                         <span className="text-sm font-medium text-slate-600">
-                          {index + 1}
+                          {filteredIncidents.length - index}
                         </span>
                       </td>
                       
                       {/* Người xử lý */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-32">
                         <div>
                           <div className="text-sm text-slate-900">{incident.handler.fullName}</div>
                           <div className="text-xs text-slate-500">{incident.handler.position}</div>
@@ -684,12 +754,12 @@ export default function IncidentPage() {
                       </td>
                       
                       {/* Khách hàng */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-48">
                         <div className="text-sm text-slate-700">
                           {incident.customer ? (
                             <div>
-                              <div className="font-medium">{incident.customer.fullCompanyName}</div>
-                              <div className="text-xs text-slate-500">({incident.customer.shortName})</div>
+                              <div className="font-medium">{incident.customer.shortName}</div>
+                              <div className="text-xs text-slate-500">{incident.customer.fullCompanyName}</div>
                             </div>
                           ) : (
                             <span className="text-slate-400">-</span>
@@ -698,12 +768,12 @@ export default function IncidentPage() {
                       </td>
                       
                       {/* Loại sự cố */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-32">
                         <div className="text-sm text-slate-700">{formatIncidentType(incident.incidentType)}</div>
                       </td>
                       
                       {/* Thông tin Sự cố */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-80">
                         <div>
                           <div className="text-sm font-medium text-slate-900 mb-1">
                             {incident.title}
@@ -718,14 +788,14 @@ export default function IncidentPage() {
                       </td>
                       
                       {/* Trạng thái */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-24">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(incident.status)}`}>
                           {getStatusText(incident.status)}
                         </span>
                       </td>
                       
                       {/* Thời gian */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-36">
                         <div className="text-sm text-slate-700">
                           <div>Bắt đầu: {formatDate(incident.startDate)}</div>
                           {incident.endDate && (
@@ -735,15 +805,8 @@ export default function IncidentPage() {
                       </td>
                       
                       {/* Hành động */}
-                      <td className="px-3 py-2">
-                        <div className="flex items-center space-x-1">
-                          <button 
-                            onClick={() => handleOpenViewModal(incident)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
-                            title="Xem chi tiết"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
+                      <td className="px-2 py-1 w-20 text-center">
+                        <div className="flex items-center justify-center space-x-1">
                           <button 
                             onClick={() => handleOpenEditModal(incident)}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
@@ -757,7 +820,7 @@ export default function IncidentPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="text-slate-400 mb-4">
                         <AlertTriangle className="h-16 w-16 mx-auto" />
                       </div>
@@ -789,12 +852,32 @@ export default function IncidentPage() {
         incidentData={selectedIncident}
       />
 
-      {/* View Incident Modal */}
-      <ViewIncidentModal
-        isOpen={isViewModalOpen}
-        onClose={handleCloseViewModal}
-        incidentData={selectedIncident}
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            style: {
+              background: '#10B981',
+              color: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            style: {
+              background: '#EF4444',
+              color: '#fff',
+            },
+          },
+        }}
       />
+
     </div>
   );
 }

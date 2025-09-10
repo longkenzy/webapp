@@ -510,7 +510,7 @@ export default function AdminInternalWorkPage() {
     }
     
     return matchesSearch && matchesHandler && matchesStatus && matchesDateRange;
-  });
+  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   // Clear all filters
   const clearFilters = () => {
@@ -874,7 +874,7 @@ export default function AdminInternalWorkPage() {
         const grandTotal = ((userTotalScore * 0.4) + (adminTotalScore * 0.6)).toFixed(2);
         
         return {
-          'STT': index + 1,
+          'STT': filteredInternalCases.length - index,
           'Tiêu đề Case': case_.title,
           'Mô tả': case_.description,
           'Người yêu cầu': case_.requester.fullName,
@@ -1031,7 +1031,7 @@ export default function AdminInternalWorkPage() {
                 <nav className="-mb-px flex space-x-8">
                   <button
                     onClick={() => setActiveTab('cases')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                       activeTab === 'cases'
                         ? 'border-blue-500 text-blue-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1051,7 +1051,7 @@ export default function AdminInternalWorkPage() {
                   </button>
                   <button
                     onClick={() => setActiveTab('config')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                    className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                       activeTab === 'config'
                         ? 'border-blue-500 text-blue-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1092,7 +1092,7 @@ export default function AdminInternalWorkPage() {
                     <button 
                       onClick={exportToExcel}
                       disabled={filteredInternalCases.length === 0}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                     >
                       <Download className="h-3.5 w-3.5" />
                       <span className="text-sm font-medium">Xuất Excel</span>
@@ -1100,7 +1100,7 @@ export default function AdminInternalWorkPage() {
                     <button 
                       onClick={refreshInternalCases}
                       disabled={refreshing}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 shadow-sm"
+                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                     >
                       <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
                       <span className="text-sm font-medium">Làm mới</span>
@@ -1266,7 +1266,7 @@ export default function AdminInternalWorkPage() {
                           </div>
                           <button
                             onClick={clearFilters}
-                            className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm"
+                            className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
                           >
                             <span className="text-xs font-medium">Xóa bộ lọc</span>
                             <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
@@ -1347,7 +1347,7 @@ export default function AdminInternalWorkPage() {
                               >
                                 <td className="px-3 py-2 text-center">
                           <span className="text-sm font-medium text-gray-600">
-                            {index + 1}
+                            {filteredInternalCases.length - index}
                           </span>
                         </td>
                                 <td className="px-3 py-2">
@@ -1427,7 +1427,7 @@ export default function AdminInternalWorkPage() {
                                         e.stopPropagation();
                                         handleOpenEvaluationModal(case_);
                                       }}
-                                      className={`p-1.5 rounded-md transition-colors duration-200 ${
+                                      className={`p-1.5 rounded-md transition-colors duration-200 cursor-pointer ${
                                         isEvaluated 
                                           ? 'text-green-600 hover:bg-green-50' 
                                           : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
@@ -1447,7 +1447,7 @@ export default function AdminInternalWorkPage() {
                                       className={`p-1.5 rounded-md transition-colors duration-200 ${
                                         deletedCases.has(case_.id) 
                                           ? 'text-gray-400 cursor-not-allowed' 
-                                          : 'text-red-600 hover:bg-red-50'
+                                          : 'text-red-600 hover:bg-red-50 cursor-pointer'
                                       }`}
                                       title={deletedCases.has(case_.id) ? "Đang xóa..." : "Xóa case"}
                                     >
@@ -1545,7 +1545,7 @@ export default function AdminInternalWorkPage() {
                   </div>
                   <button
                     onClick={handleAddCaseType}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Thêm loại case</span>
@@ -1607,7 +1607,7 @@ export default function AdminInternalWorkPage() {
                               <div className="flex items-center space-x-2">
                                 <button
                                     onClick={() => toggleCaseTypeStatus(caseType)}
-                                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                                     caseType.isActive
                                       ? 'bg-red-100 text-red-700 hover:bg-red-200'
                                       : 'bg-green-100 text-green-700 hover:bg-green-200'
@@ -1617,13 +1617,13 @@ export default function AdminInternalWorkPage() {
                                 </button>
                                   <button
                                     onClick={() => handleEditCaseType(caseType)}
-                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors"
+                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors cursor-pointer"
                                   >
                                   Sửa
                                 </button>
                                   <button
                                     onClick={() => handleDeleteCaseType(caseType)}
-                                    className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors"
+                                    className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors cursor-pointer"
                                   >
                                     Xóa
                                   </button>
@@ -1665,14 +1665,14 @@ export default function AdminInternalWorkPage() {
                                 <button
                                   onClick={handleSaveNewCaseType}
                                   disabled={saving}
-                                  className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors disabled:opacity-50"
+                                  className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   {saving ? 'Đang lưu...' : 'Lưu'}
                                 </button>
                                 <button
                                   onClick={handleCancelAddRow}
                                   disabled={saving}
-                                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   Hủy
                                 </button>
@@ -1687,7 +1687,7 @@ export default function AdminInternalWorkPage() {
                             <td colSpan={4} className="px-6 py-4">
                               <button
                                 onClick={handleAddNewRow}
-                                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium transition-colors cursor-pointer"
                               >
                                 <Plus className="h-4 w-4" />
                                 <span>Thêm loại case mới</span>
@@ -1780,11 +1780,11 @@ export default function AdminInternalWorkPage() {
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
               <button
                 onClick={handleCloseModal}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Hủy
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+              <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer">
                 Thêm
               </button>
             </div>
@@ -1824,7 +1824,7 @@ export default function AdminInternalWorkPage() {
                     <button
                       type="button"
                       onClick={fetchConfigs}
-                      className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                      className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors cursor-pointer"
                       title="Làm mới options đánh giá"
                     >
                       <RefreshCw className="h-3 w-3" />
@@ -1915,14 +1915,14 @@ export default function AdminInternalWorkPage() {
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
               <button
                 onClick={handleCloseEvaluationModal}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 onClick={handleEvaluationSubmit}
                 disabled={evaluating}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
               </button>
@@ -1967,14 +1967,14 @@ export default function AdminInternalWorkPage() {
               <button
                 onClick={handleCloseDeleteModal}
                 disabled={deleting}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 onClick={handleDeleteCase}
                 disabled={deleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center"
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
               >
                 {deleting ? (
                   <>
@@ -2033,13 +2033,13 @@ export default function AdminInternalWorkPage() {
             <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
               <button
                 onClick={handleCloseCaseTypeModal}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 onClick={handleCaseTypeSubmit}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
               >
                 {editingCaseType ? 'Cập nhật' : 'Tạo mới'}
               </button>

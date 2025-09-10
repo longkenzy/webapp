@@ -17,7 +17,7 @@ interface Incident {
     contactPerson?: string;
     contactPhone?: string;
   };
-  reporter: {
+  reporter?: {
     id: string;
     fullName: string;
     position: string;
@@ -62,12 +62,9 @@ export default function EditIncidentModal({
   incidentData 
 }: EditIncidentModalProps) {
   const [loading, setLoading] = useState(false);
-  const [customers, setCustomers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     endDate: '',
-    status: 'REPORTED',
-    customer: '',
-    notes: ''
+    status: 'RECEIVED'
   });
 
   // Initialize form data when modal opens
@@ -75,42 +72,11 @@ export default function EditIncidentModal({
     if (isOpen && incidentData) {
       setFormData({
         endDate: incidentData.endDate ? new Date(incidentData.endDate).toISOString().slice(0, 16) : '',
-        status: incidentData.status,
-        customer: incidentData.customer?.id || '',
-        notes: incidentData.notes || ''
+        status: incidentData.status
       });
     }
   }, [isOpen, incidentData]);
 
-  // Fetch customers
-  const fetchCustomers = async () => {
-    try {
-      const response = await fetch('/api/partners/list', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=300',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCustomers(data || []);
-      } else {
-        console.error('Failed to fetch customers:', response.status, response.statusText);
-        setCustomers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-      setCustomers([]);
-    }
-  };
-
-  // Fetch customers when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchCustomers();
-    }
-  }, [isOpen]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -167,9 +133,7 @@ export default function EditIncidentModal({
       // Prepare data for API
       const updateData = {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        status: formData.status,
-        customerId: formData.customer || null,
-        notes: formData.notes || null
+        status: formData.status
       };
 
       console.log('=== Updating Incident ===');
@@ -190,6 +154,12 @@ export default function EditIncidentModal({
       if (response.ok) {
         const result = await response.json();
         console.log('Incident updated successfully:', result);
+        
+        // Show success notification
+        toast.success('Cập nhật sự cố thành công!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         
         // Close modal and pass updated data
         onClose();
@@ -255,23 +225,13 @@ export default function EditIncidentModal({
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-600">Người báo cáo:</span>
-                <p className="text-sm text-gray-900 mt-1">{incidentData.reporter.fullName}</p>
+                <p className="text-sm text-gray-900 mt-1">
+                  {incidentData.reporter ? incidentData.reporter.fullName : 'Chưa xác định'}
+                </p>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-600">Người xử lý:</span>
                 <p className="text-sm text-gray-900 mt-1">{incidentData.handler.fullName}</p>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-600">Khách hàng:</span>
-                <p className="text-sm text-gray-900 mt-1">
-                  {incidentData.customer ? (
-                    <span>
-                      {incidentData.customer.fullCompanyName} ({incidentData.customer.shortName})
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </p>
               </div>
               <div className="md:col-span-2">
                 <span className="text-sm font-medium text-gray-600">Mô tả:</span>
@@ -282,76 +242,45 @@ export default function EditIncidentModal({
 
           {/* Editable Fields */}
           <div className="space-y-4">
-            {/* End Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-2" />
-                Thời gian giải quyết
-              </label>
-              <input
-                type="datetime-local"
-                value={formData.endDate}
-                onChange={(e) => handleInputChange('endDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="Chọn thời gian giải quyết"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Để trống nếu chưa có thời gian giải quyết
-              </p>
+            {/* End Date and Status Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-2" />
+                  Thời gian giải quyết
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.endDate}
+                  onChange={(e) => handleInputChange('endDate', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="Chọn thời gian giải quyết"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Để trống nếu chưa có thời gian giải quyết
+                </p>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <CheckCircle className="w-4 h-4 inline mr-2" />
+                  Trạng thái
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                >
+                  <option value="RECEIVED">Tiếp nhận</option>
+                  <option value="PROCESSING">Đang xử lý</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="CANCELLED">Hủy</option>
+                </select>
+              </div>
             </div>
 
-            {/* Customer */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <AlertTriangle className="w-4 h-4 inline mr-2" />
-                Khách hàng
-              </label>
-              <select
-                value={formData.customer}
-                onChange={(e) => handleInputChange('customer', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              >
-                <option value="">Chọn khách hàng</option>
-                {customers.map(customer => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.fullCompanyName} ({customer.shortName})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <CheckCircle className="w-4 h-4 inline mr-2" />
-                Trạng thái
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              >
-                <option value="REPORTED">Báo cáo</option>
-                <option value="INVESTIGATING">Đang điều tra</option>
-                <option value="RESOLVED">Đã giải quyết</option>
-                <option value="CLOSED">Đóng</option>
-                <option value="ESCALATED">Nâng cấp</option>
-              </select>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ghi chú
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-                placeholder="Thêm ghi chú về sự cố..."
-              />
-            </div>
           </div>
 
           {/* Action Buttons */}

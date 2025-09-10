@@ -124,44 +124,46 @@ export default function InternalCasePage() {
     }
   }, [status, fetchCases]); // Include fetchCases in dependencies
 
-  // Filter cases based on search term and filters
-  const filteredCases = cases.filter(case_ => {
-    // Search term filter
-    const matchesSearch = searchTerm === '' || (
-    case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.requester.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      case_.caseType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      case_.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    // Requester filter
-    const matchesRequester = filters.requester === '' || 
-      case_.requester.fullName.toLowerCase().includes(filters.requester.toLowerCase());
-    
-    // Handler filter
-    const matchesHandler = filters.handler === '' || 
-      case_.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
-    
-    // Case type filter
-    const matchesCaseType = filters.caseType === '' || 
-      case_.caseType === filters.caseType;
-    
-    // Status filter
-    const matchesStatus = filters.status === '' || 
-      case_.status === filters.status;
-    
-    // Date range filter
-    const caseDate = new Date(case_.startDate);
-    const startDate = filters.startDate ? new Date(filters.startDate) : null;
-    const endDate = filters.endDate ? new Date(filters.endDate) : null;
-    
-    const matchesDateRange = (!startDate || caseDate >= startDate) && 
-      (!endDate || caseDate <= endDate);
-    
-    return matchesSearch && matchesRequester && matchesHandler && 
-           matchesCaseType && matchesStatus && matchesDateRange;
-  });
+  // Filter and sort cases based on search term and filters
+  const filteredCases = cases
+    .filter(case_ => {
+      // Search term filter
+      const matchesSearch = searchTerm === '' || (
+      case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      case_.requester.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      case_.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        case_.caseType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        case_.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      // Requester filter
+      const matchesRequester = filters.requester === '' || 
+        case_.requester.fullName.toLowerCase().includes(filters.requester.toLowerCase());
+      
+      // Handler filter
+      const matchesHandler = filters.handler === '' || 
+        case_.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
+      
+      // Case type filter
+      const matchesCaseType = filters.caseType === '' || 
+        case_.caseType === filters.caseType;
+      
+      // Status filter
+      const matchesStatus = filters.status === '' || 
+        case_.status === filters.status;
+      
+      // Date range filter
+      const caseDate = new Date(case_.startDate);
+      const startDate = filters.startDate ? new Date(filters.startDate) : null;
+      const endDate = filters.endDate ? new Date(filters.endDate) : null;
+      
+      const matchesDateRange = (!startDate || caseDate >= startDate) && 
+        (!endDate || caseDate <= endDate);
+      
+      return matchesSearch && matchesRequester && matchesHandler && 
+             matchesCaseType && matchesStatus && matchesDateRange;
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -341,8 +343,8 @@ export default function InternalCasePage() {
           </div>
 
           {/* Content */}
-          <div className="p-6">
-            <div className="space-y-4">
+          <div className="p-4">
+            <div className="space-y-3">
               {/* Search Section */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -365,13 +367,13 @@ export default function InternalCasePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Bộ lọc
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
                   {/* Người yêu cầu */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <span>Người yêu cầu</span>
+                        <span>Yêu cầu</span>
                       </div>
                     </label>
                     <select
@@ -388,10 +390,10 @@ export default function InternalCasePage() {
 
                   {/* Người xử lý */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span>Người xử lý</span>
+                        <span>Xử lý</span>
                       </div>
                     </label>
                     <select
@@ -408,10 +410,10 @@ export default function InternalCasePage() {
 
                   {/* Loại case */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                        <span>Loại case</span>
+                        <span>Loại</span>
                       </div>
                     </label>
                     <select
@@ -428,8 +430,8 @@ export default function InternalCasePage() {
 
                   {/* Trạng thái */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
                         <span>Trạng thái</span>
                       </div>
@@ -448,10 +450,10 @@ export default function InternalCasePage() {
 
                   {/* Từ ngày */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                        <span>Từ ngày</span>
+                        <span>Từ</span>
                       </div>
                     </label>
                     <input
@@ -464,10 +466,10 @@ export default function InternalCasePage() {
 
                   {/* Đến ngày */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
-                        <span>Đến ngày</span>
+                        <span>Đến</span>
                       </div>
                     </label>
                     <input
@@ -614,7 +616,7 @@ export default function InternalCasePage() {
                     <tr key={case_.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       <td className="px-3 py-2 text-center">
                         <span className="text-sm font-medium text-slate-600">
-                          {index + 1}
+                          {filteredCases.length - index}
                         </span>
                       </td>
                       <td className="px-3 py-2">
@@ -694,8 +696,8 @@ export default function InternalCasePage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(newCase: any) => {
-          // Add new case to the end of the list (since we sort by createdAt ASC)
-          setCases(prevCases => [...prevCases, newCase as InternalCase]);
+          // Add new case to the beginning of the list (since we sort by newest first)
+          setCases(prevCases => [newCase as InternalCase, ...prevCases]);
         }}
       />
 

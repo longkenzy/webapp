@@ -502,14 +502,14 @@ export default function AdminMaintenanceWorkPage() {
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-600 transition-colors disabled:cursor-not-allowed cursor-pointer"
                 title="Làm mới"
               >
                 <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
               </button>
               <button
                 onClick={handleExport}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
               >
                 <Download className="h-4 w-4" />
                 <span>Xuất Excel</span>
@@ -526,7 +526,7 @@ export default function AdminMaintenanceWorkPage() {
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('cases')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                   activeTab === 'cases'
                     ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -546,7 +546,7 @@ export default function AdminMaintenanceWorkPage() {
               </button>
               <button
                 onClick={() => setActiveTab('config')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
                   activeTab === 'config'
                     ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -585,7 +585,7 @@ export default function AdminMaintenanceWorkPage() {
                       <button 
                         onClick={handleExport}
                         disabled={filteredMaintenanceCases.length === 0}
-                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                       >
                         <Download className="h-3.5 w-3.5" />
                         <span className="text-sm font-medium">Xuất Excel</span>
@@ -593,7 +593,7 @@ export default function AdminMaintenanceWorkPage() {
                       <button 
                         onClick={handleRefresh}
                         disabled={refreshing}
-                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 shadow-sm"
+                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
                         <span className="text-sm font-medium">Làm mới</span>
@@ -943,7 +943,7 @@ export default function AdminMaintenanceWorkPage() {
                                   setSelectedMaintenanceCase(case_);
                                   setShowEvaluationModal(true);
                                 }}
-                                className={`p-1.5 rounded-md transition-colors duration-200 ${
+                                className={`p-1.5 rounded-md transition-colors duration-200 cursor-pointer ${
                                   isMaintenanceCaseEvaluatedByAdmin(case_) 
                                     ? 'text-green-600 hover:bg-green-50' 
                                     : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
@@ -958,7 +958,7 @@ export default function AdminMaintenanceWorkPage() {
                                   setSelectedMaintenanceCase(case_);
                                   setShowDeleteModal(true);
                                 }}
-                                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200"
+                                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200 cursor-pointer"
                                 title="Xóa"
                               >
                                 <Trash className="h-3 w-3" />
@@ -1067,7 +1067,7 @@ export default function AdminMaintenanceWorkPage() {
                       <button
                         type="button"
                         onClick={fetchConfigs}
-                        className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
+                        className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors cursor-pointer"
                         title="Làm mới options đánh giá"
                       >
                         <RefreshCw className="h-3 w-3" />
@@ -1169,14 +1169,14 @@ export default function AdminMaintenanceWorkPage() {
                       adminUrgencyLevel: ''
                     });
                   }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleEvaluation}
                   disabled={evaluating}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
                 </button>
@@ -1224,14 +1224,14 @@ export default function AdminMaintenanceWorkPage() {
                     setSelectedMaintenanceCase(null);
                   }}
                   disabled={deleting}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
                 >
                   {deleting ? (
                     <>

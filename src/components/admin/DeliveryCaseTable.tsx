@@ -13,7 +13,8 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  AlertTriangle
 } from 'lucide-react';
 import { DeliveryCaseStatus, EvaluationType, EvaluationCategory } from '@prisma/client';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
@@ -68,7 +69,7 @@ interface DeliveryCase {
   updatedAt: string;
   requester: Employee;
   handler: Employee;
-  supplier: Partner | null;
+  customer: Partner | null;
   products: Product[];
   _count: {
     comments: number;
@@ -147,6 +148,18 @@ export default function DeliveryCaseTable({
   ];
   
   const { getFieldOptions } = useEvaluationForm(EvaluationType.ADMIN, adminCategories);
+
+  // Helper function to check if case is evaluated by admin
+  const isDeliveryCaseEvaluatedByAdmin = (caseItem: DeliveryCase) => {
+    return caseItem.adminDifficultyLevel !== null &&
+           caseItem.adminDifficultyLevel !== undefined &&
+           caseItem.adminEstimatedTime !== null &&
+           caseItem.adminEstimatedTime !== undefined &&
+           caseItem.adminImpactLevel !== null &&
+           caseItem.adminImpactLevel !== undefined &&
+           caseItem.adminUrgencyLevel !== null &&
+           caseItem.adminUrgencyLevel !== undefined;
+  };
 
   // Helper functions for evaluation text
   const getDifficultyText = (level: number) => {
@@ -296,7 +309,7 @@ export default function DeliveryCaseTable({
       }
 
       // Customer filter
-      if (customerFilter && case_.supplier?.id !== customerFilter) {
+      if (customerFilter && case_.customer?.id !== customerFilter) {
         return false;
       }
 
@@ -322,7 +335,7 @@ export default function DeliveryCaseTable({
           case_.description.toLowerCase().includes(searchLower) ||
           case_.requester?.fullName.toLowerCase().includes(searchLower) ||
           case_.handler?.fullName.toLowerCase().includes(searchLower) ||
-          case_.supplier?.shortName.toLowerCase().includes(searchLower);
+          case_.customer?.shortName.toLowerCase().includes(searchLower);
         
         if (!matchesSearch) {
           return false;
@@ -330,7 +343,7 @@ export default function DeliveryCaseTable({
       }
 
       return true;
-    });
+    }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [statusFilter, deliveryPersonFilter, customerFilter, startDate, endDate, searchTerm]);
 
   // Fetch all cases once
@@ -594,13 +607,6 @@ export default function DeliveryCaseTable({
                 </span>
               </div>
             )}
-            <button
-              onClick={refreshData}
-              className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-xs"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Làm mới
-            </button>
           </div>
         </div>
       </div>
@@ -669,10 +675,14 @@ export default function DeliveryCaseTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {getCurrentPageData().map((caseItem, index) => (
-              <tr key={caseItem.id} className="hover:bg-gray-50">
+            {getCurrentPageData().map((caseItem, index) => {
+              const isEvaluated = isDeliveryCaseEvaluatedByAdmin(caseItem);
+              return (
+                <tr key={caseItem.id} className={`hover:bg-gray-50 ${
+                  !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                }`}>
                 <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-900 text-center">
-                  {(currentPage - 1) * itemsPerPage + index + 1}
+                  {filteredCases.length - ((currentPage - 1) * itemsPerPage + index)}
                 </td>
                 
                 {/* Người giao hàng */}
@@ -751,10 +761,14 @@ export default function DeliveryCaseTable({
                    <div className="flex items-center justify-center gap-2">
                      <button
                        onClick={() => handleOpenEvaluationModal(caseItem)}
-                       className="text-green-600 hover:text-green-900 p-1 rounded hover:bg-green-50"
-                       title="Đánh giá case"
+                       className={`p-1 rounded transition-colors ${
+                         isEvaluated 
+                           ? 'text-green-600 hover:text-green-900 hover:bg-green-50' 
+                           : 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 bg-yellow-100'
+                       }`}
+                       title={isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
                      >
-                       <Edit className="h-4 w-4" />
+                       {isEvaluated ? <Edit className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
                      </button>
                      {onDelete && (
                        <button
@@ -767,8 +781,9 @@ export default function DeliveryCaseTable({
                      )}
                    </div>
                  </td>
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

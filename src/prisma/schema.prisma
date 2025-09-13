@@ -31,6 +31,8 @@ model User {
   incidentWorklogs      IncidentWorklog[]
   maintenanceCaseComments MaintenanceCaseComment[]
   maintenanceCaseWorklogs MaintenanceCaseWorklog[]
+  warrantyComments        WarrantyComment[]
+  warrantyWorklogs        WarrantyWorklog[]
   schedules             Schedule[]
   employee              Employee?              @relation(fields: [employeeId], references: [id])
 }
@@ -68,6 +70,8 @@ model Employee {
   incidentsHandler        Incident[]      @relation("HandlerIncidents")
   maintenanceCasesReporter MaintenanceCase[] @relation("ReporterMaintenanceCases")
   maintenanceCasesHandler  MaintenanceCase[] @relation("HandlerMaintenanceCases")
+  warrantiesReporter       Warranty[]        @relation("ReporterWarranties")
+  warrantiesHandler        Warranty[]        @relation("HandlerWarranties")
   user                    User?
 }
 
@@ -100,6 +104,7 @@ model Partner {
   receivingCases  ReceivingCase[]
   incidents       Incident[]
   maintenanceCases MaintenanceCase[]
+  warranties      Warranty[]
 }
 
 model CaseType {
@@ -537,5 +542,78 @@ enum MaintenanceType {
   ROUTINE
   UPGRADE
   INSPECTION
+}
+
+model WarrantyType {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  warranties  Warranty[]
+}
+
+model Warranty {
+  id                   String           @id @default(cuid())
+  title                String
+  description          String
+  reporterId           String
+  handlerId            String
+  warrantyTypeId       String
+  customerId           String?
+  customerName         String
+  startDate            DateTime
+  endDate              DateTime?
+  status               WarrantyStatus   @default(RECEIVED)
+  notes                String?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  userAssessmentDate   DateTime?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  reporter             Employee         @relation("ReporterWarranties", fields: [reporterId], references: [id])
+  handler              Employee         @relation("HandlerWarranties", fields: [handlerId], references: [id])
+  warrantyType         WarrantyType     @relation(fields: [warrantyTypeId], references: [id])
+  customer             Partner?         @relation(fields: [customerId], references: [id])
+  comments             WarrantyComment[]
+  worklogs             WarrantyWorklog[]
+}
+
+model WarrantyComment {
+  id         String   @id @default(cuid())
+  warrantyId String
+  userId     String
+  content    String
+  createdAt  DateTime @default(now())
+  warranty   Warranty @relation(fields: [warrantyId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model WarrantyWorklog {
+  id         String   @id @default(cuid())
+  warrantyId String
+  userId     String
+  duration   Int
+  description String
+  createdAt  DateTime @default(now())
+  warranty   Warranty @relation(fields: [warrantyId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+enum WarrantyStatus {
+  RECEIVED
+  PROCESSING
+  COMPLETED
+  CANCELLED
 }
 

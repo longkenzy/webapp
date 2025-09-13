@@ -20,7 +20,7 @@ interface Warranty {
   description: string;
   reporter: Employee;
   handler: Employee;
-  warrantyType: string;
+  warrantyType: string | { id: string; name: string; description?: string };
   customer?: {
     id: string;
     fullCompanyName: string;
@@ -28,6 +28,7 @@ interface Warranty {
     contactPerson?: string;
     contactPhone?: string;
   };
+  customerName?: string;
   status: string;
   startDate: string;
   endDate?: string;
@@ -177,61 +178,65 @@ export default function WarrantyPage() {
   }, [status, fetchWarranties, fetchCustomers]);
 
   // Filter warranties based on search term and filters
-  const filteredWarranties = warranties.filter(warranty => {
-    // Search term filter
-    const matchesSearch = searchTerm === '' || (
-      warranty.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      warranty.reporter.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      warranty.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      warranty.warrantyType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      warranty.description.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    
-    // Handler filter
-    const matchesHandler = filters.handler === '' || 
-      warranty.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
-    
-    // Warranty type filter
-    const matchesWarrantyType = filters.warrantyType === '' || 
-      warranty.warrantyType === filters.warrantyType;
-    
-    // Customer filter
-    const matchesCustomer = filters.customer === '' || 
-      warranty.customer?.id === filters.customer;
-    
-    // Status filter
-    const matchesStatus = filters.status === '' || 
-      warranty.status === filters.status;
-    
-    // Date range filter
-    const warrantyDate = new Date(warranty.startDate);
-    const startDate = filters.startDate ? new Date(filters.startDate) : null;
-    const endDate = filters.endDate ? new Date(filters.endDate) : null;
-    
-    const matchesDateRange = (!startDate || warrantyDate >= startDate) && 
-      (!endDate || warrantyDate <= endDate);
-    
-    return matchesSearch && matchesHandler && 
-           matchesWarrantyType && matchesCustomer && matchesStatus && matchesDateRange;
-  });
+  const filteredWarranties = warranties
+    .filter(warranty => {
+      // Get warranty type name once
+      const warrantyTypeName = typeof warranty.warrantyType === 'string' 
+        ? warranty.warrantyType 
+        : warranty.warrantyType.name;
+      
+      // Search term filter
+      const matchesSearch = searchTerm === '' || (
+        warranty.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        warranty.reporter.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        warranty.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        warrantyTypeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        warranty.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      // Handler filter
+      const matchesHandler = filters.handler === '' || 
+        warranty.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
+      
+      // Warranty type filter
+      const matchesWarrantyType = filters.warrantyType === '' || 
+        warrantyTypeName === filters.warrantyType;
+      
+      // Customer filter
+      const matchesCustomer = filters.customer === '' || 
+        warranty.customer?.id === filters.customer;
+      
+      // Status filter
+      const matchesStatus = filters.status === '' || 
+        warranty.status === filters.status;
+      
+      // Date range filter
+      const warrantyDate = new Date(warranty.startDate);
+      const startDate = filters.startDate ? new Date(filters.startDate) : null;
+      const endDate = filters.endDate ? new Date(filters.endDate) : null;
+      
+      const matchesDateRange = (!startDate || warrantyDate >= startDate) && 
+        (!endDate || warrantyDate <= endDate);
+      
+      return matchesSearch && matchesHandler && 
+             matchesWarrantyType && matchesCustomer && matchesStatus && matchesDateRange;
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'REPORTED':
-      case 'Báo cáo':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'INVESTIGATING':
-      case 'Đang điều tra':
+      case 'RECEIVED':
+      case 'Tiếp nhận':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'PROCESSING':
+      case 'Đang xử lý':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'RESOLVED':
-      case 'Đã giải quyết':
+      case 'COMPLETED':
+      case 'Hoàn thành':
         return 'bg-green-100 text-green-800 border-green-200';
-      case 'CLOSED':
-      case 'Đóng':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-      case 'ESCALATED':
-      case 'Nâng cấp':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'CANCELLED':
+      case 'Hủy':
+        return 'bg-red-100 text-red-800 border-red-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -239,16 +244,14 @@ export default function WarrantyPage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'REPORTED':
-        return 'Báo cáo';
-      case 'INVESTIGATING':
-        return 'Đang điều tra';
-      case 'RESOLVED':
-        return 'Đã giải quyết';
-      case 'CLOSED':
-        return 'Đóng';
-      case 'ESCALATED':
-        return 'Nâng cấp';
+      case 'RECEIVED':
+        return 'Tiếp nhận';
+      case 'PROCESSING':
+        return 'Đang xử lý';
+      case 'COMPLETED':
+        return 'Hoàn thành';
+      case 'CANCELLED':
+        return 'Hủy';
       default:
         return status;
     }
@@ -265,7 +268,29 @@ export default function WarrantyPage() {
     });
   };
 
-  const formatWarrantyType = (warrantyType: string) => {
+  const formatWarrantyType = (warrantyType: string | { id: string; name: string; description?: string }) => {
+    // Handle object case
+    if (typeof warrantyType === 'object' && warrantyType !== null) {
+      const typeName = warrantyType.name;
+      switch (typeName) {
+        case 'hardware-warranty':
+          return 'Bảo hành phần cứng';
+        case 'software-warranty':
+          return 'Bảo hành phần mềm';
+        case 'service-warranty':
+          return 'Bảo hành dịch vụ';
+        case 'extended-warranty':
+          return 'Bảo hành mở rộng';
+        case 'replacement-warranty':
+          return 'Bảo hành thay thế';
+        case 'repair-warranty':
+          return 'Bảo hành sửa chữa';
+        default:
+          return typeName;
+      }
+    }
+    
+    // Handle string case
     switch (warrantyType) {
       case 'hardware-warranty':
         return 'Bảo hành phần cứng';
@@ -291,7 +316,11 @@ export default function WarrantyPage() {
   };
 
   const getUniqueWarrantyTypes = () => {
-    const warrantyTypes = warranties.map(warranty => warranty.warrantyType);
+    const warrantyTypes = warranties.map(warranty => 
+      typeof warranty.warrantyType === 'string' 
+        ? warranty.warrantyType 
+        : warranty.warrantyType.name
+    );
     return [...new Set(warrantyTypes)].sort();
   };
 
@@ -627,28 +656,28 @@ export default function WarrantyPage() {
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-blue-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">
                     STT
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
                     Người xử lý
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-48">
                     Khách hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
                     Loại bảo hành
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-80">
                     Thông tin Case
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Trạng thái
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-36">
                     Thời gian
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">
                     Hành động
                   </th>
                 </tr>
@@ -656,7 +685,7 @@ export default function WarrantyPage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
                         <span className="text-slate-600">Đang tải danh sách case bảo hành...</span>
@@ -667,14 +696,14 @@ export default function WarrantyPage() {
                   filteredWarranties.map((warranty, index) => (
                     <tr key={warranty.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       {/* STT */}
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-2 py-1 text-center w-16">
                         <span className="text-sm font-medium text-slate-600">
-                          {index + 1}
+                          {filteredWarranties.length - index}
                         </span>
                       </td>
                       
                       {/* Người xử lý */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-32">
                         <div>
                           <div className="text-sm text-slate-900">{warranty.handler.fullName}</div>
                           <div className="text-xs text-slate-500">{warranty.handler.position}</div>
@@ -682,31 +711,29 @@ export default function WarrantyPage() {
                       </td>
                       
                       {/* Khách hàng */}
-                      <td className="px-3 py-2">
-                        <div className="text-sm text-slate-700">
-                          {warranty.customer ? (
-                            <div>
-                              <div className="font-medium">{warranty.customer.fullCompanyName}</div>
-                              <div className="text-xs text-slate-500">({warranty.customer.shortName})</div>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">-</span>
+                      <td className="px-2 py-1 w-48">
+                        <div>
+                          <div className="text-sm font-medium text-slate-900">
+                            {warranty.customer ? warranty.customer.shortName : (warranty.customerName || '-')}
+                          </div>
+                          {warranty.customer && (
+                            <div className="text-xs text-slate-500">{warranty.customer.fullCompanyName}</div>
                           )}
                         </div>
                       </td>
                       
                       {/* Loại bảo hành */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-32">
                         <div className="text-sm text-slate-700">{formatWarrantyType(warranty.warrantyType)}</div>
                       </td>
                       
                       {/* Thông tin Case */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-80">
                         <div>
-                          <div className="text-sm font-medium text-slate-900 mb-1">
+                          <div className="text-sm font-medium text-slate-900 mb-1 break-words">
                             {warranty.title}
                           </div>
-                          <div className="text-xs text-slate-500 mb-1 line-clamp-2">
+                          <div className="text-xs text-slate-500 mb-1 break-words">
                             {warranty.description}
                           </div>
                           <div className="text-xs text-slate-500">
@@ -716,14 +743,14 @@ export default function WarrantyPage() {
                       </td>
                       
                       {/* Trạng thái */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-24">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(warranty.status)}`}>
                           {getStatusText(warranty.status)}
                         </span>
                       </td>
                       
                       {/* Thời gian */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-36">
                         <div className="text-sm text-slate-700">
                           <div>Bắt đầu: {formatDate(warranty.startDate)}</div>
                           {warranty.endDate && (
@@ -733,15 +760,8 @@ export default function WarrantyPage() {
                       </td>
                       
                       {/* Hành động */}
-                      <td className="px-3 py-2">
-                        <div className="flex items-center space-x-1">
-                          <button 
-                            onClick={() => handleOpenViewModal(warranty)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
-                            title="Xem chi tiết"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
+                      <td className="px-2 py-1 w-20 text-center">
+                        <div className="flex items-center justify-center space-x-1">
                           <button 
                             onClick={() => handleOpenEditModal(warranty)}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
@@ -755,7 +775,7 @@ export default function WarrantyPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="text-slate-400 mb-4">
                         <Shield className="h-16 w-16 mx-auto" />
                       </div>

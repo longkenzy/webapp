@@ -27,7 +27,8 @@ interface Warranty {
     position: string;
     department: string;
   };
-  warrantyType: string;
+  warrantyType: string | { id: string; name: string; description?: string };
+  customerName?: string;
   startDate: string;
   notes?: string;
   userDifficultyLevel?: number;
@@ -92,7 +93,29 @@ export default function ViewWarrantyModal({
     }
   };
 
-  const formatWarrantyType = (warrantyType: string) => {
+  const formatWarrantyType = (warrantyType: string | { id: string; name: string; description?: string }) => {
+    // Handle object case
+    if (typeof warrantyType === 'object' && warrantyType !== null) {
+      const typeName = warrantyType.name;
+      switch (typeName) {
+        case 'hardware-warranty':
+          return 'Bảo hành phần cứng';
+        case 'software-warranty':
+          return 'Bảo hành phần mềm';
+        case 'service-warranty':
+          return 'Bảo hành dịch vụ';
+        case 'extended-warranty':
+          return 'Bảo hành mở rộng';
+        case 'replacement-warranty':
+          return 'Bảo hành thay thế';
+        case 'repair-warranty':
+          return 'Bảo hành sửa chữa';
+        default:
+          return typeName;
+      }
+    }
+
+    // Handle string case
     switch (warrantyType) {
       case 'hardware-warranty':
         return 'Bảo hành phần cứng';

@@ -26,7 +26,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
-  const [warrantyTypes, setWarrantyTypes] = useState<string[]>([]);
+  const [warrantyTypes, setWarrantyTypes] = useState<(string | { id: string; name: string; description?: string })[]>([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,11 +43,10 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
   const [formData, setFormData] = useState({
-    reporter: '',
-    position: '',
     handler: '',
     warrantyType: '',
     customer: '',
+    customerName: '',
     title: '',
     description: '',
     startDate: new Date().toLocaleString('vi-VN', {
@@ -122,8 +121,10 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       });
       if (response.ok) {
         const data = await response.json();
+        console.log('Warranty types API response:', data);
         // Convert to array of strings for backward compatibility
         const typeNames = data.data?.map((type: any) => type.name) || [];
+        console.log('Processed warranty types:', typeNames);
         setWarrantyTypes(typeNames);
       } else {
         console.error('Failed to fetch warranty types:', response.status, response.statusText);
@@ -137,11 +138,10 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
 
   const resetForm = useCallback(() => {
     setFormData({
-      reporter: '',
-      position: '',
       handler: '',
       warrantyType: '',
       customer: '',
+      customerName: '',
       title: '',
       description: '',
       startDate: new Date().toLocaleString('vi-VN', {
@@ -244,18 +244,6 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       ...prev,
       [field]: value
     }));
-
-    // Auto-fill position when reporter is selected
-    if (field === 'reporter') {
-      const selectedEmployee = employees.find(emp => emp.id === value);
-      if (selectedEmployee) {
-        setFormData(prev => ({
-          ...prev,
-          reporter: value,
-          position: selectedEmployee.position || ''
-        }));
-      }
-    }
   };
 
   // Filter partners based on search
@@ -269,7 +257,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
     const selectedPartner = partners.find(p => p.id === partnerId);
     setFormData(prev => ({
       ...prev,
-      customer: partnerId
+      customer: partnerId,
+      customerName: selectedPartner ? selectedPartner.fullCompanyName : ''
     }));
     setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
     setShowCustomerDropdown(false);
@@ -284,7 +273,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
     if (!value) {
       setFormData(prev => ({
         ...prev,
-        customer: ''
+        customer: '',
+        customerName: ''
       }));
     }
   };
@@ -311,10 +301,10 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       const warrantyData = {
         title: formData.title,
         description: formData.description,
-        reporterId: formData.reporter,
         handlerId: formData.handler,
-        warrantyType: formData.warrantyType,
+        warrantyTypeId: formData.warrantyType,
         customerId: formData.customer || null,
+        customerName: formData.customerName || null,
         startDate: formData.startDate,
         endDate: formData.endDate || null,
         status: formData.status,
@@ -428,49 +418,6 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Người báo cáo</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.reporter}
-                    onChange={(e) => handleInputChange('reporter', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
-                      </option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Chức danh</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.position}
-                    onChange={(e) => handleInputChange('position', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Tự động điền khi chọn nhân viên"
-                    readOnly
-                  />
-                </div>
-
-                <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
                     <span className="w-24">Người xử lý</span>
                     <span className="text-red-500 ml-1">*</span>
@@ -497,11 +444,6 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
                       </option>
                     )}
                   </select>
-                  {formData.handler && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Tự động chọn: {employees.find(emp => emp.id === formData.handler)?.fullName}
-                    </p>
-                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -517,8 +459,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
                   >
                     <option value="">Chọn loại bảo hành</option>
                     {warrantyTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
+                      <option key={typeof type === 'string' ? type : type.id} value={typeof type === 'string' ? type : type.id}>
+                        {typeof type === 'string' ? type : type.name}
                       </option>
                     ))}
                     {warrantyTypes.length === 0 && (
@@ -564,6 +506,21 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
                       </div>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center">
+                    <span className="w-24">Tên khách hàng</span>
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.customerName}
+                    onChange={(e) => handleInputChange('customerName', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Nhập tên khách hàng"
+                    required
+                  />
                 </div>
               </div>
             </div>

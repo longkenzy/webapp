@@ -29,7 +29,7 @@ interface Warranty {
     position: string;
     department: string;
   };
-  warrantyType: string;
+  warrantyType: string | { id: string; name: string; description?: string };
   startDate: string;
   notes?: string;
   userDifficultyLevel?: number;
@@ -62,12 +62,9 @@ export default function EditWarrantyModal({
   warrantyData 
 }: EditWarrantyModalProps) {
   const [loading, setLoading] = useState(false);
-  const [customers, setCustomers] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     endDate: '',
-    status: 'REPORTED',
-    customer: '',
-    notes: ''
+    status: 'RECEIVED'
   });
 
   // Initialize form data when modal opens
@@ -75,42 +72,10 @@ export default function EditWarrantyModal({
     if (isOpen && warrantyData) {
       setFormData({
         endDate: warrantyData.endDate ? new Date(warrantyData.endDate).toISOString().slice(0, 16) : '',
-        status: warrantyData.status,
-        customer: warrantyData.customer?.id || '',
-        notes: warrantyData.notes || ''
+        status: warrantyData.status
       });
     }
   }, [isOpen, warrantyData]);
-
-  // Fetch customers
-  const fetchCustomers = async () => {
-    try {
-      const response = await fetch('/api/partners/list', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=300',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCustomers(data || []);
-      } else {
-        console.error('Failed to fetch customers:', response.status, response.statusText);
-        setCustomers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-      setCustomers([]);
-    }
-  };
-
-  // Fetch customers when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchCustomers();
-    }
-  }, [isOpen]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -121,22 +86,42 @@ export default function EditWarrantyModal({
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'REPORTED':
-        return 'Báo cáo';
-      case 'INVESTIGATING':
-        return 'Đang điều tra';
-      case 'RESOLVED':
-        return 'Đã giải quyết';
-      case 'CLOSED':
-        return 'Đóng';
-      case 'ESCALATED':
-        return 'Nâng cấp';
+      case 'RECEIVED':
+        return 'Tiếp nhận';
+      case 'PROCESSING':
+        return 'Đang xử lý';
+      case 'COMPLETED':
+        return 'Hoàn thành';
+      case 'CANCELLED':
+        return 'Hủy';
       default:
         return status;
     }
   };
 
-  const formatWarrantyType = (warrantyType: string) => {
+  const formatWarrantyType = (warrantyType: string | { id: string; name: string; description?: string }) => {
+    // Handle object case
+    if (typeof warrantyType === 'object' && warrantyType !== null) {
+      const typeName = warrantyType.name;
+      switch (typeName) {
+        case 'hardware-warranty':
+          return 'Bảo hành phần cứng';
+        case 'software-warranty':
+          return 'Bảo hành phần mềm';
+        case 'service-warranty':
+          return 'Bảo hành dịch vụ';
+        case 'extended-warranty':
+          return 'Bảo hành mở rộng';
+        case 'replacement-warranty':
+          return 'Bảo hành thay thế';
+        case 'repair-warranty':
+          return 'Bảo hành sửa chữa';
+        default:
+          return typeName;
+      }
+    }
+
+    // Handle string case
     switch (warrantyType) {
       case 'hardware-warranty':
         return 'Bảo hành phần cứng';
@@ -180,9 +165,7 @@ export default function EditWarrantyModal({
       // Prepare data for API
       const updateData = {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        status: formData.status,
-        customerId: formData.customer || null,
-        notes: formData.notes || null
+        status: formData.status
       };
 
       console.log('=== Updating Warranty ===');
@@ -203,6 +186,12 @@ export default function EditWarrantyModal({
       if (response.ok) {
         const result = await response.json();
         console.log('Warranty updated successfully:', result);
+        
+        // Show success notification
+        toast.success('Cập nhật case bảo hành thành công!', {
+          duration: 3000,
+          position: 'top-right',
+        });
         
         // Close modal and pass updated data
         onClose();
@@ -274,18 +263,6 @@ export default function EditWarrantyModal({
                 <span className="text-sm font-medium text-gray-600">Người xử lý:</span>
                 <p className="text-sm text-gray-900 mt-1">{warrantyData.handler.fullName}</p>
               </div>
-              <div>
-                <span className="text-sm font-medium text-gray-600">Khách hàng:</span>
-                <p className="text-sm text-gray-900 mt-1">
-                  {warrantyData.customer ? (
-                    <span>
-                      {warrantyData.customer.fullCompanyName} ({warrantyData.customer.shortName})
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </p>
-              </div>
               <div className="md:col-span-2">
                 <span className="text-sm font-medium text-gray-600">Mô tả:</span>
                 <p className="text-sm text-gray-900 mt-1">{warrantyData.description}</p>
@@ -295,76 +272,45 @@ export default function EditWarrantyModal({
 
           {/* Editable Fields */}
           <div className="space-y-4">
-            {/* End Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-2" />
-                Thời gian kết thúc
-              </label>
-              <input
-                type="datetime-local"
-                value={formData.endDate}
-                onChange={(e) => handleInputChange('endDate', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Chọn thời gian kết thúc"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Để trống nếu chưa có thời gian kết thúc
-              </p>
+            {/* End Date and Status Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-2" />
+                  Thời gian kết thúc
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.endDate}
+                  onChange={(e) => handleInputChange('endDate', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Chọn thời gian kết thúc"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Để trống nếu chưa có thời gian kết thúc
+                </p>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <CheckCircle className="w-4 h-4 inline mr-2" />
+                  Trạng thái
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="RECEIVED">Tiếp nhận</option>
+                  <option value="PROCESSING">Đang xử lý</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="CANCELLED">Hủy</option>
+                </select>
+              </div>
             </div>
 
-            {/* Customer */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Shield className="w-4 h-4 inline mr-2" />
-                Khách hàng
-              </label>
-              <select
-                value={formData.customer}
-                onChange={(e) => handleInputChange('customer', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Chọn khách hàng</option>
-                {customers.map(customer => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.fullCompanyName} ({customer.shortName})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <CheckCircle className="w-4 h-4 inline mr-2" />
-                Trạng thái
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="REPORTED">Báo cáo</option>
-                <option value="INVESTIGATING">Đang điều tra</option>
-                <option value="RESOLVED">Đã giải quyết</option>
-                <option value="CLOSED">Đóng</option>
-                <option value="ESCALATED">Nâng cấp</option>
-              </select>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ghi chú
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="Thêm ghi chú về case bảo hành..."
-              />
-            </div>
           </div>
 
           {/* Action Buttons */}

@@ -38,6 +38,15 @@ export async function GET(request: NextRequest) {
             serialNumber: true,
             location: true
           }
+        },
+        customer: {
+          select: {
+            id: true,
+            fullCompanyName: true,
+            shortName: true,
+            contactPerson: true,
+            contactPhone: true
+          }
         }
       },
       orderBy: {
@@ -61,16 +70,6 @@ export async function GET(request: NextRequest) {
         success: false,
         error: 'Failed to fetch maintenance cases',
         message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  } catch (error) {
-    console.error('Error in maintenance cases API:', error);
-    return NextResponse.json(
-      { 
-        success: false,
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : 'Something went wrong'
       },
       { status: 500 }
     );
@@ -199,16 +198,6 @@ export async function POST(request: NextRequest) {
         success: false,
         error: 'Failed to create maintenance case',
         message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  } catch (error) {
-    console.error('Error in maintenance cases API:', error);
-    return NextResponse.json(
-      { 
-        success: false,
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : 'Something went wrong'
       },
       { status: 500 }
     );

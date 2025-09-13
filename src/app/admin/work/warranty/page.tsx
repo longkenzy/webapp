@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { Plus, Settings, Shield, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
@@ -21,7 +21,7 @@ interface Warranty {
   description: string;
   customerName: string;
   handler: Employee;
-  warrantyType: string;
+  warrantyType: string | { id: string; name: string; description?: string };
   customer?: {
     id: string;
     fullCompanyName: string;
@@ -229,8 +229,13 @@ export default function AdminWarrantyWorkPage() {
         setShowDeleteModal(false);
         setSelectedWarranty(null);
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Không thể xóa bảo hành');
+        try {
+          const errorData = await response.json();
+          toast.error(errorData.error || 'Không thể xóa bảo hành');
+        } catch (jsonError) {
+          console.error('Failed to parse error response:', jsonError);
+          toast.error(`Không thể xóa bảo hành (${response.status}: ${response.statusText})`);
+        }
       }
     } catch (error) {
       console.error('Error deleting incident:', error);
@@ -275,20 +280,21 @@ export default function AdminWarrantyWorkPage() {
     setDateTo('');
   }, []);
 
-  // Filter warranties
-  const filteredWarranties = warranties.filter(warranty => {
+  // Filter warranties (memoized for performance)
+  const filteredWarranties = useMemo(() => warranties.filter(warranty => {
     const matchesSearch = !searchTerm || 
       warranty.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       warranty.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       warranty.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       warranty.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      warranty.warrantyType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
       (warranty.customer?.fullCompanyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (warranty.customer?.shortName.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesHandler = !selectedHandler || warranty.handler.id === selectedHandler;
     const matchesStatus = !selectedStatus || warranty.status === selectedStatus;
-    const matchesWarrantyType = !selectedWarrantyType || warranty.warrantyType === selectedWarrantyType;
+    const matchesWarrantyType = !selectedWarrantyType || 
+      (typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType.name) === selectedWarrantyType;
     const matchesCustomer = !selectedCustomer || warranty.customer?.id === selectedCustomer;
     
     const matchesDateFrom = !dateFrom || new Date(warranty.startDate) >= new Date(dateFrom);
@@ -296,18 +302,26 @@ export default function AdminWarrantyWorkPage() {
 
     return matchesSearch && matchesHandler && matchesStatus && matchesWarrantyType && 
            matchesCustomer && matchesDateFrom && matchesDateTo;
-  });
+  }), [warranties, searchTerm, selectedHandler, selectedStatus, selectedWarrantyType, selectedCustomer, dateFrom, dateTo]);
 
-  // Get unique values for filters
-  const uniqueHandlers = Array.from(new Set(warranties.map(warranty => warranty.handler.id)))
-    .map(id => warranties.find(warranty => warranty.handler.id === id)?.handler)
-    .filter(Boolean) as Employee[];
+  // Get unique values for filters (memoized for performance)
+  const uniqueHandlers = useMemo(() => 
+    Array.from(new Set(warranties.map(warranty => warranty.handler.id)))
+      .map(id => warranties.find(warranty => warranty.handler.id === id)?.handler)
+      .filter(Boolean) as Employee[], [warranties]);
 
-  const uniqueStatuses = Array.from(new Set(warranties.map(warranty => warranty.status)));
-  const uniqueWarrantyTypes = Array.from(new Set(warranties.map(warranty => warranty.warrantyType)));
-  const uniqueCustomers = Array.from(new Set(warranties.map(warranty => warranty.customer?.id).filter(Boolean)))
-    .map(id => warranties.find(warranty => warranty.customer?.id === id)?.customer)
-    .filter(Boolean);
+  const uniqueStatuses = useMemo(() => 
+    Array.from(new Set(warranties.map(warranty => warranty.status))), [warranties]);
+    
+  const uniqueWarrantyTypes = useMemo(() => 
+    Array.from(new Set(warranties.map(warranty => 
+      typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType.name
+    ))), [warranties]);
+    
+  const uniqueCustomers = useMemo(() => 
+    Array.from(new Set(warranties.map(warranty => warranty.customer?.id).filter(Boolean)))
+      .map(id => warranties.find(warranty => warranty.customer?.id === id)?.customer)
+      .filter(Boolean), [warranties]);
 
   // Handle evaluation submission
   const handleEvaluationSubmit = useCallback(async () => {
@@ -315,7 +329,7 @@ export default function AdminWarrantyWorkPage() {
 
     setEvaluating(true);
     try {
-      const response = await fetch(`/api/warranties/${selectedWarranty.id}`, {
+      const response = await fetch(`/api/warranties/${selectedWarranty.id}/evaluation`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -361,7 +375,7 @@ export default function AdminWarrantyWorkPage() {
       'Mô tả': warranty.description,
       'Tên khách hàng': warranty.customerName,
       'Người xử lý': warranty.handler.fullName,
-      'Loại bảo hành': warranty.warrantyType,
+      'Loại bảo hành': typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType.name,
       'Khách hàng': warranty.customer?.fullCompanyName || 'N/A',
       'Trạng thái': warranty.status,
       'Ngày bắt đầu': new Date(warranty.startDate).toLocaleDateString('vi-VN'),
@@ -616,7 +630,29 @@ export default function AdminWarrantyWorkPage() {
     }
   };
 
-  const formatWarrantyType = (warrantyType: string) => {
+  const formatWarrantyType = (warrantyType: string | { id: string; name: string; description?: string }) => {
+    // Handle object case
+    if (typeof warrantyType === 'object' && warrantyType !== null) {
+      const typeName = warrantyType.name;
+      switch (typeName) {
+        case 'hardware-warranty':
+          return 'Bảo hành phần cứng';
+        case 'software-warranty':
+          return 'Bảo hành phần mềm';
+        case 'service-warranty':
+          return 'Bảo hành dịch vụ';
+        case 'extended-warranty':
+          return 'Bảo hành mở rộng';
+        case 'replacement-warranty':
+          return 'Bảo hành thay thế';
+        case 'repair-warranty':
+          return 'Bảo hành sửa chữa';
+        default:
+          return typeName;
+      }
+    }
+
+    // Handle string case
     switch (warrantyType) {
       case 'hardware-warranty':
         return 'Bảo hành phần cứng';
@@ -1522,7 +1558,6 @@ export default function AdminWarrantyWorkPage() {
                       </div>
                     </div>
 
-                    {/* Ghi chú đánh giá */}
                   </div>
                 </div>
               </div>
@@ -1578,7 +1613,7 @@ export default function AdminWarrantyWorkPage() {
                       <div className="text-gray-600 mt-1">
                         <div>Tên khách hàng: {selectedWarranty.customerName}</div>
                         <div>Người xử lý: {selectedWarranty.handler.fullName}</div>
-                        <div>Loại: {selectedWarranty.warrantyType}</div>
+                        <div>Loại: {formatWarrantyType(selectedWarranty.warrantyType)}</div>
                       </div>
                     </div>
                     <p className="text-xs text-red-600 mt-2">

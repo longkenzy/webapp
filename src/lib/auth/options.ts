@@ -16,7 +16,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {},
   adapter: undefined, // Explicitly set to undefined to avoid adapter issues
-  trustHost: true, // Trust the host in production
   providers: [
     Credentials({
       name: "Credentials",

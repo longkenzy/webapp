@@ -26,6 +26,13 @@ interface MaintenanceCase {
   };
   customerName?: string;
   customerId?: string;
+  customer?: {
+    id: string;
+    fullCompanyName: string;
+    shortName: string;
+    contactPerson?: string;
+    contactPhone?: string;
+  };
   equipment?: {
     id: string;
     name: string;
@@ -624,28 +631,28 @@ export default function MaintenancePage() {
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-orange-50">
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-16">
                     STT
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
                     Người xử lý
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-48">
                     Khách hàng
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
                     Loại bảo trì
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-80">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-80">
                     Thông tin Case
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Trạng thái
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-36">
                     Thời gian
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">
+                  <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">
                     Hành động
                   </th>
                 </tr>
@@ -653,7 +660,7 @@ export default function MaintenancePage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-orange-600" />
                         <span className="text-slate-600">Đang tải danh sách case bảo trì...</span>
@@ -664,14 +671,14 @@ export default function MaintenancePage() {
                   filteredMaintenanceCases.map((maintenance, index) => (
                     <tr key={maintenance.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       {/* STT */}
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-2 py-1 text-center w-16">
                         <span className="text-sm font-medium text-slate-600">
-                          {index + 1}
+                          {filteredMaintenanceCases.length - index}
                         </span>
                       </td>
                       
                       {/* Người xử lý */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-32">
                         <div>
                           <div className="text-sm text-slate-900">{maintenance.handler.fullName}</div>
                           <div className="text-xs text-slate-500">{maintenance.handler.position}</div>
@@ -679,19 +686,26 @@ export default function MaintenancePage() {
                       </td>
                       
                       {/* Khách hàng */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-48">
                         <div className="text-sm text-slate-700">
-                          {maintenance.customerName || '-'}
+                          {maintenance.customer ? (
+                            <div>
+                              <div className="font-medium text-slate-900">{maintenance.customer.shortName}</div>
+                              <div className="text-xs text-slate-500">{maintenance.customer.fullCompanyName}</div>
+                            </div>
+                          ) : (
+                            maintenance.customerName || '-'
+                          )}
                         </div>
                       </td>
                       
                       {/* Loại bảo trì */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-32">
                         <div className="text-sm text-slate-700">{formatMaintenanceType(maintenance.maintenanceType)}</div>
                       </td>
                       
                       {/* Thông tin Case */}
-                      <td className="px-3 py-2 w-80">
+                      <td className="px-2 py-1 w-80">
                         <div>
                           <div className="text-sm font-medium text-slate-900 mb-1 break-words">
                             {maintenance.title}
@@ -706,14 +720,14 @@ export default function MaintenancePage() {
                       </td>
                       
                       {/* Trạng thái */}
-                      <td className="px-3 py-2 w-32">
+                      <td className="px-2 py-1 w-24">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(maintenance.status)}`}>
                           {getStatusText(maintenance.status)}
                         </span>
                       </td>
                       
                       {/* Thời gian */}
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-1 w-36">
                         <div className="text-sm text-slate-700">
                           <div>Bắt đầu: {formatDate(maintenance.startDate)}</div>
                           {maintenance.endDate && (
@@ -723,7 +737,7 @@ export default function MaintenancePage() {
                       </td>
                       
                       {/* Hành động */}
-                      <td className="px-3 py-2 w-28 text-center">
+                      <td className="px-2 py-1 w-20 text-center">
                         <div className="flex items-center justify-center space-x-1">
                           <button 
                             onClick={() => handleOpenEditModal(maintenance)}
@@ -738,7 +752,7 @@ export default function MaintenancePage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="text-slate-400 mb-4">
                         <Wrench className="h-16 w-16 mx-auto" />
                       </div>

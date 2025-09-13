@@ -1,68 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
-
-// Mock warranty types data
-const mockWarrantyTypes = [
-  {
-    id: "warranty-type-1",
-    name: "hardware-warranty",
-    description: "Bảo hành phần cứng",
-    isActive: true
-  },
-  {
-    id: "warranty-type-2", 
-    name: "software-warranty",
-    description: "Bảo hành phần mềm",
-    isActive: true
-  },
-  {
-    id: "warranty-type-3",
-    name: "service-warranty", 
-    description: "Bảo hành dịch vụ",
-    isActive: true
-  },
-  {
-    id: "warranty-type-4",
-    name: "extended-warranty",
-    description: "Bảo hành mở rộng", 
-    isActive: true
-  },
-  {
-    id: "warranty-type-5",
-    name: "replacement-warranty",
-    description: "Bảo hành thay thế",
-    isActive: true
-  },
-  {
-    id: "warranty-type-6",
-    name: "repair-warranty",
-    description: "Bảo hành sửa chữa",
-    isActive: true
-  }
-];
+import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("=== GET Warranty Types API Called ===");
-    
     const session = await getSession();
-    
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("Session found:", session.user?.email);
-
-    // Get all active warranty types
-    const warrantyTypes = mockWarrantyTypes.filter(type => type.isActive);
-
-    const response = NextResponse.json({
-      data: warrantyTypes
+    // Get all active warranty types from database
+    const warrantyTypes = await db.warrantyType.findMany({
+      where: { isActive: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, description: true }
     });
 
-    // Add caching headers
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    const response = NextResponse.json({ data: warrantyTypes });
     
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
     return response;
 
   } catch (error) {
@@ -76,15 +33,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("=== POST Warranty Types API Called ===");
-    
     const session = await getSession();
-    
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    console.log("Session found:", session.user?.email);
 
     const body = await request.json();
     const { name, description } = body;
@@ -96,28 +48,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if warranty type already exists
-    const existingType = mockWarrantyTypes.find(type => type.name === name.trim());
-
-    if (existingType) {
-      return NextResponse.json(
-        { error: "Warranty type already exists" },
-        { status: 409 }
-      );
-    }
-
-    // Create new warranty type
-    const newWarrantyType = {
-      id: `warranty-type-${Date.now()}`,
-      name: name.trim(),
-      description: description?.trim() || null,
-      isActive: true
-    };
-
-    // Add to mock array
-    mockWarrantyTypes.push(newWarrantyType);
-
-    console.log("Warranty type created:", newWarrantyType);
+    // Create new warranty type in database (with upsert to handle duplicates)
+    const newWarrantyType = await db.warrantyType.upsert({
+      where: { name: name.trim() },
+      update: { isActive: true },
+      create: {
+        name: name.trim(),
+        description: description?.trim() || null,
+        isActive: true
+      }
+    });
 
     return NextResponse.json({
       data: newWarrantyType

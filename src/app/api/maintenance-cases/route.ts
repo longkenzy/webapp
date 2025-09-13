@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { db } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    // Temporarily disable authentication for testing
-    // const session = await getServerSession(authOptions);
-    
-    // if (!session?.user?.id) {
-    //   return NextResponse.json(
-    //     { error: 'Unauthorized' },
-    //     { status: 401 }
-    //   );
-    // }
+    // Temporarily disable authentication for testing in production
+    console.log('Maintenance cases API called');
 
-    const maintenanceCases = await prisma.maintenanceCase.findMany({
+    const maintenanceCases = await db.maintenanceCase.findMany({
       include: {
         reporter: {
           select: {
@@ -73,8 +64,16 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Error in maintenance cases API:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : 'Something went wrong'
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -119,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get first employee as default reporter (for now)
-    const defaultEmployee = await prisma.employee.findFirst();
+    const defaultEmployee = await db.employee.findFirst();
     if (!defaultEmployee) {
       return NextResponse.json(
         { error: 'No employees found' },
@@ -127,7 +126,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newMaintenanceCase = await prisma.maintenanceCase.create({
+    const newMaintenanceCase = await db.maintenanceCase.create({
       data: {
         title,
         description,
@@ -203,7 +202,15 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
+  } catch (error) {
+    console.error('Error in maintenance cases API:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Internal server error',
+        message: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : 'Something went wrong'
+      },
+      { status: 500 }
+    );
   }
 }

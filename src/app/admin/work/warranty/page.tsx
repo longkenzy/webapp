@@ -15,13 +15,13 @@ interface Employee {
   department: string;
 }
 
-interface Incident {
+interface Warranty {
   id: string;
   title: string;
   description: string;
   customerName: string;
   handler: Employee;
-  incidentType: string;
+  warrantyType: string;
   customer?: {
     id: string;
     fullCompanyName: string;
@@ -51,7 +51,7 @@ interface Incident {
   adminAssessmentNotes?: string;
 }
 
-export default function AdminIncidentWorkPage() {
+export default function AdminWarrantyWorkPage() {
   // Admin evaluation categories
   const adminCategories = [
     EvaluationCategory.DIFFICULTY,
@@ -66,13 +66,13 @@ export default function AdminIncidentWorkPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [selectedWarranty, setSelectedWarranty] = useState<Warranty | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [deletedIncidents, setDeletedIncidents] = useState<Set<string>>(new Set());
+  const [deletedWarranties, setDeletedWarranties] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
   // States for incidents list
-  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -81,7 +81,7 @@ export default function AdminIncidentWorkPage() {
   // Filter states
   const [selectedHandler, setSelectedHandler] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [selectedIncidentType, setSelectedIncidentType] = useState<string>('');
+  const [selectedWarrantyType, setSelectedWarrantyType] = useState<string>('');
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
@@ -96,30 +96,30 @@ export default function AdminIncidentWorkPage() {
   const [evaluating, setEvaluating] = useState(false);
 
   // Incident Type Management States
-  const [incidentTypes, setIncidentTypes] = useState<Array<{id: string, name: string, description?: string}>>([]);
-  const [incidentTypesLoading, setIncidentTypesLoading] = useState(true);
-  const [showIncidentTypeModal, setShowIncidentTypeModal] = useState(false);
-  const [editingIncidentType, setEditingIncidentType] = useState<{id: string, name: string} | null>(null);
-  const [incidentTypeForm, setIncidentTypeForm] = useState({
+  const [warrantyTypes, setWarrantyTypes] = useState<Array<{id: string, name: string, description?: string}>>([]);
+  const [warrantyTypesLoading, setWarrantyTypesLoading] = useState(true);
+  const [showWarrantyTypeModal, setShowWarrantyTypeModal] = useState(false);
+  const [editingWarrantyType, setEditingWarrantyType] = useState<{id: string, name: string} | null>(null);
+  const [warrantyTypeForm, setWarrantyTypeForm] = useState({
     name: '',
     isActive: true
   });
   
   // Inline editing states
   const [isAddingNewRow, setIsAddingNewRow] = useState(false);
-  const [newIncidentTypeName, setNewIncidentTypeName] = useState('');
+  const [newWarrantyTypeName, setNewWarrantyTypeName] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Helper function to check if incident is evaluated by admin
-  const isIncidentEvaluatedByAdmin = (incident: Incident) => {
-    return incident.adminDifficultyLevel !== null && 
-           incident.adminDifficultyLevel !== undefined &&
-           incident.adminEstimatedTime !== null && 
-           incident.adminEstimatedTime !== undefined &&
-           incident.adminImpactLevel !== null && 
-           incident.adminImpactLevel !== undefined &&
-           incident.adminUrgencyLevel !== null && 
-           incident.adminUrgencyLevel !== undefined;
+  // Helper function to check if warranty is evaluated by admin
+  const isWarrantyEvaluatedByAdmin = (warranty: Warranty) => {
+    return warranty.adminDifficultyLevel !== null && 
+           warranty.adminDifficultyLevel !== undefined &&
+           warranty.adminEstimatedTime !== null && 
+           warranty.adminEstimatedTime !== undefined &&
+           warranty.adminImpactLevel !== null && 
+           warranty.adminImpactLevel !== undefined &&
+           warranty.adminUrgencyLevel !== null && 
+           warranty.adminUrgencyLevel !== undefined;
   };
 
   // Helper functions to get evaluation text
@@ -152,12 +152,12 @@ export default function AdminIncidentWorkPage() {
     return `${score} điểm`;
   };
 
-  // Fetch incidents from API with caching and retry
-  const fetchIncidents = useCallback(async (retryCount = 0) => {
+  // Fetch warranties from API with caching and retry
+  const fetchWarranties = useCallback(async (retryCount = 0) => {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/incidents', {
+      const response = await fetch('/api/warranties', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
@@ -166,32 +166,32 @@ export default function AdminIncidentWorkPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setIncidents(data.data || []);
+        setWarranties(data.data || []);
       } else if (response.status === 401 && retryCount < 2) {
         // Retry on auth error
-        setTimeout(() => fetchIncidents(retryCount + 1), 1000);
+        setTimeout(() => fetchWarranties(retryCount + 1), 1000);
         return;
       } else {
         console.error('Failed to fetch incidents:', response.status, response.statusText);
-        setIncidents([]);
+        setWarranties([]);
       }
     } catch (error) {
       console.error('Error fetching incidents:', error);
       if (retryCount < 2) {
-        setTimeout(() => fetchIncidents(retryCount + 1), 1000);
+        setTimeout(() => fetchWarranties(retryCount + 1), 1000);
         return;
       }
-      setIncidents([]);
+      setWarranties([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Refresh incidents
-  const refreshIncidents = useCallback(async () => {
+  // Refresh warranties
+  const refreshWarranties = useCallback(async () => {
     setRefreshing(true);
     try {
-      const response = await fetch('/api/incidents', {
+      const response = await fetch('/api/warranties', {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache',
@@ -200,54 +200,54 @@ export default function AdminIncidentWorkPage() {
       
       if (response.ok) {
         const data = await response.json();
-        setIncidents(data.data || []);
-        toast.success('Danh sách sự cố đã được cập nhật');
+        setWarranties(data.data || []);
+        toast.success('Danh sách bảo hành đã được cập nhật');
       } else {
         console.error('Failed to refresh incidents');
-        toast.error('Không thể cập nhật danh sách sự cố');
+        toast.error('Không thể cập nhật danh sách bảo hành');
       }
     } catch (error) {
       console.error('Error refreshing incidents:', error);
-      toast.error('Lỗi khi cập nhật danh sách sự cố');
+      toast.error('Lỗi khi cập nhật danh sách bảo hành');
     } finally {
       setRefreshing(false);
     }
   }, []);
 
-  // Delete incident
-  const deleteIncident = useCallback(async (incidentId: string) => {
+  // Delete warranty
+  const deleteWarranty = useCallback(async (warrantyId: string) => {
     setDeleting(true);
     try {
-      const response = await fetch(`/api/incidents/${incidentId}`, {
+      const response = await fetch(`/api/warranties/${warrantyId}`, {
         method: 'DELETE',
       });
       
       if (response.ok) {
-        setIncidents(prev => prev.filter(incident => incident.id !== incidentId));
-        setDeletedIncidents(prev => new Set([...prev, incidentId]));
-        toast.success('Xóa sự cố thành công');
+        setWarranties(prev => prev.filter(warranty => warranty.id !== warrantyId));
+        setDeletedWarranties(prev => new Set([...prev, warrantyId]));
+        toast.success('Xóa bảo hành thành công');
         setShowDeleteModal(false);
-        setSelectedIncident(null);
+        setSelectedWarranty(null);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Không thể xóa sự cố');
+        toast.error(errorData.error || 'Không thể xóa bảo hành');
       }
     } catch (error) {
       console.error('Error deleting incident:', error);
-      toast.error('Lỗi khi xóa sự cố');
+      toast.error('Lỗi khi xóa bảo hành');
     } finally {
       setDeleting(false);
     }
   }, []);
 
   // Toggle row expansion
-  const toggleRowExpansion = useCallback((incidentId: string) => {
+  const toggleRowExpansion = useCallback((warrantyId: string) => {
     setExpandedRows(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(incidentId)) {
-        newSet.delete(incidentId);
+      if (newSet.has(warrantyId)) {
+        newSet.delete(warrantyId);
       } else {
-        newSet.add(incidentId);
+        newSet.add(warrantyId);
       }
       return newSet;
     });
@@ -258,64 +258,64 @@ export default function AdminIncidentWorkPage() {
     return searchTerm !== '' || 
            selectedHandler !== '' || 
            selectedStatus !== '' || 
-           selectedIncidentType !== '' || 
+           selectedWarrantyType !== '' || 
            selectedCustomer !== '' || 
            dateFrom !== '' || 
            dateTo !== '';
-  }, [searchTerm, selectedHandler, selectedStatus, selectedIncidentType, selectedCustomer, dateFrom, dateTo]);
+  }, [searchTerm, selectedHandler, selectedStatus, selectedWarrantyType, selectedCustomer, dateFrom, dateTo]);
 
   // Clear filters
   const clearFilters = useCallback(() => {
     setSearchTerm('');
     setSelectedHandler('');
     setSelectedStatus('');
-    setSelectedIncidentType('');
+    setSelectedWarrantyType('');
     setSelectedCustomer('');
     setDateFrom('');
     setDateTo('');
   }, []);
 
-  // Filter incidents
-  const filteredIncidents = incidents.filter(incident => {
+  // Filter warranties
+  const filteredWarranties = warranties.filter(warranty => {
     const matchesSearch = !searchTerm || 
-      incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      incident.incidentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (incident.customer?.fullCompanyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (incident.customer?.shortName.toLowerCase().includes(searchTerm.toLowerCase()));
+      warranty.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warranty.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warranty.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warranty.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      warranty.warrantyType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (warranty.customer?.fullCompanyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (warranty.customer?.shortName.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesHandler = !selectedHandler || incident.handler.id === selectedHandler;
-    const matchesStatus = !selectedStatus || incident.status === selectedStatus;
-    const matchesIncidentType = !selectedIncidentType || incident.incidentType === selectedIncidentType;
-    const matchesCustomer = !selectedCustomer || incident.customer?.id === selectedCustomer;
+    const matchesHandler = !selectedHandler || warranty.handler.id === selectedHandler;
+    const matchesStatus = !selectedStatus || warranty.status === selectedStatus;
+    const matchesWarrantyType = !selectedWarrantyType || warranty.warrantyType === selectedWarrantyType;
+    const matchesCustomer = !selectedCustomer || warranty.customer?.id === selectedCustomer;
     
-    const matchesDateFrom = !dateFrom || new Date(incident.startDate) >= new Date(dateFrom);
-    const matchesDateTo = !dateTo || new Date(incident.startDate) <= new Date(dateTo);
+    const matchesDateFrom = !dateFrom || new Date(warranty.startDate) >= new Date(dateFrom);
+    const matchesDateTo = !dateTo || new Date(warranty.startDate) <= new Date(dateTo);
 
-    return matchesSearch && matchesHandler && matchesStatus && matchesIncidentType && 
+    return matchesSearch && matchesHandler && matchesStatus && matchesWarrantyType && 
            matchesCustomer && matchesDateFrom && matchesDateTo;
   });
 
   // Get unique values for filters
-  const uniqueHandlers = Array.from(new Set(incidents.map(incident => incident.handler.id)))
-    .map(id => incidents.find(incident => incident.handler.id === id)?.handler)
+  const uniqueHandlers = Array.from(new Set(warranties.map(warranty => warranty.handler.id)))
+    .map(id => warranties.find(warranty => warranty.handler.id === id)?.handler)
     .filter(Boolean) as Employee[];
 
-  const uniqueStatuses = Array.from(new Set(incidents.map(incident => incident.status)));
-  const uniqueIncidentTypes = Array.from(new Set(incidents.map(incident => incident.incidentType)));
-  const uniqueCustomers = Array.from(new Set(incidents.map(incident => incident.customer?.id).filter(Boolean)))
-    .map(id => incidents.find(incident => incident.customer?.id === id)?.customer)
+  const uniqueStatuses = Array.from(new Set(warranties.map(warranty => warranty.status)));
+  const uniqueWarrantyTypes = Array.from(new Set(warranties.map(warranty => warranty.warrantyType)));
+  const uniqueCustomers = Array.from(new Set(warranties.map(warranty => warranty.customer?.id).filter(Boolean)))
+    .map(id => warranties.find(warranty => warranty.customer?.id === id)?.customer)
     .filter(Boolean);
 
   // Handle evaluation submission
   const handleEvaluationSubmit = useCallback(async () => {
-    if (!selectedIncident) return;
+    if (!selectedWarranty) return;
 
     setEvaluating(true);
     try {
-      const response = await fetch(`/api/incidents/${selectedIncident.id}`, {
+      const response = await fetch(`/api/warranties/${selectedWarranty.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -330,12 +330,12 @@ export default function AdminIncidentWorkPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setIncidents(prev => prev.map(incident => 
-          incident.id === selectedIncident.id ? data.data : incident
+        setWarranties(prev => prev.map(warranty => 
+          warranty.id === selectedWarranty.id ? data.data : warranty
         ));
-        toast.success('Đánh giá sự cố thành công');
+        toast.success('Đánh giá bảo hành thành công');
         setShowEvaluationModal(false);
-        setSelectedIncident(null);
+        setSelectedWarranty(null);
         setEvaluationForm({
           adminDifficultyLevel: '',
           adminEstimatedTime: '',
@@ -344,53 +344,53 @@ export default function AdminIncidentWorkPage() {
         });
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Không thể đánh giá sự cố');
+        toast.error(errorData.error || 'Không thể đánh giá bảo hành');
       }
     } catch (error) {
       console.error('Error evaluating incident:', error);
-      toast.error('Lỗi khi đánh giá sự cố');
+      toast.error('Lỗi khi đánh giá bảo hành');
     } finally {
       setEvaluating(false);
     }
-  }, [selectedIncident, evaluationForm]);
+  }, [selectedWarranty, evaluationForm]);
 
   // Export to Excel
   const exportToExcel = useCallback(() => {
-    const exportData = filteredIncidents.map(incident => ({
-      'Tiêu đề': incident.title,
-      'Mô tả': incident.description,
-      'Tên khách hàng': incident.customerName,
-      'Người xử lý': incident.handler.fullName,
-      'Loại sự cố': incident.incidentType,
-      'Khách hàng': incident.customer?.fullCompanyName || 'N/A',
-      'Trạng thái': incident.status,
-      'Ngày bắt đầu': new Date(incident.startDate).toLocaleDateString('vi-VN'),
-      'Ngày kết thúc': incident.endDate ? new Date(incident.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
-      'Ngày tạo': new Date(incident.createdAt).toLocaleDateString('vi-VN'),
-      'Độ khó (User)': incident.userDifficultyLevel || 'N/A',
-      'Thời gian ước tính (User)': incident.userEstimatedTime || 'N/A',
-      'Tác động (User)': incident.userImpactLevel || 'N/A',
-      'Độ khẩn cấp (User)': incident.userUrgencyLevel || 'N/A',
-      'Độ khó (Admin)': incident.adminDifficultyLevel || 'N/A',
-      'Thời gian ước tính (Admin)': incident.adminEstimatedTime || 'N/A',
-      'Tác động (Admin)': incident.adminImpactLevel || 'N/A',
-      'Độ khẩn cấp (Admin)': incident.adminUrgencyLevel || 'N/A',
+    const exportData = filteredWarranties.map(warranty => ({
+      'Tiêu đề': warranty.title,
+      'Mô tả': warranty.description,
+      'Tên khách hàng': warranty.customerName,
+      'Người xử lý': warranty.handler.fullName,
+      'Loại bảo hành': warranty.warrantyType,
+      'Khách hàng': warranty.customer?.fullCompanyName || 'N/A',
+      'Trạng thái': warranty.status,
+      'Ngày bắt đầu': new Date(warranty.startDate).toLocaleDateString('vi-VN'),
+      'Ngày kết thúc': warranty.endDate ? new Date(warranty.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
+      'Ngày tạo': new Date(warranty.createdAt).toLocaleDateString('vi-VN'),
+      'Độ khó (User)': warranty.userDifficultyLevel || 'N/A',
+      'Thời gian ước tính (User)': warranty.userEstimatedTime || 'N/A',
+      'Tác động (User)': warranty.userImpactLevel || 'N/A',
+      'Độ khẩn cấp (User)': warranty.userUrgencyLevel || 'N/A',
+      'Độ khó (Admin)': warranty.adminDifficultyLevel || 'N/A',
+      'Thời gian ước tính (Admin)': warranty.adminEstimatedTime || 'N/A',
+      'Tác động (Admin)': warranty.adminImpactLevel || 'N/A',
+      'Độ khẩn cấp (Admin)': warranty.adminUrgencyLevel || 'N/A',
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Danh sách sự cố');
     
-    const fileName = `danh-sach-su-co-${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `danh-sach-bao-hanh-${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Xuất file Excel thành công');
-  }, [filteredIncidents]);
+  }, [filteredWarranties]);
 
-  // Fetch incident types from API
-  const fetchIncidentTypes = useCallback(async () => {
+  // Fetch warranty types from API
+  const fetchWarrantyTypes = useCallback(async () => {
     try {
-      setIncidentTypesLoading(true);
-      const response = await fetch(`/api/incident-types?t=${Date.now()}`, {
+      setWarrantyTypesLoading(true);
+      const response = await fetch(`/api/warranty-types?t=${Date.now()}`, {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache',
@@ -400,38 +400,38 @@ export default function AdminIncidentWorkPage() {
         const data = await response.json();
         // Store full objects with id, name, and description
         const types = data.data || [];
-        setIncidentTypes(types);
+        setWarrantyTypes(types);
       } else {
         console.error('Failed to fetch incident types');
-        setIncidentTypes([]);
+        setWarrantyTypes([]);
       }
     } catch (error) {
       console.error('Error fetching incident types:', error);
-      setIncidentTypes([]);
+      setWarrantyTypes([]);
     } finally {
-      setIncidentTypesLoading(false);
+      setWarrantyTypesLoading(false);
     }
   }, []);
 
-  // Incident Type Management Functions
-  const handleAddIncidentType = () => {
+  // Warranty Type Management Functions
+  const handleAddWarrantyType = () => {
     setIsAddingNewRow(true);
-    setNewIncidentTypeName('');
+    setNewWarrantyTypeName('');
   };
 
-  const handleEditIncidentType = (type: {id: string, name: string}) => {
-    setEditingIncidentType(type);
-    setIncidentTypeForm({
+  const handleEditWarrantyType = (type: {id: string, name: string}) => {
+    setEditingWarrantyType(type);
+    setWarrantyTypeForm({
       name: type.name,
       isActive: true
     });
-    setShowIncidentTypeModal(true);
+    setShowWarrantyTypeModal(true);
   };
 
-  const handleDeleteIncidentType = async (type: {id: string, name: string}) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa loại sự cố "${type.name}"?`)) {
+  const handleDeleteWarrantyType = async (type: {id: string, name: string}) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xóa loại bảo hành "${type.name}"?`)) {
       try {
-        const response = await fetch(`/api/incident-types/${type.id}`, {
+        const response = await fetch(`/api/warranty-types/${type.id}`, {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
@@ -440,26 +440,26 @@ export default function AdminIncidentWorkPage() {
 
         if (response.ok) {
           // Remove from local state
-          setIncidentTypes(prev => prev.filter(t => t.id !== type.id));
-          toast.success('Xóa loại sự cố thành công');
+          setWarrantyTypes(prev => prev.filter(t => t.id !== type.id));
+          toast.success('Xóa loại bảo hành thành công');
         } else {
           const errorData = await response.json();
-          toast.error(errorData.error || 'Lỗi khi xóa loại sự cố');
+          toast.error(errorData.error || 'Lỗi khi xóa loại bảo hành');
         }
       } catch (error) {
         console.error('Error deleting incident type:', error);
-        toast.error('Lỗi khi xóa loại sự cố');
+        toast.error('Lỗi khi xóa loại bảo hành');
       }
     }
   };
 
   const handleSaveNewIncidentType = async () => {
-    if (!newIncidentTypeName.trim()) {
+    if (!newWarrantyTypeName.trim()) {
       toast.error('Vui lòng nhập tên loại sự cố');
       return;
     }
 
-    if (incidentTypes.some(type => type.name === newIncidentTypeName.trim())) {
+    if (warrantyTypes.some(type => type.name === newWarrantyTypeName.trim())) {
       toast.error('Loại sự cố này đã tồn tại');
       return;
     }
@@ -472,17 +472,17 @@ export default function AdminIncidentWorkPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: newIncidentTypeName.trim(),
+          name: newWarrantyTypeName.trim(),
           description: null
         }),
       });
 
       if (response.ok) {
-        setNewIncidentTypeName('');
+        setNewWarrantyTypeName('');
         setIsAddingNewRow(false);
         toast.success('Thêm loại sự cố thành công');
         // Refresh the list
-        await fetchIncidentTypes();
+        await fetchWarrantyTypes();
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || 'Lỗi khi thêm loại sự cố');
@@ -497,35 +497,35 @@ export default function AdminIncidentWorkPage() {
 
   const handleCancelNewIncidentType = () => {
     setIsAddingNewRow(false);
-    setNewIncidentTypeName('');
+    setNewWarrantyTypeName('');
   };
 
   const handleSubmitIncidentTypeForm = async () => {
-    if (!incidentTypeForm.name.trim()) {
+    if (!warrantyTypeForm.name.trim()) {
       toast.error('Vui lòng nhập tên loại sự cố');
       return;
     }
 
     setSaving(true);
     try {
-      if (editingIncidentType) {
+      if (editingWarrantyType) {
         // Update existing type
-        const response = await fetch(`/api/incident-types/${editingIncidentType.id}`, {
+        const response = await fetch(`/api/warranty-types/${editingWarrantyType.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: incidentTypeForm.name.trim(),
+            name: warrantyTypeForm.name.trim(),
             description: null,
-            isActive: incidentTypeForm.isActive
+            isActive: warrantyTypeForm.isActive
           }),
         });
 
         if (response.ok) {
           toast.success('Cập nhật loại sự cố thành công');
           // Refresh the list to sync with API
-          await fetchIncidentTypes();
+          await fetchWarrantyTypes();
         } else {
           const errorData = await response.json();
           toast.error(errorData.error || 'Lỗi khi cập nhật loại sự cố');
@@ -533,7 +533,7 @@ export default function AdminIncidentWorkPage() {
         }
       } else {
         // Add new type
-        if (incidentTypes.some(type => type.name === incidentTypeForm.name.trim())) {
+        if (warrantyTypes.some(type => type.name === warrantyTypeForm.name.trim())) {
           toast.error('Loại sự cố này đã tồn tại');
           return;
         }
@@ -544,7 +544,7 @@ export default function AdminIncidentWorkPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: incidentTypeForm.name.trim(),
+            name: warrantyTypeForm.name.trim(),
             description: null
           }),
         });
@@ -552,7 +552,7 @@ export default function AdminIncidentWorkPage() {
         if (response.ok) {
           toast.success('Thêm loại sự cố thành công');
           // Refresh the list to sync with API
-          await fetchIncidentTypes();
+          await fetchWarrantyTypes();
         } else {
           const errorData = await response.json();
           toast.error(errorData.error || 'Lỗi khi thêm loại sự cố');
@@ -560,9 +560,9 @@ export default function AdminIncidentWorkPage() {
         }
       }
       
-      setShowIncidentTypeModal(false);
-      setEditingIncidentType(null);
-      setIncidentTypeForm({ name: '', isActive: true });
+      setShowWarrantyTypeModal(false);
+      setEditingWarrantyType(null);
+      setWarrantyTypeForm({ name: '', isActive: true });
     } catch (error) {
       console.error('Error saving incident type:', error);
       toast.error('Lỗi khi lưu loại sự cố');
@@ -572,17 +572,17 @@ export default function AdminIncidentWorkPage() {
   };
 
   const handleCloseIncidentTypeModal = () => {
-    setShowIncidentTypeModal(false);
-    setEditingIncidentType(null);
-    setIncidentTypeForm({ name: '', isActive: true });
+    setShowWarrantyTypeModal(false);
+    setEditingWarrantyType(null);
+    setWarrantyTypeForm({ name: '', isActive: true });
   };
 
   // Load data on component mount
   useEffect(() => {
-    fetchIncidents();
+    fetchWarranties();
     fetchConfigs();
-    fetchIncidentTypes();
-  }, [fetchIncidents, fetchConfigs, fetchIncidentTypes]);
+    fetchWarrantyTypes();
+  }, [fetchWarranties, fetchConfigs, fetchWarrantyTypes]);
 
   // Get status badge color
   const getStatusBadgeColor = (status: string) => {
@@ -616,22 +616,22 @@ export default function AdminIncidentWorkPage() {
     }
   };
 
-  const formatIncidentType = (incidentType: string) => {
-    switch (incidentType) {
-      case 'security-breach':
-        return 'Vi phạm bảo mật';
-      case 'system-failure':
-        return 'Lỗi hệ thống';
-      case 'data-loss':
-        return 'Mất dữ liệu';
-      case 'network-issue':
-        return 'Sự cố mạng';
-      case 'hardware-failure':
-        return 'Lỗi phần cứng';
-      case 'software-bug':
-        return 'Lỗi phần mềm';
+  const formatWarrantyType = (warrantyType: string) => {
+    switch (warrantyType) {
+      case 'hardware-warranty':
+        return 'Bảo hành phần cứng';
+      case 'software-warranty':
+        return 'Bảo hành phần mềm';
+      case 'service-warranty':
+        return 'Bảo hành dịch vụ';
+      case 'extended-warranty':
+        return 'Bảo hành mở rộng';
+      case 'replacement-warranty':
+        return 'Bảo hành thay thế';
+      case 'repair-warranty':
+        return 'Bảo hành sửa chữa';
       default:
-        return incidentType;
+        return warrantyType;
     }
   };
 
@@ -643,33 +643,33 @@ export default function AdminIncidentWorkPage() {
         <div className="max-w-full mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Shield className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Quản lý sự cố</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Quản lý bảo hành</h1>
                 <p className="text-sm text-gray-600 mt-1">
-                  Quản lý và theo dõi các sự cố hệ thống
+                  Quản lý và theo dõi các yêu cầu bảo hành
                 </p>
                 {activeTab === 'cases' && (
                   <div className="mt-2 flex items-center space-x-4 text-xs">
                     <div className="flex items-center space-x-1">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span className="text-green-600">
-                        Đã đánh giá: {filteredIncidents.filter(isIncidentEvaluatedByAdmin).length}
+                        Đã đánh giá: {filteredWarranties.filter(isWarrantyEvaluatedByAdmin).length}
                       </span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <AlertTriangle className="h-4 w-4 text-yellow-500" />
                       <span className="text-yellow-600">
-                        Chưa đánh giá: {filteredIncidents.filter(incident => !isIncidentEvaluatedByAdmin(incident)).length}
+                        Chưa đánh giá: {filteredWarranties.filter(warranty => !isWarrantyEvaluatedByAdmin(warranty)).length}
                       </span>
                     </div>
                     {hasActiveFilters() && (
                       <div className="flex items-center space-x-1">
                         <Search className="h-4 w-4 text-blue-500" />
                         <span className="text-blue-600">
-                          Đang lọc: {filteredIncidents.length}/{incidents.length}
+                          Đang lọc: {filteredWarranties.length}/{warranties.length}
                         </span>
                       </div>
                     )}
@@ -693,13 +693,13 @@ export default function AdminIncidentWorkPage() {
                 >
                   <div className="flex items-center space-x-2">
                     <FileText className="h-4 w-4" />
-                    <span>Danh sách sự cố</span>
+                    <span>Danh sách bảo hành</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${
                       hasActiveFilters() 
                         ? 'bg-blue-100 text-blue-600' 
                         : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {hasActiveFilters() ? `${filteredIncidents.length}/${incidents.length}` : incidents.length}
+                      {hasActiveFilters() ? `${filteredWarranties.length}/${warranties.length}` : warranties.length}
                     </span>
                   </div>
                 </button>
@@ -739,20 +739,20 @@ export default function AdminIncidentWorkPage() {
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
-                      <p className="text-xs text-gray-600">Tìm kiếm và lọc sự cố theo nhiều tiêu chí</p>
+                      <p className="text-xs text-gray-600">Tìm kiếm và lọc bảo hành theo nhiều tiêu chí</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button 
                       onClick={exportToExcel}
-                      disabled={filteredIncidents.length === 0}
+                      disabled={filteredWarranties.length === 0}
                       className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                     >
                       <Download className="h-3.5 w-3.5" />
                       <span className="text-sm font-medium">Xuất Excel</span>
                     </button>
                     <button 
-                      onClick={refreshIncidents}
+                      onClick={refreshWarranties}
                       disabled={refreshing}
                       className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                     >
@@ -775,7 +775,7 @@ export default function AdminIncidentWorkPage() {
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <input
                         type="text"
-                        placeholder="Tìm kiếm theo tên sự cố, người báo cáo, người xử lý..."
+                        placeholder="Tìm kiếm theo tên bảo hành, người báo cáo, người xử lý..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
@@ -838,18 +838,18 @@ export default function AdminIncidentWorkPage() {
                         <label className="block text-xs font-medium text-gray-600 mb-1.5">
                           <div className="flex items-center space-x-1.5">
                             <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                            <span>Loại sự cố</span>
+                            <span>Loại bảo hành</span>
                           </div>
                         </label>
                         <select
-                          value={selectedIncidentType}
-                          onChange={(e) => setSelectedIncidentType(e.target.value)}
+                          value={selectedWarrantyType}
+                          onChange={(e) => setSelectedWarrantyType(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                         >
-                          <option value="">Tất cả loại sự cố</option>
-                          {uniqueIncidentTypes.map((type) => (
+                          <option value="">Tất cả loại bảo hành</option>
+                          {uniqueWarrantyTypes.map((type) => (
                             <option key={type} value={type}>
-                              {type}
+                              {formatWarrantyType(type)}
                             </option>
                           ))}
                         </select>
@@ -941,10 +941,10 @@ export default function AdminIncidentWorkPage() {
                               Trạng thái: {getStatusLabel(selectedStatus)}
                             </span>
                           )}
-                          {selectedIncidentType && (
+                          {selectedWarrantyType && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
                               <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
-                              Loại: {formatIncidentType(selectedIncidentType)}
+                              Loại: {formatWarrantyType(selectedWarrantyType)}
                             </span>
                           )}
                           {selectedCustomer && (
@@ -983,7 +983,7 @@ export default function AdminIncidentWorkPage() {
                 {/* Results Summary */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                   <div className="text-sm text-gray-600">
-                    Hiển thị <span className="font-medium text-gray-900">{filteredIncidents.length}</span> trong tổng số <span className="font-medium text-gray-900">{incidents.length}</span> sự cố
+                    Hiển thị <span className="font-medium text-gray-900">{filteredWarranties.length}</span> trong tổng số <span className="font-medium text-gray-900">{warranties.length}</span> bảo hành
                     {hasActiveFilters() && (
                       <span className="ml-2 text-blue-600 font-medium">
                         (đã lọc)
@@ -1001,14 +1001,14 @@ export default function AdminIncidentWorkPage() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                   <span className="ml-2 text-gray-600">Đang tải...</span>
                 </div>
-              ) : filteredIncidents.length === 0 ? (
+              ) : filteredWarranties.length === 0 ? (
                 <div className="text-center py-12">
                   <AlertTriangle className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">Không có sự cố nào</h3>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">Không có bảo hành nào</h3>
                   <p className="mt-1 text-sm text-gray-500">
                     {hasActiveFilters()
-                      ? 'Không tìm thấy sự cố phù hợp với bộ lọc.'
-                      : 'Chưa có sự cố nào được tạo.'}
+                      ? 'Không tìm thấy bảo hành phù hợp với bộ lọc.'
+                      : 'Chưa có bảo hành nào được tạo.'}
                   </p>
                 </div>
               ) : (
@@ -1049,18 +1049,18 @@ export default function AdminIncidentWorkPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredIncidents.map((incident, index) => (
-                      <React.Fragment key={incident.id}>
+                    {filteredWarranties.map((warranty, index) => (
+                          <React.Fragment key={warranty.id}>
                         <tr 
                           className={`hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer ${
-                            !isIncidentEvaluatedByAdmin(incident) ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                            !isWarrantyEvaluatedByAdmin(warranty) ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
                           }`}
-                          onClick={() => toggleRowExpansion(incident.id)}
+                          onClick={() => toggleRowExpansion(warranty.id)}
                         >
                           {/* STT */}
                           <td className="px-2 py-4 whitespace-nowrap text-center w-16">
                             <span className="text-xs font-medium text-gray-600">
-                              {filteredIncidents.length - index}
+                              {filteredWarranties.length - index}
                             </span>
                           </td>
                           
@@ -1068,45 +1068,45 @@ export default function AdminIncidentWorkPage() {
                           <td className="px-2 py-4 whitespace-nowrap w-64">
                             <div>
                               <div className="text-xs font-medium text-gray-900">
-                                {incident.title}
+                                {warranty.title}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Tạo: {new Date(incident.createdAt).toLocaleString('vi-VN')}
+                                Tạo: {new Date(warranty.createdAt).toLocaleString('vi-VN')}
                               </div>
                             </div>
                           </td>
                           
                           {/* Người xử lý */}
                           <td className="px-2 py-4 whitespace-nowrap w-32">
-                            <div className="text-xs text-gray-900">{incident.handler.fullName}</div>
-                            <div className="text-xs text-gray-500">{incident.handler.position}</div>
+                            <div className="text-xs text-gray-900">{warranty.handler.fullName}</div>
+                            <div className="text-xs text-gray-500">{warranty.handler.position}</div>
                           </td>
                           
                           {/* Khách hàng */}
                           <td className="px-2 py-4 whitespace-nowrap w-48">
                             <div className="text-xs font-medium text-gray-900">
-                              {incident.customer?.shortName || incident.customerName}
+                              {warranty.customer?.shortName || warranty.customerName}
                             </div>
                           </td>
                           
                           {/* Trạng thái */}
                           <td className="px-2 py-4 whitespace-nowrap w-24">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(incident.status)}`}>
-                              {getStatusLabel(incident.status)}
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(warranty.status)}`}>
+                              {getStatusLabel(warranty.status)}
                             </span>
                           </td>
                           
                           {/* Thời gian */}
                           <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 w-36">
-                            <div>Bắt đầu: {new Date(incident.startDate).toLocaleString('vi-VN', { 
+                            <div>Bắt đầu: {new Date(warranty.startDate).toLocaleString('vi-VN', { 
                               year: 'numeric', 
                               month: '2-digit', 
                               day: '2-digit', 
                               hour: '2-digit', 
                               minute: '2-digit' 
                             })}</div>
-                            {incident.endDate && (
-                              <div>Kết thúc: {new Date(incident.endDate).toLocaleString('vi-VN', { 
+                            {warranty.endDate && (
+                              <div>Kết thúc: {new Date(warranty.endDate).toLocaleString('vi-VN', { 
                                 year: 'numeric', 
                                 month: '2-digit', 
                                 day: '2-digit', 
@@ -1118,9 +1118,9 @@ export default function AdminIncidentWorkPage() {
                           
                           {/* Tổng điểm User */}
                           <td className="px-2 py-4 whitespace-nowrap text-center w-24">
-                            {incident.userDifficultyLevel && incident.userEstimatedTime && incident.userImpactLevel && incident.userUrgencyLevel ? (
+                            {warranty.userDifficultyLevel && warranty.userEstimatedTime && warranty.userImpactLevel && warranty.userUrgencyLevel ? (
                               <span className="text-xs font-medium text-blue-600">
-                                {incident.userDifficultyLevel + incident.userEstimatedTime + incident.userImpactLevel + incident.userUrgencyLevel}
+                                {warranty.userDifficultyLevel + warranty.userEstimatedTime + warranty.userImpactLevel + warranty.userUrgencyLevel}
                               </span>
                             ) : (
                               <span className="text-xs text-gray-400">-</span>
@@ -1129,9 +1129,9 @@ export default function AdminIncidentWorkPage() {
                           
                           {/* Điểm Admin */}
                           <td className="px-2 py-4 whitespace-nowrap text-center w-24">
-                            {isIncidentEvaluatedByAdmin(incident) ? (
+                            {isWarrantyEvaluatedByAdmin(warranty) ? (
                               <span className="text-xs font-medium text-green-600">
-                                {(incident.adminDifficultyLevel || 0) + (incident.adminEstimatedTime || 0) + (incident.adminImpactLevel || 0) + (incident.adminUrgencyLevel || 0)}
+                                {(warranty.adminDifficultyLevel || 0) + (warranty.adminEstimatedTime || 0) + (warranty.adminImpactLevel || 0) + (warranty.adminUrgencyLevel || 0)}
                               </span>
                             ) : (
                               <div className="flex items-center justify-center space-x-1">
@@ -1146,14 +1146,14 @@ export default function AdminIncidentWorkPage() {
                           {/* Tổng điểm */}
                           <td className="px-2 py-4 whitespace-nowrap text-center w-24">
                             {(() => {
-                              const userScore = incident.userDifficultyLevel && incident.userEstimatedTime && incident.userImpactLevel && incident.userUrgencyLevel 
-                                ? incident.userDifficultyLevel + incident.userEstimatedTime + incident.userImpactLevel + incident.userUrgencyLevel 
+                              const userScore = warranty.userDifficultyLevel && warranty.userEstimatedTime && warranty.userImpactLevel && warranty.userUrgencyLevel 
+                                ? warranty.userDifficultyLevel + warranty.userEstimatedTime + warranty.userImpactLevel + warranty.userUrgencyLevel 
                                 : 0;
-                              const adminScore = incident.adminDifficultyLevel && incident.adminEstimatedTime && incident.adminImpactLevel && incident.adminUrgencyLevel 
-                                ? incident.adminDifficultyLevel + incident.adminEstimatedTime + incident.adminImpactLevel + incident.adminUrgencyLevel 
+                              const adminScore = warranty.adminDifficultyLevel && warranty.adminEstimatedTime && warranty.adminImpactLevel && warranty.adminUrgencyLevel 
+                                ? warranty.adminDifficultyLevel + warranty.adminEstimatedTime + warranty.adminImpactLevel + warranty.adminUrgencyLevel 
                                 : 0;
                               const totalScore = userScore + adminScore;
-                              const isAdminEvaluated = isIncidentEvaluatedByAdmin(incident);
+                              const isAdminEvaluated = isWarrantyEvaluatedByAdmin(warranty);
                               
                               if (totalScore > 0) {
                                 return (
@@ -1182,28 +1182,28 @@ export default function AdminIncidentWorkPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedIncident(incident);
+                                  setSelectedWarranty(warranty);
                                   setShowEvaluationModal(true);
                                   setEvaluationForm({
-                                    adminDifficultyLevel: incident.adminDifficultyLevel?.toString() || '',
-                                    adminEstimatedTime: incident.adminEstimatedTime?.toString() || '',
-                                    adminImpactLevel: incident.adminImpactLevel?.toString() || '',
-                                    adminUrgencyLevel: incident.adminUrgencyLevel?.toString() || ''
+                                    adminDifficultyLevel: warranty.adminDifficultyLevel?.toString() || '',
+                                    adminEstimatedTime: warranty.adminEstimatedTime?.toString() || '',
+                                    adminImpactLevel: warranty.adminImpactLevel?.toString() || '',
+                                    adminUrgencyLevel: warranty.adminUrgencyLevel?.toString() || ''
                                   });
                                 }}
                                 className={`p-1.5 rounded-md transition-colors duration-200 ${
-                                  isIncidentEvaluatedByAdmin(incident) 
+                                  isWarrantyEvaluatedByAdmin(warranty) 
                                     ? 'text-green-600 hover:bg-green-50' 
                                     : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
                                 }`}
-                                title={isIncidentEvaluatedByAdmin(incident) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
+                                title={isWarrantyEvaluatedByAdmin(warranty) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
                               >
-                                {isIncidentEvaluatedByAdmin(incident) ? <Edit className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                {isWarrantyEvaluatedByAdmin(warranty) ? <Edit className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
                               </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedIncident(incident);
+                                  setSelectedWarranty(warranty);
                                   setShowDeleteModal(true);
                                 }}
                                 className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200"
@@ -1216,7 +1216,7 @@ export default function AdminIncidentWorkPage() {
                         </tr>
                         
                         {/* Expanded Row Content */}
-                        {expandedRows.has(incident.id) && (
+                        {expandedRows.has(warranty.id) && (
                           <tr>
                             <td colSpan={10} className="px-3 py-6 bg-gray-50" onClick={(e) => e.stopPropagation()}>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1226,7 +1226,7 @@ export default function AdminIncidentWorkPage() {
                                     <FileText className="h-3 w-3 mr-2 text-blue-600" />
                                     Mô tả chi tiết
                                   </h4>
-                                  <p className="text-xs text-gray-600 leading-relaxed">{incident.description}</p>
+                                  <p className="text-xs text-gray-600 leading-relaxed">{warranty.description}</p>
                                 </div>
                                 
                                 {/* Tên công ty đầy đủ */}
@@ -1237,11 +1237,11 @@ export default function AdminIncidentWorkPage() {
                                   </h4>
                                   <div className="text-xs text-gray-600">
                                     <div className="font-medium text-gray-900">
-                                      {incident.customer?.fullCompanyName || 'N/A'}
+                                      {warranty.customer?.fullCompanyName || 'N/A'}
                                     </div>
-                                    {incident.customer?.contactPerson && (
+                                    {warranty.customer?.contactPerson && (
                                       <div className="mt-1 text-gray-500">
-                                        Người liên hệ: {incident.customer.contactPerson}
+                                        Người liên hệ: {warranty.customer.contactPerson}
                                       </div>
                                     )}
                                   </div>
@@ -1261,7 +1261,7 @@ export default function AdminIncidentWorkPage() {
         ) : (
           /* Configuration Tab Content */
           <div className="space-y-6">
-            {/* Incident Types Management */}
+            {/* Warranty Types Management */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -1269,26 +1269,26 @@ export default function AdminIncidentWorkPage() {
                     <div className="p-1.5 bg-blue-100 rounded-md">
                       <FileText className="h-4 w-4 text-blue-600" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Quản lý loại sự cố</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Quản lý loại bảo hành</h3>
                   </div>
                   <button
-                    onClick={handleAddIncidentType}
+                    onClick={handleAddWarrantyType}
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>Thêm loại sự cố</span>
+                    <span>Thêm loại bảo hành</span>
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  Quản lý các loại sự cố hệ thống
-                </p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Quản lý các loại bảo hành hệ thống
+                  </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Loại sự cố
+                        Loại bảo hành
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Thao tác
@@ -1296,33 +1296,33 @@ export default function AdminIncidentWorkPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {incidentTypesLoading ? (
+                    {warrantyTypesLoading ? (
                       <tr key="loading-state">
                         <td colSpan={2} className="px-6 py-8 text-center">
                           <div className="flex items-center justify-center space-x-2">
                             <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
-                            <span className="text-gray-600">Đang tải danh sách loại sự cố...</span>
+                            <span className="text-gray-600">Đang tải danh sách loại bảo hành...</span>
                           </div>
                         </td>
                       </tr>
                     ) : (
                       <>
                         {/* Existing incident types */}
-                        {incidentTypes.map((incidentType, index) => (
-                          <tr key={`incident-type-${incidentType.id}`} className="hover:bg-gray-50">
+                        {warrantyTypes.map((warrantyType, index) => (
+                          <tr key={`warranty-type-${warrantyType.id}`} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{incidentType.name}</div>
+                              <div className="text-sm font-medium text-gray-900">{warrantyType.name}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex items-center space-x-2">
                                 <button
-                                  onClick={() => handleEditIncidentType(incidentType)}
+                                  onClick={() => handleEditWarrantyType(warrantyType)}
                                   className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors cursor-pointer"
                                 >
                                   Sửa
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteIncidentType(incidentType)}
+                                  onClick={() => handleDeleteWarrantyType(warrantyType)}
                                   className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors cursor-pointer"
                                 >
                                   Xóa
@@ -1338,8 +1338,8 @@ export default function AdminIncidentWorkPage() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input
                                 type="text"
-                                value={newIncidentTypeName}
-                                onChange={(e) => setNewIncidentTypeName(e.target.value)}
+                                value={newWarrantyTypeName}
+                                onChange={(e) => setNewWarrantyTypeName(e.target.value)}
                                 placeholder="Nhập tên loại sự cố..."
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 autoFocus
@@ -1374,7 +1374,7 @@ export default function AdminIncidentWorkPage() {
                         )}
                         
                         {/* Empty state */}
-                        {incidentTypes.length === 0 && !isAddingNewRow && (
+                        {warrantyTypes.length === 0 && !isAddingNewRow && (
                           <tr>
                             <td colSpan={2} className="px-6 py-8 text-center">
                               <div className="text-gray-400 mb-4">
@@ -1383,7 +1383,7 @@ export default function AdminIncidentWorkPage() {
                               <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có loại sự cố nào</h3>
                               <p className="text-gray-500 mb-4">Thêm loại sự cố đầu tiên để bắt đầu quản lý</p>
                               <button
-                                onClick={handleAddIncidentType}
+                                onClick={handleAddWarrantyType}
                                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
@@ -1403,11 +1403,11 @@ export default function AdminIncidentWorkPage() {
       </div>
 
         {/* Evaluation Modal */}
-        {showEvaluationModal && selectedIncident && (
+        {showEvaluationModal && selectedWarranty && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Đánh giá Case: {selectedIncident.title}</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Đánh giá Case: {selectedWarranty.title}</h3>
                 <p className="text-sm text-gray-600">Đánh giá mức độ khó, thời gian, ảnh hưởng và khẩn cấp</p>
               </div>
               
@@ -1419,13 +1419,13 @@ export default function AdminIncidentWorkPage() {
                       <h4 className="text-sm font-semibold text-blue-800">Đánh giá của User</h4>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>Mức độ khó: {getDifficultyText(selectedIncident.userDifficultyLevel || 0)}</div>
-                      <div>Thời gian ước tính: {getEstimatedTimeText(selectedIncident.userEstimatedTime || 0)}</div>
-                      <div>Mức độ ảnh hưởng: {getImpactText(selectedIncident.userImpactLevel || 0)}</div>
-                      <div>Mức độ khẩn cấp: {getUrgencyText(selectedIncident.userUrgencyLevel || 0)}</div>
-                      <div>Hình thức: {getFormText(selectedIncident.userFormScore)}</div>
+                      <div>Mức độ khó: {getDifficultyText(selectedWarranty.userDifficultyLevel || 0)}</div>
+                      <div>Thời gian ước tính: {getEstimatedTimeText(selectedWarranty.userEstimatedTime || 0)}</div>
+                      <div>Mức độ ảnh hưởng: {getImpactText(selectedWarranty.userImpactLevel || 0)}</div>
+                      <div>Mức độ khẩn cấp: {getUrgencyText(selectedWarranty.userUrgencyLevel || 0)}</div>
+                      <div>Hình thức: {getFormText(selectedWarranty.userFormScore)}</div>
                       <div className="font-medium text-blue-600">
-                        Tổng: {((selectedIncident.userDifficultyLevel || 0) + (selectedIncident.userEstimatedTime || 0) + (selectedIncident.userImpactLevel || 0) + (selectedIncident.userUrgencyLevel || 0) + (selectedIncident.userFormScore || 0))}
+                        Tổng: {((selectedWarranty.userDifficultyLevel || 0) + (selectedWarranty.userEstimatedTime || 0) + (selectedWarranty.userImpactLevel || 0) + (selectedWarranty.userUrgencyLevel || 0) + (selectedWarranty.userFormScore || 0))}
                       </div>
                     </div>
                   </div>
@@ -1531,7 +1531,7 @@ export default function AdminIncidentWorkPage() {
                 <button
                   onClick={() => {
                     setShowEvaluationModal(false);
-                    setSelectedIncident(null);
+                    setSelectedWarranty(null);
                     setEvaluationForm({
                       adminDifficultyLevel: '',
                       adminEstimatedTime: '',
@@ -1556,11 +1556,11 @@ export default function AdminIncidentWorkPage() {
         )}
 
         {/* Delete Confirmation Modal */}
-        {showDeleteModal && selectedIncident && (
+        {showDeleteModal && selectedWarranty && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Xác nhận xóa sự cố</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Xác nhận xóa bảo hành</h3>
               </div>
               <div className="p-6">
                 <div className="flex items-start space-x-3">
@@ -1571,14 +1571,14 @@ export default function AdminIncidentWorkPage() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-gray-700 mb-2">
-                      Bạn có chắc chắn muốn xóa sự cố này không?
+                      Bạn có chắc chắn muốn xóa bảo hành này không?
                     </p>
                     <div className="bg-gray-50 rounded-md p-3 text-sm">
-                      <div className="font-medium text-gray-900">{selectedIncident.title}</div>
+                      <div className="font-medium text-gray-900">{selectedWarranty.title}</div>
                       <div className="text-gray-600 mt-1">
-                        <div>Tên khách hàng: {selectedIncident.customerName}</div>
-                        <div>Người xử lý: {selectedIncident.handler.fullName}</div>
-                        <div>Loại: {selectedIncident.incidentType}</div>
+                        <div>Tên khách hàng: {selectedWarranty.customerName}</div>
+                        <div>Người xử lý: {selectedWarranty.handler.fullName}</div>
+                        <div>Loại: {selectedWarranty.warrantyType}</div>
                       </div>
                     </div>
                     <p className="text-xs text-red-600 mt-2">
@@ -1591,7 +1591,7 @@ export default function AdminIncidentWorkPage() {
                 <button
                   onClick={() => {
                     setShowDeleteModal(false);
-                    setSelectedIncident(null);
+                    setSelectedWarranty(null);
                   }}
                   disabled={deleting}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -1599,7 +1599,7 @@ export default function AdminIncidentWorkPage() {
                   Hủy
                 </button>
                 <button
-                  onClick={() => deleteIncident(selectedIncident.id)}
+                  onClick={() => deleteWarranty(selectedWarranty.id)}
                   disabled={deleting}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
                 >
@@ -1611,7 +1611,7 @@ export default function AdminIncidentWorkPage() {
                   ) : (
                     <>
                       <Trash className="h-4 w-4 mr-2" />
-                      Xóa sự cố
+                      Xóa bảo hành
                     </>
                   )}
                 </button>
@@ -1620,27 +1620,27 @@ export default function AdminIncidentWorkPage() {
           </div>
         )}
 
-        {/* Incident Type Modal */}
-        {showIncidentTypeModal && (
+        {/* Warranty Type Modal */}
+        {showWarrantyTypeModal && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {editingIncidentType ? 'Chỉnh sửa loại sự cố' : 'Thêm loại sự cố mới'}
+                  {editingWarrantyType ? 'Chỉnh sửa loại bảo hành' : 'Thêm loại bảo hành mới'}
                 </h3>
               </div>
               <div className="p-6">
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tên loại sự cố *
+                      Tên loại bảo hành *
                     </label>
                     <input
                       type="text"
-                      value={incidentTypeForm.name}
-                      onChange={(e) => setIncidentTypeForm(prev => ({ ...prev, name: e.target.value }))}
+                      value={warrantyTypeForm.name}
+                      onChange={(e) => setWarrantyTypeForm(prev => ({ ...prev, name: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Nhập tên loại sự cố"
+                      placeholder="Nhập tên loại bảo hành"
                     />
                   </div>
                 </div>
@@ -1666,7 +1666,7 @@ export default function AdminIncidentWorkPage() {
                   ) : (
                     <>
                       <Plus className="h-4 w-4 mr-2" />
-                      {editingIncidentType ? 'Cập nhật' : 'Thêm mới'}
+                      {editingWarrantyType ? 'Cập nhật' : 'Thêm mới'}
                     </>
                   )}
                 </button>

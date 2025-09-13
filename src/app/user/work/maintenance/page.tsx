@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Filter, MoreVertical, Eye, Edit, RefreshCw, X, Wrench } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Edit, RefreshCw, X, Wrench } from 'lucide-react';
 import CreateMaintenanceModal from './CreateMaintenanceModal';
 import EditMaintenanceModal from './EditMaintenanceModal';
-import ViewMaintenanceModal from './ViewMaintenanceModal';
 
 interface Employee {
   id: string;
@@ -21,6 +20,12 @@ interface MaintenanceCase {
   reporter: Employee;
   handler: Employee;
   maintenanceType: string;
+  maintenanceCaseType?: {
+    id: string;
+    name: string;
+  };
+  customerName?: string;
+  customerId?: string;
   equipment?: {
     id: string;
     name: string;
@@ -54,20 +59,19 @@ export default function MaintenancePage() {
   const { data: session, status } = useSession();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedMaintenance, setSelectedMaintenance] = useState<MaintenanceCase | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [maintenanceCases, setMaintenanceCases] = useState<MaintenanceCase[]>([]);
-  const [equipment, setEquipment] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [partners, setPartners] = useState<any[]>([]);
   
   // Filter states
   const [filters, setFilters] = useState({
     handler: '',
     maintenanceType: '',
-    equipment: '',
     status: '',
+    customer: '',
     startDate: '',
     endDate: ''
   });
@@ -108,28 +112,6 @@ export default function MaintenancePage() {
     }
   }, []);
 
-  // Fetch equipment from API
-  const fetchEquipment = useCallback(async () => {
-    try {
-      const response = await fetch('/api/equipment/list', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=300',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setEquipment(data || []);
-      } else {
-        console.error('Failed to fetch equipment:', response.status, response.statusText);
-        setEquipment([]);
-      }
-    } catch (error) {
-      console.error('Error fetching equipment:', error);
-      setEquipment([]);
-    }
-  }, []);
 
   // Refresh maintenance cases
   const refreshMaintenanceCases = async () => {
@@ -138,16 +120,6 @@ export default function MaintenancePage() {
     setRefreshing(false);
   };
 
-  // Handle view modal
-  const handleOpenViewModal = (maintenanceData: MaintenanceCase) => {
-    setSelectedMaintenance(maintenanceData);
-    setIsViewModalOpen(true);
-  };
-
-  const handleCloseViewModal = () => {
-    setIsViewModalOpen(false);
-    setSelectedMaintenance(null);
-  };
 
   // Handle edit modal
   const handleOpenEditModal = (maintenanceData: MaintenanceCase) => {
@@ -168,13 +140,41 @@ export default function MaintenancePage() {
     );
   };
 
-  // Load maintenance cases and equipment on component mount
+  // Load maintenance cases on component mount
   useEffect(() => {
     if (status === 'authenticated') {
       fetchMaintenanceCases();
-      fetchEquipment();
     }
-  }, [status, fetchMaintenanceCases, fetchEquipment]);
+  }, [status, fetchMaintenanceCases]);
+
+  // Fetch partners for customer filter
+  const fetchPartners = useCallback(async () => {
+    try {
+      const response = await fetch('/api/partners/list', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=300',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPartners(data || []);
+      } else {
+        console.error('Failed to fetch partners:', response.status, response.statusText);
+        setPartners([]);
+      }
+    } catch (error) {
+      console.error('Error fetching partners:', error);
+      setPartners([]);
+    }
+  }, []);
+
+  // Load partners on component mount
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchPartners();
+    }
+  }, [status, fetchPartners]);
 
   // Filter maintenance cases based on search term and filters
   const filteredMaintenanceCases = maintenanceCases.filter(maintenance => {
@@ -184,7 +184,8 @@ export default function MaintenancePage() {
       maintenance.reporter.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       maintenance.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       maintenance.maintenanceType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      maintenance.description.toLowerCase().includes(searchTerm.toLowerCase())
+      maintenance.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (maintenance.customerName || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
     
     // Handler filter
@@ -195,13 +196,13 @@ export default function MaintenancePage() {
     const matchesMaintenanceType = filters.maintenanceType === '' || 
       maintenance.maintenanceType === filters.maintenanceType;
     
-    // Equipment filter
-    const matchesEquipment = filters.equipment === '' || 
-      maintenance.equipment?.id === filters.equipment;
-    
     // Status filter
     const matchesStatus = filters.status === '' || 
       maintenance.status === filters.status;
+    
+    // Customer filter
+    const matchesCustomer = filters.customer === '' || 
+      maintenance.customerId === filters.customer;
     
     // Date range filter
     const maintenanceDate = new Date(maintenance.startDate);
@@ -212,16 +213,16 @@ export default function MaintenancePage() {
       (!endDate || maintenanceDate <= endDate);
     
     return matchesSearch && matchesHandler && 
-           matchesMaintenanceType && matchesEquipment && matchesStatus && matchesDateRange;
+           matchesMaintenanceType && matchesStatus && matchesCustomer && matchesDateRange;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'SCHEDULED':
-      case 'Đã lên lịch':
+      case 'RECEIVED':
+      case 'Tiếp nhận':
         return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'IN_PROGRESS':
-      case 'Đang thực hiện':
+      case 'PROCESSING':
+      case 'Đang xử lý':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'COMPLETED':
       case 'Hoàn thành':
@@ -229,9 +230,6 @@ export default function MaintenancePage() {
       case 'CANCELLED':
       case 'Hủy':
         return 'bg-red-100 text-red-800 border-red-200';
-      case 'PENDING':
-      case 'Chờ xử lý':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -239,16 +237,14 @@ export default function MaintenancePage() {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'SCHEDULED':
-        return 'Đã lên lịch';
-      case 'IN_PROGRESS':
-        return 'Đang thực hiện';
+      case 'RECEIVED':
+        return 'Tiếp nhận';
+      case 'PROCESSING':
+        return 'Đang xử lý';
       case 'COMPLETED':
         return 'Hoàn thành';
       case 'CANCELLED':
         return 'Hủy';
-      case 'PENDING':
-        return 'Chờ xử lý';
       default:
         return status;
     }
@@ -266,7 +262,7 @@ export default function MaintenancePage() {
   };
 
   const formatMaintenanceType = (maintenanceType: string) => {
-    switch (maintenanceType) {
+    switch (maintenanceType?.toLowerCase()) {
       case 'preventive':
         return 'Bảo trì phòng ngừa';
       case 'corrective':
@@ -280,7 +276,7 @@ export default function MaintenancePage() {
       case 'inspection':
         return 'Kiểm tra thiết bị';
       default:
-        return maintenanceType;
+        return maintenanceType || 'Không xác định';
     }
   };
 
@@ -305,8 +301,8 @@ export default function MaintenancePage() {
     setFilters({
       handler: '',
       maintenanceType: '',
-      equipment: '',
       status: '',
+      customer: '',
       startDate: '',
       endDate: ''
     });
@@ -458,27 +454,6 @@ export default function MaintenancePage() {
                     </select>
                   </div>
 
-                  {/* Thiết bị */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                        <span>Thiết bị</span>
-                      </div>
-                    </label>
-                    <select
-                      value={filters.equipment}
-                      onChange={(e) => setFilters(prev => ({ ...prev, equipment: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả thiết bị</option>
-                      {equipment.map(eq => (
-                        <option key={eq.id} value={eq.id}>
-                          {eq.name} {eq.model && `(${eq.model})`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
 
                   {/* Trạng thái */}
                   <div>
@@ -496,6 +471,28 @@ export default function MaintenancePage() {
                       <option value="">Tất cả trạng thái</option>
                       {getUniqueStatuses().map(status => (
                         <option key={status} value={status}>{getStatusText(status)}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Khách hàng */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <span>Khách hàng</span>
+                      </div>
+                    </label>
+                    <select
+                      value={filters.customer}
+                      onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    >
+                      <option value="">Tất cả khách hàng</option>
+                      {partners.map((partner) => (
+                        <option key={partner.id} value={partner.id}>
+                          {partner.shortName}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -567,16 +564,16 @@ export default function MaintenancePage() {
                             Loại: {formatMaintenanceType(filters.maintenanceType)}
                           </span>
                         )}
-                        {filters.equipment && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
-                            Thiết bị: {equipment.find(eq => eq.id === filters.equipment)?.name || filters.equipment}
-                          </span>
-                        )}
                         {filters.status && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
                             Trạng thái: {getStatusText(filters.status)}
+                          </span>
+                        )}
+                        {filters.customer && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></div>
+                            Khách hàng: {partners.find(p => p.id === filters.customer)?.shortName || 'Unknown'}
                           </span>
                         )}
                         {filters.startDate && (
@@ -634,21 +631,21 @@ export default function MaintenancePage() {
                     Người xử lý
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                    Thiết bị
+                    Khách hàng
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Loại bảo trì
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-80">
                     Thông tin Case
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
                     Trạng thái
                   </th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Thời gian
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">
                     Hành động
                   </th>
                 </tr>
@@ -681,20 +678,10 @@ export default function MaintenancePage() {
                         </div>
                       </td>
                       
-                      {/* Thiết bị */}
+                      {/* Khách hàng */}
                       <td className="px-3 py-2">
                         <div className="text-sm text-slate-700">
-                          {maintenance.equipment ? (
-                            <div>
-                              <div className="font-medium">{maintenance.equipment.name}</div>
-                              <div className="text-xs text-slate-500">
-                                {maintenance.equipment.model && `${maintenance.equipment.model}`}
-                                {maintenance.equipment.location && ` - ${maintenance.equipment.location}`}
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
+                          {maintenance.customerName || '-'}
                         </div>
                       </td>
                       
@@ -704,12 +691,12 @@ export default function MaintenancePage() {
                       </td>
                       
                       {/* Thông tin Case */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 w-80">
                         <div>
-                          <div className="text-sm font-medium text-slate-900 mb-1">
+                          <div className="text-sm font-medium text-slate-900 mb-1 break-words">
                             {maintenance.title}
                           </div>
-                          <div className="text-xs text-slate-500 mb-1 line-clamp-2">
+                          <div className="text-xs text-slate-500 mb-1 break-words">
                             {maintenance.description}
                           </div>
                           <div className="text-xs text-slate-500">
@@ -719,7 +706,7 @@ export default function MaintenancePage() {
                       </td>
                       
                       {/* Trạng thái */}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 w-32">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(maintenance.status)}`}>
                           {getStatusText(maintenance.status)}
                         </span>
@@ -736,15 +723,8 @@ export default function MaintenancePage() {
                       </td>
                       
                       {/* Hành động */}
-                      <td className="px-3 py-2">
-                        <div className="flex items-center space-x-1">
-                          <button 
-                            onClick={() => handleOpenViewModal(maintenance)}
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
-                            title="Xem chi tiết"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
+                      <td className="px-3 py-2 w-28 text-center">
+                        <div className="flex items-center justify-center space-x-1">
                           <button 
                             onClick={() => handleOpenEditModal(maintenance)}
                             className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
@@ -790,12 +770,6 @@ export default function MaintenancePage() {
         maintenanceData={selectedMaintenance}
       />
 
-      {/* View Maintenance Modal */}
-      <ViewMaintenanceModal
-        isOpen={isViewModalOpen}
-        onClose={handleCloseViewModal}
-        maintenanceData={selectedMaintenance}
-      />
     </div>
   );
 }

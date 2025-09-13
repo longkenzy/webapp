@@ -16,6 +16,12 @@ interface Employee {
   companyEmail: string;
 }
 
+interface MaintenanceType {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 
 interface CreateMaintenanceModalProps {
   isOpen: boolean;
@@ -26,6 +32,10 @@ interface CreateMaintenanceModalProps {
 export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: CreateMaintenanceModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
+  const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // User evaluation categories
@@ -40,10 +50,10 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
   const [formData, setFormData] = useState({
-    reporter: '',
-    position: '',
     handler: '',
     maintenanceType: '',
+    customerName: '',
+    customer: '',
     title: '',
     description: '',
     startDate: new Date().toLocaleString('vi-VN', {
@@ -87,13 +97,57 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
     }
   }, []);
 
+  const fetchPartners = useCallback(async () => {
+    try {
+      const response = await fetch('/api/partners/list', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=300',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPartners(data || []);
+      } else {
+        console.error('Failed to fetch partners:', response.status, response.statusText);
+        setPartners([]);
+      }
+    } catch (error) {
+      console.error('Error fetching partners:', error);
+      setPartners([]);
+    }
+  }, []);
+
+  const fetchMaintenanceTypes = useCallback(async () => {
+    try {
+      const response = await fetch('/api/maintenance-types?isActive=true', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=300',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      setMaintenanceTypes(result.data || []);
+    } catch (error) {
+      console.error('Error fetching maintenance types:', error);
+      setMaintenanceTypes([]);
+      toast.error('Không thể tải danh sách loại bảo trì');
+    }
+  }, []);
+
+
 
   const resetForm = useCallback(() => {
     setFormData({
-      reporter: '',
-      position: '',
       handler: '',
       maintenanceType: '',
+      customerName: '',
+      customer: '',
       title: '',
       description: '',
       startDate: new Date().toLocaleString('vi-VN', {
@@ -115,6 +169,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       form: 'Onsite',
       formScore: '2' // Default for Onsite
     });
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
   }, []);
 
   // Reset form when modal opens
@@ -127,11 +183,17 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
-      fetchEmployees();
-      // Refresh evaluation configs to get latest options
-      fetchConfigs();
+      // Fetch all data in parallel for better performance
+      Promise.all([
+        fetchEmployees(),
+        fetchPartners(),
+        fetchMaintenanceTypes(),
+        fetchConfigs()
+      ]).catch(error => {
+        console.error('Error fetching modal data:', error);
+      });
     }
-  }, [isOpen, fetchEmployees, fetchConfigs]);
+  }, [isOpen, fetchEmployees, fetchPartners, fetchMaintenanceTypes, fetchConfigs]);
 
   // Auto-fill handler with current user when employees are loaded
   useEffect(() => {
@@ -146,6 +208,21 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       }
     }
   }, [employees, session?.user?.email]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.customer-dropdown-container')) {
+        setShowCustomerDropdown(false);
+      }
+    };
+
+    if (showCustomerDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCustomerDropdown]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -177,22 +254,47 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       ...prev,
       [field]: value
     }));
+  };
 
-    // Auto-fill position when reporter is selected
-    if (field === 'reporter') {
-      const selectedEmployee = employees.find(emp => emp.id === value);
-      if (selectedEmployee) {
-        setFormData(prev => ({
-          ...prev,
-          reporter: value,
-          position: selectedEmployee.position || ''
-        }));
-      }
+  // Filter partners based on search
+  const filteredPartners = partners.filter(partner =>
+    partner.fullCompanyName.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    partner.shortName.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  // Handle customer selection
+  const handleCustomerSelect = (partnerId: string) => {
+    const selectedPartner = partners.find(p => p.id === partnerId);
+    setFormData(prev => ({
+      ...prev,
+      customer: partnerId
+    }));
+    setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
+    setShowCustomerDropdown(false);
+  };
+
+  // Handle customer search change
+  const handleCustomerSearchChange = (value: string) => {
+    setCustomerSearch(value);
+    setShowCustomerDropdown(true);
+    
+    // If search is cleared, clear customer selection
+    if (!value) {
+      setFormData(prev => ({
+        ...prev,
+        customer: ''
+      }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.maintenanceType) {
+      toast.error('Vui lòng chọn loại bảo trì!');
+      return;
+    }
     
     // Validate end date
     if (formData.endDate) {
@@ -213,9 +315,10 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       const maintenanceData = {
         title: formData.title,
         description: formData.description,
-        reporterId: formData.reporter,
         handlerId: formData.handler,
-        maintenanceType: formData.maintenanceType,
+        maintenanceTypeId: formData.maintenanceType, // Now sending the ID instead of enum
+        customerName: formData.customerName,
+        customerId: formData.customer || null,
         startDate: formData.startDate,
         endDate: formData.endDate || null,
         status: formData.status,
@@ -327,105 +430,114 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                 <h3 className="text-sm font-semibold text-gray-700">Thông tin cơ bản</h3>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Người báo cáo</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.reporter}
-                    onChange={(e) => handleInputChange('reporter', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center">
+                      <span className="w-24">Người xử lý</span>
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      value={formData.handler}
+                      onChange={(e) => handleInputChange('handler', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      required
+                      disabled={loading}
+                    >
+                      <option value="">
+                        {loading ? 'Đang tải...' : 'Chọn nhân viên'}
                       </option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Chức danh</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.position}
-                    onChange={(e) => handleInputChange('position', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    placeholder="Tự động điền khi chọn nhân viên"
-                    readOnly
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Người xử lý</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.handler}
-                    onChange={(e) => handleInputChange('handler', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.fullName}
+                      {employees.length > 0 ? (
+                        employees.map((employee) => (
+                          <option key={employee.id} value={employee.id}>
+                            {employee.fullName}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>
+                          {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
                         </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center">
+                      <span className="w-24">Loại bảo trì</span>
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      value={formData.maintenanceType}
+                      onChange={(e) => handleInputChange('maintenanceType', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      required
+                      disabled={maintenanceTypes.length === 0}
+                    >
+                      <option value="">
+                        {maintenanceTypes.length > 0 ? 'Chọn loại bảo trì' : 'Đang tải loại bảo trì...'}
                       </option>
-                    )}
-                  </select>
-                  {formData.handler && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      Tự động chọn: {employees.find(emp => emp.id === formData.handler)?.fullName}
-                    </p>
-                  )}
+                      {maintenanceTypes.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Loại bảo trì</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.maintenanceType}
-                    onChange={(e) => handleInputChange('maintenanceType', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn loại bảo trì</option>
-                    <option value="PREVENTIVE">Bảo trì phòng ngừa</option>
-                    <option value="CORRECTIVE">Bảo trì sửa chữa</option>
-                    <option value="EMERGENCY">Bảo trì khẩn cấp</option>
-                    <option value="ROUTINE">Bảo trì định kỳ</option>
-                    <option value="UPGRADE">Nâng cấp thiết bị</option>
-                    <option value="INSPECTION">Kiểm tra thiết bị</option>
-                  </select>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                      <span className="w-24">Khách hàng</span>
+                      <span className="ml-1 w-2"></span>
+                    </label>
+                    <div className="relative customer-dropdown-container">
+                      <input
+                        type="text"
+                        value={customerSearch}
+                        onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                        placeholder="Tìm kiếm khách hàng..."
+                      />
+                      {showCustomerDropdown && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {filteredPartners.length > 0 ? (
+                            filteredPartners.map((partner) => (
+                              <div
+                                key={partner.id}
+                                onClick={() => handleCustomerSelect(partner.id)}
+                                className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                              >
+                                <div className="font-medium">{partner.fullCompanyName}</div>
+                                <div className="text-gray-500 text-xs">{partner.shortName}</div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">
+                              Không tìm thấy khách hàng
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                      <span className="w-24">Tên khách hàng</span>
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => handleInputChange('customerName', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      placeholder="Nhập tên khách hàng"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 

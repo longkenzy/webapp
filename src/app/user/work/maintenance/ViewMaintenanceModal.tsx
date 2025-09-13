@@ -23,7 +23,7 @@ export default function ViewMaintenanceModal({ isOpen, onClose, maintenanceData 
   };
 
   const formatMaintenanceType = (type: string) => {
-    switch (type) {
+    switch (type?.toLowerCase()) {
       case 'preventive':
         return 'Bảo trì phòng ngừa';
       case 'corrective':
@@ -37,7 +37,7 @@ export default function ViewMaintenanceModal({ isOpen, onClose, maintenanceData 
       case 'inspection':
         return 'Kiểm tra thiết bị';
       default:
-        return type;
+        return type || 'Không xác định';
     }
   };
 

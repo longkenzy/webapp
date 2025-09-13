@@ -39,6 +39,12 @@ export async function GET(
             department: true
           }
         },
+        maintenanceCaseType: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         equipment: {
           select: {
             id: true,
@@ -88,28 +94,61 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, description, maintenanceType, equipmentId, startDate, endDate, status, notes } = body;
+    const { 
+      title, 
+      description, 
+      maintenanceType, 
+      equipmentId, 
+      startDate, 
+      endDate, 
+      status, 
+      notes,
+      // Admin evaluation fields
+      adminDifficultyLevel,
+      adminEstimatedTime,
+      adminImpactLevel,
+      adminUrgencyLevel,
+      adminAssessmentDate,
+      adminAssessmentNotes,
+      // User evaluation fields (for updates)
+      userDifficultyLevel,
+      userEstimatedTime,
+      userImpactLevel,
+      userUrgencyLevel,
+      userFormScore
+    } = body;
 
-    // Validate required fields
-    if (!title || !description || !maintenanceType || !equipmentId || !startDate) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+    // Build update data object dynamically
+    const updateData: any = {};
+
+    // Only update fields that are provided
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (maintenanceType !== undefined) updateData.maintenanceType = maintenanceType.toUpperCase();
+    if (equipmentId !== undefined) updateData.equipmentId = equipmentId;
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (status !== undefined) updateData.status = status.toUpperCase();
+    if (notes !== undefined) updateData.notes = notes;
+
+    // Admin evaluation fields
+    if (adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = parseInt(adminDifficultyLevel);
+    if (adminEstimatedTime !== undefined) updateData.adminEstimatedTime = parseInt(adminEstimatedTime);
+    if (adminImpactLevel !== undefined) updateData.adminImpactLevel = parseInt(adminImpactLevel);
+    if (adminUrgencyLevel !== undefined) updateData.adminUrgencyLevel = parseInt(adminUrgencyLevel);
+    if (adminAssessmentDate !== undefined) updateData.adminAssessmentDate = new Date(adminAssessmentDate);
+    if (adminAssessmentNotes !== undefined) updateData.adminAssessmentNotes = adminAssessmentNotes;
+
+    // User evaluation fields
+    if (userDifficultyLevel !== undefined) updateData.userDifficultyLevel = parseInt(userDifficultyLevel);
+    if (userEstimatedTime !== undefined) updateData.userEstimatedTime = parseInt(userEstimatedTime);
+    if (userImpactLevel !== undefined) updateData.userImpactLevel = parseInt(userImpactLevel);
+    if (userUrgencyLevel !== undefined) updateData.userUrgencyLevel = parseInt(userUrgencyLevel);
+    if (userFormScore !== undefined) updateData.userFormScore = parseInt(userFormScore);
 
     const updatedMaintenanceCase = await prisma.maintenanceCase.update({
       where: { id },
-      data: {
-        title,
-        description,
-        maintenanceType: maintenanceType.toUpperCase(),
-        equipmentId,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        status: status ? status.toUpperCase() : 'RECEIVED',
-        notes: notes || ''
-      },
+      data: updateData,
       include: {
         reporter: {
           select: {
@@ -125,6 +164,12 @@ export async function PUT(
             fullName: true,
             position: true,
             department: true
+          }
+        },
+        maintenanceCaseType: {
+          select: {
+            id: true,
+            name: true
           }
         },
         equipment: {

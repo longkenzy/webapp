@@ -99,6 +99,7 @@ model Partner {
   deliveryCases   DeliveryCase[]
   receivingCases  ReceivingCase[]
   incidents       Incident[]
+  maintenanceCases MaintenanceCase[]
 }
 
 model CaseType {
@@ -334,6 +335,16 @@ model IncidentType {
   incidents   Incident[]
 }
 
+model MaintenanceCaseType {
+  id               String            @id @default(cuid())
+  name             String            @unique
+  description      String?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  maintenanceCases MaintenanceCase[]
+}
+
 model Incident {
   id                   String           @id @default(cuid())
   title                String
@@ -411,8 +422,11 @@ model MaintenanceCase {
   description          String
   reporterId           String
   handlerId            String
-  equipmentId          String
+  equipmentId          String?
+  customerName         String?
+  customerId           String?
   maintenanceType      MaintenanceType
+  maintenanceTypeId    String?
   startDate            DateTime
   endDate              DateTime?
   status               MaintenanceCaseStatus  @default(RECEIVED)
@@ -433,7 +447,9 @@ model MaintenanceCase {
   updatedAt            DateTime               @updatedAt
   reporter             Employee               @relation("ReporterMaintenanceCases", fields: [reporterId], references: [id])
   handler              Employee               @relation("HandlerMaintenanceCases", fields: [handlerId], references: [id])
-  equipment            Equipment              @relation(fields: [equipmentId], references: [id])
+  equipment            Equipment?             @relation(fields: [equipmentId], references: [id])
+  customer             Partner?               @relation(fields: [customerId], references: [id])
+  maintenanceCaseType  MaintenanceCaseType?   @relation(fields: [maintenanceTypeId], references: [id])
   comments             MaintenanceCaseComment[]
   worklogs             MaintenanceCaseWorklog[]
 }

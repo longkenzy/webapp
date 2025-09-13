@@ -33,6 +33,12 @@ export async function GET(request: NextRequest) {
             department: true
           }
         },
+        maintenanceCaseType: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         equipment: {
           select: {
             id: true,
@@ -51,13 +57,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: maintenanceCases
+    }, {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'public, max-age=60' // Cache for 1 minute
+      }
     });
   } catch (error) {
     console.error('Error fetching maintenance cases:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch maintenance cases' },
+      { 
+        success: false,
+        error: 'Failed to fetch maintenance cases',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
@@ -74,17 +91,34 @@ export async function POST(request: NextRequest) {
     // }
 
     const body = await request.json();
-    const { title, description, maintenanceType, equipmentId, startDate, notes } = body;
+    const { 
+      title, 
+      description, 
+      maintenanceType, 
+      maintenanceTypeId,
+      handlerId, 
+      customerName, 
+      customerId, 
+      startDate, 
+      endDate, 
+      status, 
+      notes,
+      userDifficultyLevel,
+      userEstimatedTime,
+      userImpactLevel,
+      userUrgencyLevel,
+      userFormScore
+    } = body;
 
     // Validate required fields
-    if (!title || !description || !maintenanceType || !equipmentId || !startDate) {
+    if (!title || !description || !handlerId || !customerName || !startDate) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Get first employee as default reporter and handler (for now)
+    // Get first employee as default reporter (for now)
     const defaultEmployee = await prisma.employee.findFirst();
     if (!defaultEmployee) {
       return NextResponse.json(
@@ -98,12 +132,21 @@ export async function POST(request: NextRequest) {
         title,
         description,
         reporterId: defaultEmployee.id,
-        handlerId: defaultEmployee.id,
-        equipmentId,
-        maintenanceType: maintenanceType.toUpperCase(),
+        handlerId,
+        customerName,
+        customerId: customerId || null,
+        maintenanceType: maintenanceType || 'PREVENTIVE', // Fallback to enum for backward compatibility
+        maintenanceTypeId: maintenanceTypeId || null,
         startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
         notes: notes || '',
-        status: 'RECEIVED'
+        status: status || 'RECEIVED',
+        // User evaluation data - convert strings to integers
+        userDifficultyLevel: userDifficultyLevel ? parseInt(userDifficultyLevel) : null,
+        userEstimatedTime: userEstimatedTime ? parseInt(userEstimatedTime) : null,
+        userImpactLevel: userImpactLevel ? parseInt(userImpactLevel) : null,
+        userUrgencyLevel: userUrgencyLevel ? parseInt(userUrgencyLevel) : null,
+        userFormScore: userFormScore ? parseInt(userFormScore) : null
       },
       include: {
         reporter: {
@@ -122,6 +165,12 @@ export async function POST(request: NextRequest) {
             department: true
           }
         },
+        maintenanceCaseType: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
         equipment: {
           select: {
             id: true,
@@ -136,13 +185,25 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      message: 'Maintenance case created successfully',
       data: newMaintenanceCase
-    }, { status: 201 });
+    }, { 
+      status: 201,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      }
+    });
   } catch (error) {
     console.error('Error creating maintenance case:', error);
     return NextResponse.json(
-      { error: 'Failed to create maintenance case' },
+      { 
+        success: false,
+        error: 'Failed to create maintenance case',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

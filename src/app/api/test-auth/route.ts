@@ -1,46 +1,34 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/session";
-import { db } from "@/lib/db";
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/options';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("=== Test Auth API Called ===");
-    
-    // Test database connection
-    const userCount = await db.user.count();
-    console.log("Database connection test - User count:", userCount);
-    
-    // Test session
-    const session = await getSession();
-    console.log("Session test - Session exists:", !!session);
-    
-    if (session) {
-      console.log("Session details:", {
-        userId: session.user?.id,
-        email: session.user?.email,
-        role: session.user?.role
-      });
-    }
+    const session = await getServerSession(authOptions);
     
     return NextResponse.json({
       success: true,
-      databaseConnected: true,
-      userCount,
-      sessionExists: !!session,
+      hasSession: !!session,
       session: session ? {
-        userId: session.user?.id,
-        email: session.user?.email,
-        role: session.user?.role
+        user: {
+          id: session.user?.id,
+          email: session.user?.email,
+          name: session.user?.name,
+          role: session.user?.role
+        }
       } : null,
+      environment: process.env.NODE_ENV,
+      nextAuthUrl: process.env.NEXTAUTH_URL,
       timestamp: new Date().toISOString()
     });
-    
   } catch (error) {
-    console.error("Test auth error:", error);
+    console.error('Auth test error:', error);
     
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Auth test failed',
+      error: process.env.NODE_ENV === 'development' ? error : 'Auth error',
+      environment: process.env.NODE_ENV,
       timestamp: new Date().toISOString()
     }, { status: 500 });
   }

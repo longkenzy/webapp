@@ -16,6 +16,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {},
   adapter: undefined, // Explicitly set to undefined to avoid adapter issues
+  trustHost: true, // Trust the host in production
   providers: [
     Credentials({
       name: "Credentials",
@@ -56,6 +57,9 @@ export const authOptions: NextAuthOptions = {
             }
           }).catch((dbError) => {
             console.error('Database error during authentication:', dbError);
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Full error details:', dbError);
+            }
             throw new Error('DATABASE_ERROR');
           });
           
@@ -86,6 +90,10 @@ export const authOptions: NextAuthOptions = {
           };
         } catch (error) {
           console.error('Authentication error:', error);
+          
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Full authentication error details:', error);
+          }
           
           // Return specific error for inactive account
           if (error instanceof Error && error.message === 'ACCOUNT_INACTIVE') {
@@ -138,6 +146,7 @@ export const authOptions: NextAuthOptions = {
       }
     },
   },
+  useSecureCookies: process.env.NODE_ENV === 'production',
   secret: process.env.NEXTAUTH_SECRET || "your-super-secret-key-here-change-this-in-production",
 };
 

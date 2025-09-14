@@ -1,96 +1,83 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { getSession } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const isActive = searchParams.get('isActive');
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    const whereClause = isActive !== null ? { isActive: isActive === 'true' } : {};
-
-    const maintenanceTypes = await prisma.maintenanceCaseType.findMany({
-      where: whereClause,
+    // Get all active maintenance types from database
+    const maintenanceTypes = await db.maintenanceCaseType.findMany({
+      where: { isActive: true },
       orderBy: { name: 'asc' },
+      select: { id: true, name: true, description: true }
     });
 
-    return NextResponse.json({
-      success: true,
-      data: maintenanceTypes,
-    }, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    });
+    const response = NextResponse.json({ data: maintenanceTypes });
+    
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    return response;
+
   } catch (error) {
-    console.error('Error fetching maintenance types:', error);
+    console.error("Error fetching maintenance types:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: 'Failed to fetch maintenance types',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name } = body;
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-    if (!name) {
+    const body = await request.json();
+    const { name, description } = body;
+
+    if (!name || !name.trim()) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'Name is required',
-        },
+        { error: "Name is required" },
         { status: 400 }
       );
     }
 
-    const maintenanceType = await prisma.maintenanceCaseType.create({
-      data: {
-        name,
-        description: null,
-      },
+    // Check if maintenance type already exists
+    const existingType = await db.maintenanceCaseType.findUnique({
+      where: { name: name.trim() }
     });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Maintenance case type created successfully',
-      data: maintenanceType,
-    }, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    });
-  } catch (error) {
-    console.error('Error creating maintenance type:', error);
-    
-    if (error instanceof Error && error.message.includes('Unique constraint')) {
+    if (existingType) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'A maintenance case type with this name already exists',
-        },
+        { error: "Maintenance type already exists" },
         { status: 409 }
       );
     }
 
+    // Create new maintenance type
+    const newMaintenanceType = await db.maintenanceCaseType.create({
+      data: {
+        name: name.trim(),
+        description: description?.trim() || null,
+        isActive: true
+      }
+    });
+
+    return NextResponse.json({
+      data: newMaintenanceType
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error("Error creating maintenance type:", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: 'Failed to create maintenance case type',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

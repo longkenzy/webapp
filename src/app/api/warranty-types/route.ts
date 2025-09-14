@@ -48,11 +48,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new warranty type in database (with upsert to handle duplicates)
-    const newWarrantyType = await db.warrantyType.upsert({
-      where: { name: name.trim() },
-      update: { isActive: true },
-      create: {
+    // Check if warranty type already exists
+    const existingType = await db.warrantyType.findUnique({
+      where: { name: name.trim() }
+    });
+
+    if (existingType) {
+      return NextResponse.json(
+        { error: "Warranty type already exists" },
+        { status: 409 }
+      );
+    }
+
+    // Create new warranty type
+    const newWarrantyType = await db.warrantyType.create({
+      data: {
         name: name.trim(),
         description: description?.trim() || null,
         isActive: true

@@ -503,7 +503,7 @@ export default function AdminWarrantyWorkPage() {
       }
     } catch (error) {
       console.error('Error adding incident type:', error);
-      toast.error('Lỗi khi thêm loại sự cố');
+      toast.error('Lỗi khi thêm loại bảo hành');
     } finally {
       setSaving(false);
     }
@@ -516,7 +516,7 @@ export default function AdminWarrantyWorkPage() {
 
   const handleSubmitIncidentTypeForm = async () => {
     if (!warrantyTypeForm.name.trim()) {
-      toast.error('Vui lòng nhập tên loại sự cố');
+      toast.error('Vui lòng nhập tên loại bảo hành');
       return;
     }
 
@@ -537,22 +537,22 @@ export default function AdminWarrantyWorkPage() {
         });
 
         if (response.ok) {
-          toast.success('Cập nhật loại sự cố thành công');
+          toast.success('Cập nhật loại bảo hành thành công');
           // Refresh the list to sync with API
           await fetchWarrantyTypes();
         } else {
           const errorData = await response.json();
-          toast.error(errorData.error || 'Lỗi khi cập nhật loại sự cố');
+          toast.error(errorData.error || 'Lỗi khi cập nhật loại bảo hành');
           return;
         }
       } else {
         // Add new type
         if (warrantyTypes.some(type => type.name === warrantyTypeForm.name.trim())) {
-          toast.error('Loại sự cố này đã tồn tại');
+          toast.error('Loại bảo hành này đã tồn tại');
           return;
         }
 
-        const response = await fetch('/api/incident-types', {
+        const response = await fetch('/api/warranty-types', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -564,12 +564,12 @@ export default function AdminWarrantyWorkPage() {
         });
 
         if (response.ok) {
-          toast.success('Thêm loại sự cố thành công');
+          toast.success('Thêm loại bảo hành thành công');
           // Refresh the list to sync with API
           await fetchWarrantyTypes();
         } else {
           const errorData = await response.json();
-          toast.error(errorData.error || 'Lỗi khi thêm loại sự cố');
+          toast.error(errorData.error || 'Lỗi khi thêm loại bảo hành');
           return;
         }
       }

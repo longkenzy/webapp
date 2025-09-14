@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -174,6 +175,26 @@ export async function POST(request: NextRequest) {
     });
 
     console.log("Incident created successfully:", incident);
+
+    // Create notifications for admin users
+    try {
+      const adminUsers = await getAdminUsers();
+      const requesterName = handler.fullName; // Using handler as reporter for incidents
+      
+      for (const admin of adminUsers) {
+        await createCaseCreatedNotification(
+          'incident',
+          incident.id,
+          incident.title,
+          requesterName,
+          admin.id
+        );
+      }
+      console.log(`Notifications sent to ${adminUsers.length} admin users`);
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't fail the case creation if notifications fail
+    }
 
     // Transform the created incident to match frontend interface
     console.log("Transforming created incident...");

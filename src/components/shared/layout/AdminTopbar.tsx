@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { Bell, Search, Settings, User, LogOut, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import NotificationCenter from "@/components/shared/common/NotificationCenter";
 
 export default function AdminTopbar() {
   const { data } = useSession();
@@ -25,10 +26,7 @@ export default function AdminTopbar() {
       {/* Right Section - Actions & User */}
       <div className="flex items-center space-x-4">
         {/* Notifications */}
-        <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse"></span>
-        </button>
+        <NotificationCenter />
 
         {/* Settings */}
         <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200">

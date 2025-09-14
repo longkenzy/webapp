@@ -304,6 +304,9 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
           },
         });
         
+        // Trigger case creation event for real-time notifications
+        window.dispatchEvent(new CustomEvent('case-created'));
+        
         onSuccess(result);
         handleClose();
       } else {

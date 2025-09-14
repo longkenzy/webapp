@@ -287,6 +287,9 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
           position: 'top-right',
         });
         
+        // Trigger case creation event for real-time notifications
+        window.dispatchEvent(new CustomEvent('case-created'));
+        
         // Reset form data
         resetForm();
         

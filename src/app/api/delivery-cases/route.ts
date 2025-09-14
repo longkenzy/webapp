@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { db } from '@/lib/db';
 import { ReceivingCaseStatus } from '@prisma/client';
+import { createCaseCreatedNotification, getAdminUsers } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   try {
@@ -264,6 +265,26 @@ export async function POST(request: NextRequest) {
         }
       }
     });
+
+    // Create notifications for admin users
+    try {
+      const adminUsers = await getAdminUsers();
+      const requesterName = employee.fullName;
+      
+      for (const admin of adminUsers) {
+        await createCaseCreatedNotification(
+          'delivery',
+          deliveryCase.id,
+          deliveryCase.title,
+          requesterName,
+          admin.id
+        );
+      }
+      console.log(`Notifications sent to ${adminUsers.length} admin users`);
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't fail the case creation if notifications fail
+    }
 
     return NextResponse.json(deliveryCase, { status: 201 });
 

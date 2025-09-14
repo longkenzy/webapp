@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -94,6 +95,26 @@ export async function POST(request: NextRequest) {
         customer: { select: { id: true, fullCompanyName: true, shortName: true } }
       }
     });
+
+    // Create notifications for admin users
+    try {
+      const adminUsers = await getAdminUsers();
+      const requesterName = defaultEmployee.fullName;
+      
+      for (const admin of adminUsers) {
+        await createCaseCreatedNotification(
+          'warranty',
+          newWarranty.id,
+          newWarranty.title,
+          requesterName,
+          admin.id
+        );
+      }
+      console.log(`Notifications sent to ${adminUsers.length} admin users`);
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't fail the case creation if notifications fail
+    }
 
     return NextResponse.json({
       message: "Warranty created successfully",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -133,6 +134,26 @@ export async function POST(request: NextRequest) {
     });
 
     console.log("Internal case created successfully:", internalCase);
+
+    // Create notifications for admin users
+    try {
+      const adminUsers = await getAdminUsers();
+      const requesterName = requester.fullName;
+      
+      for (const admin of adminUsers) {
+        await createCaseCreatedNotification(
+          'internal',
+          internalCase.id,
+          internalCase.title,
+          requesterName,
+          admin.id
+        );
+      }
+      console.log(`Notifications sent to ${adminUsers.length} admin users`);
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't fail the case creation if notifications fail
+    }
 
     return NextResponse.json({
       message: "Internal case created successfully",

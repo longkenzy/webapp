@@ -319,6 +319,9 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
           position: 'top-right',
         });
         
+        // Trigger case creation event for real-time notifications
+        window.dispatchEvent(new CustomEvent('case-created'));
+        
         // Reset form data
         resetForm();
         

@@ -356,6 +356,9 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
           position: 'top-right',
         });
         
+        // Trigger case creation event for real-time notifications
+        window.dispatchEvent(new CustomEvent('case-created'));
+        
         // Reset form data
         resetForm();
         

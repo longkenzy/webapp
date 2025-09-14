@@ -146,7 +146,10 @@ export default function PersonnelListPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Có lỗi xảy ra khi xóa nhân sự');
+        setError(errorData.error || 'Có lỗi xảy ra khi xóa nhân sự');
+        setShowDeleteModal(false);
+        setEmployeeToDelete(null);
+        return;
       }
 
       setSuccess('Xóa nhân sự thành công!');
@@ -160,6 +163,8 @@ export default function PersonnelListPage() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra');
+      setShowDeleteModal(false);
+      setEmployeeToDelete(null);
     } finally {
       setIsDeleting(false);
     }

@@ -162,6 +162,7 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
             alt="IT Services Management Logo"
             width={40}
             height={40}
+            style={{ width: "auto", height: "auto" }}
             className="rounded-lg"
           />
           <div>

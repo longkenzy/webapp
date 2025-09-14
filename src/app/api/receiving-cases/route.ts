@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { ReceivingCaseStatus } from "@prisma/client";
+import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
 
 export async function GET(request: NextRequest) {
   console.log('=== API Receiving Case GET START ===');
@@ -348,6 +349,27 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('Successfully created receiving case:', receivingCase.id);
+
+    // Create notifications for admin users
+    try {
+      const adminUsers = await getAdminUsers();
+      const requesterName = employee.fullName;
+      
+      for (const admin of adminUsers) {
+        await createCaseCreatedNotification(
+          'receiving',
+          receivingCase.id,
+          receivingCase.title,
+          requesterName,
+          admin.id
+        );
+      }
+      console.log(`Notifications sent to ${adminUsers.length} admin users`);
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't fail the case creation if notifications fail
+    }
+
     return NextResponse.json(receivingCase, { status: 201 });
 
   } catch (error) {

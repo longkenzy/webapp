@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth/options";
 import { db } from "@/lib/db";
-import { writeFile, unlink } from "fs/promises";
+import { writeFile, unlink, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 
@@ -41,10 +41,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Ensure avatars directory exists
+    const avatarsDir = join(process.cwd(), "public", "avatars");
+    if (!existsSync(avatarsDir)) {
+      await mkdir(avatarsDir, { recursive: true });
+    }
+
     // Generate unique filename
     const fileExtension = file.name.split('.').pop();
     const fileName = `${user.id}-${Date.now()}.${fileExtension}`;
-    const filePath = join(process.cwd(), "public", "avatars", fileName);
+    const filePath = join(avatarsDir, fileName);
 
     // Convert file to buffer and save
     const bytes = await file.arrayBuffer();
@@ -82,10 +88,12 @@ export async function POST(request: NextRequest) {
           ethnicity: "Unknown",
           startDate: new Date(),
           primaryPhone: user.phone || "",
+          secondaryPhone: null, // Optional field
           personalEmail: user.email,
           companyEmail: user.email,
           placeOfBirth: "Unknown",
           permanentAddress: "Unknown",
+          temporaryAddress: null, // Optional field
           avatar: fileName
         }
       });
@@ -105,6 +113,18 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("Error uploading avatar:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
+    
+    // Return more specific error message in development
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? error instanceof Error ? error.message : "Unknown error"
+      : "Internal server error";
+    
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

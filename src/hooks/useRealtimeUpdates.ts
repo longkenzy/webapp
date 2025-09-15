@@ -10,10 +10,10 @@ interface UseRealtimeUpdatesOptions {
 }
 
 export function useRealtimeUpdates({
-  interval = 30000, // 30 seconds default
+  interval = 60000, // 60 seconds default - increased to reduce API calls
   enabled = true,
   onUpdate,
-  debounceMs = 1000 // 1 second debounce
+  debounceMs = 2000 // 2 seconds debounce - increased to prevent rapid calls
 }: UseRealtimeUpdatesOptions = {}) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);

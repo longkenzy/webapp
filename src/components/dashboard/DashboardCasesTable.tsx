@@ -89,7 +89,7 @@ export default function DashboardCasesTable() {
 
   // Use realtime updates hook
   useRealtimeUpdates({
-    interval: 30000, // 30 seconds
+    interval: 60000, // 60 seconds - reduced frequency
     enabled: true,
     onUpdate: () => fetchCases(false) // Don't show loading for auto-refresh
   });

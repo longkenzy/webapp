@@ -77,10 +77,14 @@ export default function AddPersonnelPage() {
       });
 
       if (response.ok) {
+        toast.success("Thêm nhân sự thành công!", {
+          duration: 4000,
+          position: 'top-right',
+        });
         router.push("/admin/personnel/list");
       } else {
-        const error = await response.json();
-        toast.error(error.message || "Có lỗi xảy ra khi thêm nhân sự", {
+        const errorData = await response.json();
+        toast.error(errorData.error || "Có lỗi xảy ra khi thêm nhân sự", {
           duration: 4000,
           position: 'top-right',
         });

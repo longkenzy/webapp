@@ -82,8 +82,8 @@ export default function RealtimeNotification({
     // Initial check
     checkForNewCases();
     
-    // Check every 10 seconds for faster detection
-    const interval = setInterval(checkForNewCases, 10000);
+    // Check every 30 seconds to reduce API calls
+    const interval = setInterval(checkForNewCases, 30000);
     
     return () => clearInterval(interval);
   }, [lastCaseCount]);

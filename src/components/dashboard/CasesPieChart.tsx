@@ -132,7 +132,7 @@ export default function CasesPieChart() {
 
   // Use realtime updates hook
   useRealtimeUpdates({
-    interval: 30000, // 30 seconds
+    interval: 120000, // 120 seconds (2 minutes) - reduced frequency for stats
     enabled: true,
     onUpdate: async () => {
       setIsAutoRefreshing(true);

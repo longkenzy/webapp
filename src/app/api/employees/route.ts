@@ -31,43 +31,84 @@ export async function POST(request: Request) {
     if (!atLeast(session.user.role, Role.IT_STAFF)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await request.json();
-    const { name, email, phone, department, role, status, password } = body;
+    const { 
+      employeeId,
+      name,
+      dateOfBirth,
+      gender,
+      hometown,
+      religion,
+      ethnicity,
+      seniority,
+      startDate,
+      phone,
+      email,
+      placeOfBirth,
+      temporaryAddress,
+      avatar,
+      position,
+      contractType,
+      department,
+      officeLocation,
+      officeAddress
+    } = body;
 
-    // Validation
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
+    console.log("Received employee data:", body);
+
+    // Validation - check required fields for Employee
+    if (!name || !dateOfBirth || !gender || !hometown || !religion || !ethnicity || 
+        !startDate || !phone || !email || !placeOfBirth) {
+      console.log("Validation failed. Missing fields:", {
+        name: !!name,
+        dateOfBirth: !!dateOfBirth,
+        gender: !!gender,
+        hometown: !!hometown,
+        religion: !!religion,
+        ethnicity: !!ethnicity,
+        startDate: !!startDate,
+        phone: !!phone,
+        email: !!email,
+        placeOfBirth: !!placeOfBirth
+      });
+      return NextResponse.json({ 
+        error: "Vui lòng điền đầy đủ thông tin bắt buộc (Họ tên, Ngày sinh, Giới tính, Quê quán, Tôn giáo, Dân tộc, Ngày vào làm, Số điện thoại, Email, Nơi sinh)" 
+      }, { status: 400 });
     }
 
-    // Check if email already exists
-    const existingUser = await db.user.findUnique({
-      where: { email }
+    // Check if company email already exists
+    const existingEmployee = await db.employee.findUnique({
+      where: { companyEmail: email }
     });
 
-    if (existingUser) {
-      return NextResponse.json({ error: "Email already exists" }, { status: 400 });
+    if (existingEmployee) {
+      return NextResponse.json({ error: "Email công ty đã được sử dụng" }, { status: 400 });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    // Create new user
-    const username = email.split('@')[0]; // Generate username from email
-    const newUser = await db.user.create({
+    // Create new employee
+    const newEmployee = await db.employee.create({
       data: {
-        name,
-        email,
-        username,
-        phone: phone || null,
+        fullName: name,
+        dateOfBirth: new Date(dateOfBirth),
+        gender,
+        hometown,
+        religion,
+        ethnicity,
+        startDate: new Date(startDate),
+        primaryPhone: phone,
+        personalEmail: email, // Use email as personal email
+        companyEmail: email, // Use same email as company email
+        placeOfBirth,
+        permanentAddress: officeAddress || "", // Use office address as permanent address
+        temporaryAddress: temporaryAddress || null,
+        position: position || null,
         department: department || null,
-        role: role || Role.USER,
-        status: status || "active",
-        password: hashedPassword,
+        status: "active",
+        contractType: contractType || null,
+        avatar: avatar || null,
       }
     });
 
-    // Return user without password
-    const { password: _, ...userWithoutPassword } = newUser;
-    return NextResponse.json(userWithoutPassword, { status: 201 });
+    return NextResponse.json(newEmployee, { status: 201 });
 
   } catch (error) {
     console.error("Error creating employee:", error);

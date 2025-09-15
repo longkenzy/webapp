@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { db } from '@/lib/db';
-import { NotificationType } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('GET /api/notifications - Starting request');
+    
     const session = await getServerSession(authOptions);
+    console.log('Session:', session?.user?.id ? 'Found' : 'Not found');
+    
     if (!session?.user?.id) {
+      console.log('Unauthorized: No session or user ID');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -16,6 +20,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const isRead = searchParams.get('isRead');
     const type = searchParams.get('type');
+
+    console.log('Query params:', { page, limit, isRead, type });
 
     const skip = (page - 1) * limit;
 
@@ -32,6 +38,27 @@ export async function GET(request: NextRequest) {
       where.type = type;
     }
 
+    console.log('Where clause:', where);
+
+    // Check if notification table exists and is accessible
+    try {
+      console.log('Testing database connection...');
+      const testCount = await db.notification.count();
+      console.log('Total notifications in database:', testCount);
+    } catch (dbError) {
+      console.error('Database connection test failed:', dbError);
+      // Return empty result instead of error
+      return NextResponse.json({
+        notifications: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          pages: 0
+        }
+      });
+    }
+
     // Get notifications with pagination
     const [notifications, total] = await Promise.all([
       db.notification.findMany({
@@ -44,6 +71,8 @@ export async function GET(request: NextRequest) {
       }),
       db.notification.count({ where })
     ]);
+
+    console.log('Found notifications:', notifications.length, 'Total:', total);
 
     return NextResponse.json({
       notifications,
@@ -58,7 +87,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -90,7 +119,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate notification type
-    if (!Object.values(NotificationType).includes(type)) {
+    const validTypes = ['CASE_CREATED', 'CASE_UPDATED', 'CASE_COMPLETED', 'CASE_ASSIGNED', 'SYSTEM_ALERT'];
+    if (!validTypes.includes(type)) {
       return NextResponse.json(
         { error: 'Invalid notification type' },
         { status: 400 }

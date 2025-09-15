@@ -56,22 +56,32 @@ export async function POST(request: Request) {
     console.log("Received employee data:", body);
 
     // Validation - check required fields for Employee
-    if (!name || !dateOfBirth || !gender || !hometown || !religion || !ethnicity || 
-        !startDate || !phone || !email || !placeOfBirth) {
-      console.log("Validation failed. Missing fields:", {
-        name: !!name,
-        dateOfBirth: !!dateOfBirth,
-        gender: !!gender,
-        hometown: !!hometown,
-        religion: !!religion,
-        ethnicity: !!ethnicity,
-        startDate: !!startDate,
-        phone: !!phone,
-        email: !!email,
-        placeOfBirth: !!placeOfBirth
-      });
+    const requiredFields = {
+      name: name,
+      dateOfBirth: dateOfBirth,
+      gender: gender,
+      hometown: hometown,
+      religion: religion,
+      ethnicity: ethnicity,
+      startDate: startDate,
+      phone: phone,
+      email: email,
+      placeOfBirth: placeOfBirth
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([key, value]) => !value || value.trim() === '')
+      .map(([key]) => key);
+
+    console.log("Validation check:", {
+      allFields: requiredFields,
+      missingFields: missingFields
+    });
+
+    if (missingFields.length > 0) {
+      console.log("Validation failed. Missing fields:", missingFields);
       return NextResponse.json({ 
-        error: "Vui lòng điền đầy đủ thông tin bắt buộc (Họ tên, Ngày sinh, Giới tính, Quê quán, Tôn giáo, Dân tộc, Ngày vào làm, Số điện thoại, Email, Nơi sinh)" 
+        error: `Vui lòng điền đầy đủ thông tin bắt buộc: ${missingFields.join(', ')}` 
       }, { status: 400 });
     }
 

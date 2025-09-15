@@ -426,12 +426,9 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         body: JSON.stringify(caseData),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Created delivery case:', result);
         
         // Show success notification
         toast.success('Tạo case giao hàng thành công!', {

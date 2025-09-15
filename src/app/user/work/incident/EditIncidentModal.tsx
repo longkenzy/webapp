@@ -149,11 +149,9 @@ export default function EditIncidentModal({
         body: JSON.stringify(updateData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Incident updated successfully:', result);
         
         // Show success notification
         toast.success('Cập nhật sự cố thành công!', {

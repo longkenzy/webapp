@@ -38,13 +38,9 @@ export async function GET(request: NextRequest) {
       where.type = type;
     }
 
-    console.log('Where clause:', where);
-
     // Check if notification table exists and is accessible
     try {
-      console.log('Testing database connection...');
-      const testCount = await db.notification.count();
-      console.log('Total notifications in database:', testCount);
+      await db.notification.count();
     } catch (dbError) {
       console.error('Database connection test failed:', dbError);
       // Return empty result instead of error

@@ -344,11 +344,9 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         body: JSON.stringify(maintenanceData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Maintenance case created successfully:', result);
         
         // Show success message
         toast.success('Tạo case bảo trì thành công!', {

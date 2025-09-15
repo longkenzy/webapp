@@ -17,9 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Check if notification table exists first
     try {
-      console.log('Testing database connection for unread count...');
-      const testCount = await db.notification.count();
-      console.log('Total notifications in database:', testCount);
+      await db.notification.count();
     } catch (dbError) {
       console.error('Database connection test failed for unread count:', dbError);
       // Return 0 instead of error

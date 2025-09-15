@@ -316,11 +316,9 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
         body: JSON.stringify(warrantyData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Warranty created successfully:', result);
         
         // Show success message
         toast.success('Tạo case bảo hành thành công!', {

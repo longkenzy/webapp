@@ -137,11 +137,6 @@ export default function EditMaintenanceModal({
         status: formData.status
       };
 
-      console.log('=== Updating Maintenance ===');
-      console.log('Maintenance ID:', maintenanceData.id);
-      console.log('Update data:', updateData);
-      console.log('Form data:', formData);
-      console.log('Maintenance data:', maintenanceData);
 
       // Send to API
       const response = await fetch(`/api/maintenance-cases/${maintenanceData.id}`, {
@@ -152,11 +147,9 @@ export default function EditMaintenanceModal({
         body: JSON.stringify(updateData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Maintenance updated successfully:', result);
         
         // Show success notification
         toast.success('Cập nhật case bảo trì thành công!', {

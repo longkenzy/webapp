@@ -275,11 +275,9 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         body: JSON.stringify(caseData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Case created successfully:', result);
         
         // Show success message (you can add a toast notification here)
         toast.success('Tạo case nội bộ thành công!', {

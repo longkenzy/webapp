@@ -229,11 +229,9 @@ export default function EditReceivingCaseModal({
         body: JSON.stringify(updateData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Case updated successfully:', result);
         
         // Show success notification
         toast.success('Cập nhật case nhận hàng thành công!', {

@@ -181,11 +181,9 @@ export default function EditWarrantyModal({
         body: JSON.stringify(updateData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Warranty updated successfully:', result);
         
         // Show success notification
         toast.success('Cập nhật case bảo hành thành công!', {

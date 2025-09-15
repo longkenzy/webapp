@@ -134,11 +134,9 @@ export default function EditInternalCaseModal({
         body: JSON.stringify(updateData),
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Case updated successfully:', result);
         
         // Close modal and pass updated data
         onClose();

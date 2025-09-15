@@ -539,7 +539,18 @@ function AdminAllCasesTable() {
     }
 
     if (filters.status) {
-      filtered = filtered.filter(case_ => case_.status === filters.status);
+      filtered = filtered.filter(case_ => {
+        // Map equivalent statuses
+        const statusMap: { [key: string]: string[] } = {
+          'RECEIVED': ['RECEIVED', 'REPORTED', 'TIẾP NHẬN'],
+          'IN_PROGRESS': ['IN_PROGRESS', 'INVESTIGATING', 'PROCESSING', 'ĐANG XỬ LÝ'],
+          'COMPLETED': ['COMPLETED', 'RESOLVED', 'HOÀN THÀNH'],
+          'CANCELLED': ['CANCELLED', 'HỦY']
+        };
+        
+        const equivalentStatuses = statusMap[filters.status] || [filters.status];
+        return equivalentStatuses.includes(case_.status.toUpperCase());
+      });
     }
 
     if (filters.customer) {
@@ -828,10 +839,7 @@ function AdminAllCasesTable() {
             >
               <option value="">Tất cả trạng thái</option>
               <option value="RECEIVED">Tiếp nhận</option>
-              <option value="REPORTED">Tiếp nhận</option>
               <option value="IN_PROGRESS">Đang xử lý</option>
-              <option value="INVESTIGATING">Đang xử lý</option>
-              <option value="RESOLVED">Hoàn thành</option>
               <option value="COMPLETED">Hoàn thành</option>
               <option value="CANCELLED">Hủy</option>
             </select>

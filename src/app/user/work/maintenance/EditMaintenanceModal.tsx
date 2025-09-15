@@ -4,11 +4,33 @@ import { useState, useEffect } from 'react';
 import { X, Wrench, AlertCircle, CheckCircle, Calendar } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-interface Maintenance {
+interface Employee {
+  id: string;
+  fullName: string;
+  position: string;
+  department: string;
+}
+
+interface MaintenanceCase {
   id: string;
   title: string;
   description: string;
+  reporter: Employee;
+  handler: Employee;
   maintenanceType: string;
+  maintenanceCaseType?: {
+    id: string;
+    name: string;
+  };
+  customerName?: string;
+  customerId?: string;
+  customer?: {
+    id: string;
+    fullCompanyName: string;
+    shortName: string;
+    contactPerson?: string;
+    contactPhone?: string;
+  };
   equipment?: {
     id: string;
     name: string;
@@ -16,25 +38,33 @@ interface Maintenance {
     serialNumber?: string;
     location?: string;
   };
+  status: string;
   startDate: string;
   endDate?: string;
-  status: string;
-  notes?: string;
-  handler?: {
-    id: string;
-    fullName: string;
-    position: string;
-    department: string;
-  };
   createdAt: string;
   updatedAt: string;
+  notes?: string;
+  // User assessment fields
+  userDifficultyLevel?: number;
+  userEstimatedTime?: number;
+  userImpactLevel?: number;
+  userUrgencyLevel?: number;
+  userFormScore?: number;
+  userAssessmentDate?: string;
+  // Admin assessment fields
+  adminDifficultyLevel?: number;
+  adminEstimatedTime?: number;
+  adminImpactLevel?: number;
+  adminUrgencyLevel?: number;
+  adminAssessmentDate?: string;
+  adminAssessmentNotes?: string;
 }
 
 interface EditMaintenanceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (updatedMaintenance: Maintenance) => void;
-  maintenanceData: Maintenance | null;
+  onSuccess?: (updatedMaintenance: MaintenanceCase) => void;
+  maintenanceData: MaintenanceCase | null;
 }
 
 export default function EditMaintenanceModal({ 

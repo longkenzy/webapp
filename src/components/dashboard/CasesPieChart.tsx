@@ -223,6 +223,7 @@ export default function CasesPieChart() {
                       paddingAngle={2}
                       dataKey="value"
                       label={({value, name}) => {
+                        if (value === undefined || value === null) return '';
                         const total = stats.totalCases;
                         const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
                         const shortName = name.replace('Case ', '').replace(/^\w/, c => c.toUpperCase());

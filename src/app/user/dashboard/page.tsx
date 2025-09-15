@@ -20,7 +20,9 @@ import {
   Wrench,
   Shield,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  Search
 } from "lucide-react";
 import Link from "next/link";
 
@@ -82,6 +84,11 @@ export default function UserDashboardPage() {
     customer: ''
   });
   
+  // Customer search states
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [uniqueCustomers, setUniqueCustomers] = useState<Array<{name: string, count: number}>>([]);
+  
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -94,6 +101,7 @@ export default function UserDashboardPage() {
         return 'bg-blue-100 text-blue-800';
       case 'IN_PROGRESS':
       case 'INVESTIGATING':
+      case 'PROCESSING':
       case 'ĐANG XỬ LÝ':
         return 'bg-yellow-100 text-yellow-800';
       case 'RESOLVED':
@@ -115,6 +123,7 @@ export default function UserDashboardPage() {
         return 'Tiếp nhận';
       case 'IN_PROGRESS':
       case 'INVESTIGATING':
+      case 'PROCESSING':
         return 'Đang xử lý';
       case 'RESOLVED':
       case 'COMPLETED':
@@ -308,7 +317,7 @@ export default function UserDashboardPage() {
             handler: case_.handler ? {
               avatar: case_.handler.avatar
             } : undefined,
-            customerName: case_.customerName || 'Khách hàng',
+            customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || case_.customerName || 'Khách hàng',
             status: case_.status,
             startDate: case_.startDate,
             endDate: case_.endDate,
@@ -373,6 +382,20 @@ export default function UserDashboardPage() {
       // Sort by start date (newest first)
       unifiedCases.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
       
+      // Extract unique customers for search dropdown
+      const customerMap = new Map<string, number>();
+      unifiedCases.forEach(case_ => {
+        if (case_.type !== 'internal' && case_.customerName && case_.customerName !== 'Khách hàng' && case_.customerName !== 'Nhà cung cấp') {
+          const customerName = case_.customerName;
+          customerMap.set(customerName, (customerMap.get(customerName) || 0) + 1);
+        }
+      });
+      
+      const uniqueCustomersList = Array.from(customerMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count); // Sort by frequency
+      
+      setUniqueCustomers(uniqueCustomersList);
       setCases(unifiedCases);
     } catch (err) {
       console.error('Error fetching cases:', err);
@@ -397,7 +420,24 @@ export default function UserDashboardPage() {
     }
 
     if (filters.status) {
-      filtered = filtered.filter(case_ => case_.status === filters.status);
+      filtered = filtered.filter(case_ => {
+        const caseStatus = case_.status.toUpperCase();
+        const filterStatus = filters.status.toUpperCase();
+        
+        // Group equivalent statuses
+        switch (filterStatus) {
+          case 'RECEIVED':
+            return ['RECEIVED', 'REPORTED'].includes(caseStatus);
+          case 'PROCESSING':
+            return ['PROCESSING', 'IN_PROGRESS', 'INVESTIGATING'].includes(caseStatus);
+          case 'COMPLETED':
+            return ['COMPLETED', 'RESOLVED'].includes(caseStatus);
+          case 'CANCELLED':
+            return caseStatus === 'CANCELLED';
+          default:
+            return caseStatus === filterStatus;
+        }
+      });
     }
 
     if (filters.customer) {
@@ -437,6 +477,13 @@ export default function UserDashboardPage() {
     fetchAllCases();
   }, []);
 
+  // Sync customerSearch with filters.customer
+  useEffect(() => {
+    if (filters.customer !== customerSearch) {
+      setCustomerSearch(filters.customer);
+    }
+  }, [filters.customer]);
+
   const handleFilterChange = (filterType: string, value: string) => {
     setFilters(prev => ({
       ...prev,
@@ -451,7 +498,28 @@ export default function UserDashboardPage() {
       status: '',
       customer: ''
     });
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
   };
+
+  // Handle customer search
+  const handleCustomerSearchChange = (value: string) => {
+    setCustomerSearch(value);
+    setShowCustomerDropdown(true);
+    handleFilterChange('customer', value);
+  };
+
+  // Handle customer selection from dropdown
+  const handleCustomerSelect = (customerName: string) => {
+    setCustomerSearch(customerName);
+    setShowCustomerDropdown(false);
+    handleFilterChange('customer', customerName);
+  };
+
+  // Filter customers based on search term
+  const filteredCustomers = uniqueCustomers.filter(customer =>
+    customer.name.toLowerCase().includes(customerSearch.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -585,29 +653,60 @@ export default function UserDashboardPage() {
             >
               <option value="">Tất cả trạng thái</option>
               <option value="RECEIVED">Tiếp nhận</option>
-              <option value="REPORTED">Tiếp nhận</option>
-              <option value="IN_PROGRESS">Đang xử lý</option>
-              <option value="INVESTIGATING">Đang xử lý</option>
-              <option value="RESOLVED">Hoàn thành</option>
+              <option value="PROCESSING">Đang xử lý</option>
               <option value="COMPLETED">Hoàn thành</option>
               <option value="CANCELLED">Hủy</option>
             </select>
                   </div>
 
           {/* Customer Filter */}
-          <div className="space-y-1">
+          <div className="space-y-1 relative">
             <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
               <AlertCircle className="h-3 w-3 text-orange-600" />
               <span>Khách hàng</span>
             </label>
-            <input
-              type="text"
-              placeholder="Tìm khách hàng..."
-              value={filters.customer}
-              onChange={(e) => handleFilterChange('customer', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm placeholder-gray-400"
-            />
+            <div className="relative">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
                 </div>
+                <input
+                  type="text"
+                  placeholder="Tìm khách hàng..."
+                  value={customerSearch}
+                  onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                  onFocus={() => setShowCustomerDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
+                  className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm placeholder-gray-400"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showCustomerDropdown ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+              {showCustomerDropdown && filteredCustomers.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                  {filteredCustomers.map((customer, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleCustomerSelect(customer.name)}
+                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-900">{customer.name}</span>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                          {customer.count} case{customer.count > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Active Filters Display */}
@@ -758,9 +857,9 @@ export default function UserDashboardPage() {
                         <div className="whitespace-pre-line">
                           <div className="font-semibold text-blue-700">Smart Services</div>
                           <div className="text-gray-600 text-xs">{case_.customerName.split('\n')[1]}</div>
-              </div>
-            ) : (
-                        <span className="text-gray-900">{case_.customerName}</span>
+                        </div>
+                      ) : (
+                        <span className="text-green-700 font-medium">{case_.customerName}</span>
                       )}
                     </div>
                   </td>
@@ -811,7 +910,7 @@ export default function UserDashboardPage() {
           </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${getStatusColor(case_.status)} shadow-sm`}>
+                    <span className={`inline-flex px-3 py-1 text-xs font-bold rounded ${getStatusColor(case_.status)} shadow-sm`}>
                       {getStatusLabel(case_.status)}
                     </span>
                   </td>

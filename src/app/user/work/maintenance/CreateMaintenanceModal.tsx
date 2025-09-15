@@ -352,8 +352,12 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         
         // Show success message
         toast.success('Tạo case bảo trì thành công!', {
-          duration: 3000,
+          duration: 4000,
           position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
         });
         
         // Trigger case creation event for real-time notifications
@@ -381,16 +385,24 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         }
          
         console.error('Failed to create maintenance case:', error);
-        toast.error(`Lỗi: ${error.error || 'Không thể tạo case bảo trì'}`, {
+        toast.error(`Lỗi tạo case: ${error.error || 'Không thể tạo case bảo trì'}`, {
           duration: 4000,
           position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
         });
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+      toast.error('Có lỗi xảy ra khi tạo case. Vui lòng thử lại.', {
         duration: 4000,
         position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
       });
     }
   };

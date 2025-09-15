@@ -2,135 +2,194 @@
 
 import { useState, useEffect } from 'react';
 import { X, Wrench, AlertCircle, CheckCircle, Calendar } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+interface Maintenance {
+  id: string;
+  title: string;
+  description: string;
+  maintenanceType: string;
+  equipment?: {
+    id: string;
+    name: string;
+    model?: string;
+    serialNumber?: string;
+    location?: string;
+  };
+  startDate: string;
+  endDate?: string;
+  status: string;
+  notes?: string;
+  handler?: {
+    id: string;
+    fullName: string;
+    position: string;
+    department: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface EditMaintenanceModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (maintenance: any) => void;
-  maintenanceData: any;
+  onSuccess?: (updatedMaintenance: Maintenance) => void;
+  maintenanceData: Maintenance | null;
 }
 
-interface Employee {
-  id: string;
-  fullName: string;
-  position: string;
-  department: string;
-}
-
-interface Equipment {
-  id: string;
-  name: string;
-  model?: string;
-  serialNumber?: string;
-  location?: string;
-}
-
-export default function EditMaintenanceModal({ isOpen, onClose, onSuccess, maintenanceData }: EditMaintenanceModalProps) {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    maintenanceType: '',
-    equipmentId: '',
-    startDate: '',
-    endDate: '',
-    status: '',
-    notes: ''
-  });
-  
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
+export default function EditMaintenanceModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  maintenanceData 
+}: EditMaintenanceModalProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    endDate: '',
+    status: 'RECEIVED'
+  });
 
-  // Initialize form data when modal opens or maintenanceData changes
+  // Initialize form data when modal opens
   useEffect(() => {
     if (isOpen && maintenanceData) {
+      // Format endDate properly for datetime-local input
+      let formattedEndDate = '';
+      if (maintenanceData.endDate) {
+        try {
+          const date = new Date(maintenanceData.endDate);
+          if (!isNaN(date.getTime())) {
+            formattedEndDate = date.toISOString().slice(0, 16);
+          }
+        } catch (error) {
+          console.error('Error formatting endDate:', error);
+        }
+      }
+
       setFormData({
-        title: maintenanceData.title || '',
-        description: maintenanceData.description || '',
-        maintenanceType: maintenanceData.maintenanceType || '',
-        equipmentId: maintenanceData.equipment?.id || '',
-        startDate: maintenanceData.startDate ? new Date(maintenanceData.startDate).toISOString().slice(0, 16) : '',
-        endDate: maintenanceData.endDate ? new Date(maintenanceData.endDate).toISOString().slice(0, 16) : '',
-        status: maintenanceData.status || '',
-        notes: maintenanceData.notes || ''
+        endDate: formattedEndDate,
+        status: maintenanceData.status || 'RECEIVED'
       });
     }
   }, [isOpen, maintenanceData]);
 
-  // Fetch employees and equipment
-  useEffect(() => {
-    if (isOpen) {
-      fetchEmployees();
-      fetchEquipment();
-    }
-  }, [isOpen]);
-
-  const fetchEmployees = async () => {
-    try {
-      const response = await fetch('/api/employees/list');
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-    }
-  };
-
-  const fetchEquipment = async () => {
-    try {
-      const response = await fetch('/api/equipment/list');
-      if (response.ok) {
-        const data = await response.json();
-        setEquipment(data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching equipment:', error);
-    }
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError('');
+    
+    if (!maintenanceData) return;
+
+    // Validate end date
+    if (formData.endDate) {
+      const startDate = new Date(maintenanceData.startDate);
+      const endDate = new Date(formData.endDate);
+      
+      if (endDate <= startDate) {
+        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+          duration: 3000,
+          position: 'top-right',
+        });
+        return;
+      }
+    }
 
     try {
+      setLoading(true);
+      
+      // Prepare data for API
+      const updateData = {
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        status: formData.status
+      };
+
+      console.log('=== Updating Maintenance ===');
+      console.log('Maintenance ID:', maintenanceData.id);
+      console.log('Update data:', updateData);
+      console.log('Form data:', formData);
+      console.log('Maintenance data:', maintenanceData);
+
+      // Send to API
       const response = await fetch(`/api/maintenance-cases/${maintenanceData.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(updateData),
       });
 
+      console.log('Response status:', response.status);
+
       if (response.ok) {
-        const updatedMaintenance = await response.json();
-        onSuccess(updatedMaintenance.data || updatedMaintenance);
-        handleClose();
+        const result = await response.json();
+        console.log('Maintenance updated successfully:', result);
+        
+        // Show success notification
+        toast.success('Cập nhật case bảo trì thành công!', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
+        
+        // Close modal and pass updated data
+        onClose();
+        if (onSuccess && result.data) {
+          onSuccess(result.data);
+        }
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Có lỗi xảy ra khi cập nhật case bảo trì');
+        let errorMessage = 'Unknown error';
+        let errorDetails = '';
+        
+        try {
+          const responseText = await response.text();
+          console.error('Raw response:', responseText);
+          console.error('Response status:', response.status);
+          console.error('Response statusText:', response.statusText);
+          
+          if (responseText) {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || errorMessage;
+            errorDetails = errorData.details || '';
+          } else {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        
+        const fullErrorMessage = errorDetails ? `${errorMessage} (${errorDetails})` : errorMessage;
+        
+        // Show error notification
+        toast.error(`Lỗi cập nhật case: ${fullErrorMessage}`, {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
+        });
       }
     } catch (error) {
-      console.error('Error updating maintenance case:', error);
-      setError('Có lỗi xảy ra khi cập nhật case bảo trì');
+      console.error('Error updating maintenance:', error);
+      toast.error('Có lỗi xảy ra khi cập nhật case bảo trì. Vui lòng thử lại.', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleClose = () => {
-    setError('');
-    onClose();
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
   };
 
   const formatMaintenanceType = (type: string) => {
@@ -152,23 +211,6 @@ export default function EditMaintenanceModal({ isOpen, onClose, onSuccess, maint
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'SCHEDULED':
-        return 'Đã lên lịch';
-      case 'IN_PROGRESS':
-        return 'Đang thực hiện';
-      case 'COMPLETED':
-        return 'Hoàn thành';
-      case 'CANCELLED':
-        return 'Hủy';
-      case 'PENDING':
-        return 'Chờ xử lý';
-      default:
-        return status;
-    }
-  };
-
   if (!isOpen || !maintenanceData) return null;
 
   return (
@@ -177,8 +219,8 @@ export default function EditMaintenanceModal({ isOpen, onClose, onSuccess, maint
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <Wrench className="h-6 w-6 text-orange-600" />
+            <div className="p-2 bg-orange-100 rounded-md">
+              <Wrench className="h-5 w-5 text-orange-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">Chỉnh sửa Case Bảo Trì</h2>
@@ -186,7 +228,7 @@ export default function EditMaintenanceModal({ isOpen, onClose, onSuccess, maint
             </div>
           </div>
           <button
-            onClick={handleClose}
+            onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
             <X className="w-6 h-6" />
@@ -195,170 +237,85 @@ export default function EditMaintenanceModal({ isOpen, onClose, onSuccess, maint
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="flex items-center">
-                <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
-                <span className="text-sm text-red-700">{error}</span>
+          {/* Maintenance Info (Read-only) */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Thông tin Case Bảo Trì</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm font-medium text-gray-600">Tiêu đề:</span>
+                <p className="text-sm text-gray-900 mt-1">{maintenanceData.title}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600">Loại bảo trì:</span>
+                <p className="text-sm text-gray-900 mt-1">{formatMaintenanceType(maintenanceData.maintenanceType)}</p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600">Thiết bị:</span>
+                <p className="text-sm text-gray-900 mt-1">
+                  {maintenanceData.equipment ? maintenanceData.equipment.name : 'Chưa xác định'}
+                </p>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600">Người xử lý:</span>
+                <p className="text-sm text-gray-900 mt-1">
+                  {maintenanceData.handler ? maintenanceData.handler.fullName : 'Chưa xác định'}
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <span className="text-sm font-medium text-gray-600">Mô tả:</span>
+                <p className="text-sm text-gray-900 mt-1">{maintenanceData.description}</p>
               </div>
             </div>
-          )}
-
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tiêu đề case bảo trì *
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleInputChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="Nhập tiêu đề case bảo trì"
-            />
           </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mô tả chi tiết *
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              required
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="Mô tả chi tiết về công việc bảo trì cần thực hiện"
-            />
-          </div>
+          {/* Editable Fields */}
+          <div className="space-y-4">
+            {/* End Date and Status Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-2" />
+                  Thời gian hoàn thành
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.endDate}
+                  onChange={(e) => handleInputChange('endDate', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="Chọn thời gian hoàn thành"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Để trống nếu chưa có thời gian hoàn thành
+                </p>
+              </div>
 
-          {/* Maintenance Type and Equipment */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Maintenance Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Loại bảo trì *
-              </label>
-              <select
-                name="maintenanceType"
-                value={formData.maintenanceType}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="">Chọn loại bảo trì</option>
-                <option value="preventive">Bảo trì phòng ngừa</option>
-                <option value="corrective">Bảo trì sửa chữa</option>
-                <option value="emergency">Bảo trì khẩn cấp</option>
-                <option value="routine">Bảo trì định kỳ</option>
-                <option value="upgrade">Nâng cấp thiết bị</option>
-                <option value="inspection">Kiểm tra thiết bị</option>
-              </select>
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <CheckCircle className="w-4 h-4 inline mr-2" />
+                  Trạng thái
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="RECEIVED">Tiếp nhận</option>
+                  <option value="PROCESSING">Đang xử lý</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="CANCELLED">Hủy</option>
+                </select>
+              </div>
             </div>
 
-            {/* Equipment */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Thiết bị cần bảo trì *
-              </label>
-              <select
-                name="equipmentId"
-                value={formData.equipmentId}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="">Chọn thiết bị</option>
-                {equipment.map(eq => (
-                  <option key={eq.id} value={eq.id}>
-                    {eq.name} {eq.model && `(${eq.model})`}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <CheckCircle className="w-4 h-4 inline mr-2" />
-              Trạng thái *
-            </label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleInputChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            >
-              <option value="">Chọn trạng thái</option>
-              <option value="PENDING">Chờ xử lý</option>
-              <option value="SCHEDULED">Đã lên lịch</option>
-              <option value="IN_PROGRESS">Đang thực hiện</option>
-              <option value="COMPLETED">Hoàn thành</option>
-              <option value="CANCELLED">Hủy</option>
-            </select>
-          </div>
-
-          {/* Start Date and End Date */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Start Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-2" />
-                Ngày bắt đầu *
-              </label>
-              <input
-                type="datetime-local"
-                name="startDate"
-                value={formData.startDate}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* End Date */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Calendar className="w-4 h-4 inline mr-2" />
-                Ngày kết thúc
-              </label>
-              <input
-                type="datetime-local"
-                name="endDate"
-                value={formData.endDate}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ghi chú bổ sung
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleInputChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="Thêm ghi chú hoặc yêu cầu đặc biệt (tùy chọn)"
-            />
-          </div>
-
-          {/* Form Actions */}
+          {/* Action Buttons */}
           <div className="flex space-x-3 pt-4 border-t border-gray-200">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={onClose}
               className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
             >
               Hủy
@@ -370,13 +327,13 @@ export default function EditMaintenanceModal({ isOpen, onClose, onSuccess, maint
             >
               {loading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span className="ml-2">Đang cập nhật...</span>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Đang cập nhật...
                 </>
               ) : (
                 <>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  <span>Cập nhật</span>
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Cập nhật
                 </>
               )}
             </button>

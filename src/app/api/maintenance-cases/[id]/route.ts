@@ -94,57 +94,55 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { 
-      title, 
-      description, 
-      maintenanceType, 
-      equipmentId, 
-      startDate, 
-      endDate, 
-      status, 
-      notes,
-      // Admin evaluation fields
-      adminDifficultyLevel,
-      adminEstimatedTime,
-      adminImpactLevel,
-      adminUrgencyLevel,
-      adminAssessmentDate,
-      adminAssessmentNotes,
-      // User evaluation fields (for updates)
-      userDifficultyLevel,
-      userEstimatedTime,
-      userImpactLevel,
-      userUrgencyLevel,
-      userFormScore
-    } = body;
+    
+    console.log('=== API Update Maintenance ===');
+    console.log('ID:', id);
+    console.log('Body received:', body);
 
     // Build update data object dynamically
     const updateData: any = {};
 
-    // Only update fields that are provided
-    if (title !== undefined) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
-    if (maintenanceType !== undefined) updateData.maintenanceType = maintenanceType.toUpperCase();
-    if (equipmentId !== undefined) updateData.equipmentId = equipmentId;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
-    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
-    if (status !== undefined) updateData.status = status.toUpperCase();
-    if (notes !== undefined) updateData.notes = notes;
+    // Only update fields that are provided and not undefined
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description;
+    if (body.maintenanceType !== undefined) updateData.maintenanceType = body.maintenanceType.toUpperCase();
+    if (body.equipmentId !== undefined) updateData.equipmentId = body.equipmentId;
+    if (body.startDate !== undefined) updateData.startDate = new Date(body.startDate);
+    if (body.endDate !== undefined) updateData.endDate = body.endDate ? new Date(body.endDate) : null;
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.notes !== undefined) updateData.notes = body.notes;
 
     // Admin evaluation fields
-    if (adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = parseInt(adminDifficultyLevel);
-    if (adminEstimatedTime !== undefined) updateData.adminEstimatedTime = parseInt(adminEstimatedTime);
-    if (adminImpactLevel !== undefined) updateData.adminImpactLevel = parseInt(adminImpactLevel);
-    if (adminUrgencyLevel !== undefined) updateData.adminUrgencyLevel = parseInt(adminUrgencyLevel);
-    if (adminAssessmentDate !== undefined) updateData.adminAssessmentDate = new Date(adminAssessmentDate);
-    if (adminAssessmentNotes !== undefined) updateData.adminAssessmentNotes = adminAssessmentNotes;
+    if (body.adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = parseInt(body.adminDifficultyLevel);
+    if (body.adminEstimatedTime !== undefined) updateData.adminEstimatedTime = parseInt(body.adminEstimatedTime);
+    if (body.adminImpactLevel !== undefined) updateData.adminImpactLevel = parseInt(body.adminImpactLevel);
+    if (body.adminUrgencyLevel !== undefined) updateData.adminUrgencyLevel = parseInt(body.adminUrgencyLevel);
+    if (body.adminAssessmentDate !== undefined) updateData.adminAssessmentDate = new Date(body.adminAssessmentDate);
+    if (body.adminAssessmentNotes !== undefined) updateData.adminAssessmentNotes = body.adminAssessmentNotes;
 
     // User evaluation fields
-    if (userDifficultyLevel !== undefined) updateData.userDifficultyLevel = parseInt(userDifficultyLevel);
-    if (userEstimatedTime !== undefined) updateData.userEstimatedTime = parseInt(userEstimatedTime);
-    if (userImpactLevel !== undefined) updateData.userImpactLevel = parseInt(userImpactLevel);
-    if (userUrgencyLevel !== undefined) updateData.userUrgencyLevel = parseInt(userUrgencyLevel);
-    if (userFormScore !== undefined) updateData.userFormScore = parseInt(userFormScore);
+    if (body.userDifficultyLevel !== undefined) updateData.userDifficultyLevel = parseInt(body.userDifficultyLevel);
+    if (body.userEstimatedTime !== undefined) updateData.userEstimatedTime = parseInt(body.userEstimatedTime);
+    if (body.userImpactLevel !== undefined) updateData.userImpactLevel = parseInt(body.userImpactLevel);
+    if (body.userUrgencyLevel !== undefined) updateData.userUrgencyLevel = parseInt(body.userUrgencyLevel);
+    if (body.userFormScore !== undefined) updateData.userFormScore = parseInt(body.userFormScore);
+
+    console.log('Update data to be sent to Prisma:', updateData);
+
+    // Check if maintenance case exists first
+    const existingCase = await prisma.maintenanceCase.findUnique({
+      where: { id }
+    });
+
+    if (!existingCase) {
+      console.error('Maintenance case not found:', id);
+      return NextResponse.json(
+        { error: 'Maintenance case not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('Existing case found:', existingCase);
 
     const updatedMaintenanceCase = await prisma.maintenanceCase.update({
       where: { id },
@@ -184,14 +182,25 @@ export async function PUT(
       }
     });
 
+    console.log('Successfully updated maintenance case:', updatedMaintenanceCase);
+
     return NextResponse.json({
       success: true,
       data: updatedMaintenanceCase
     });
   } catch (error) {
     console.error('Error updating maintenance case:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
     return NextResponse.json(
-      { error: 'Failed to update maintenance case' },
+      { 
+        error: 'Failed to update maintenance case',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

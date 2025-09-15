@@ -29,6 +29,13 @@ interface MaintenanceCase {
   };
   customerName?: string;
   customerId?: string;
+  customer?: {
+    id: string;
+    fullCompanyName: string;
+    shortName: string;
+    contactPerson?: string;
+    contactPhone?: string;
+  };
   status: string;
   startDate: string;
   endDate?: string;
@@ -1020,34 +1027,34 @@ export default function AdminMaintenanceWorkPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
                         STT
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
                         Thông tin case
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                         Người xử lý
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Loại bảo trì
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                        Khách hàng
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                         Trạng thái
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
                         Thời gian
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                         Tổng điểm User
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                         Điểm Admin
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
                         Tổng điểm
                       </th>
-                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                         Hành động
                       </th>
                     </tr>
@@ -1062,14 +1069,14 @@ export default function AdminMaintenanceWorkPage() {
                           onClick={() => toggleRowExpansion(case_.id)}
                         >
                           {/* STT */}
-                          <td className="px-2 py-2 whitespace-nowrap text-center">
+                          <td className="px-2 py-4 whitespace-nowrap text-center w-16">
                             <span className="text-xs font-medium text-gray-600">
-                              {index + 1}
+                              {filteredMaintenanceCases.length - index}
                             </span>
                           </td>
                           
                           {/* Thông tin case */}
-                          <td className="px-2 py-2 whitespace-nowrap">
+                          <td className="px-2 py-4 whitespace-nowrap w-64">
                             <div>
                               <div className="text-xs font-medium text-gray-900">
                                 {case_.title}
@@ -1081,31 +1088,27 @@ export default function AdminMaintenanceWorkPage() {
                           </td>
                           
                           {/* Người xử lý */}
-                          <td className="px-2 py-2 whitespace-nowrap">
+                          <td className="px-2 py-4 whitespace-nowrap w-32">
                             <div className="text-xs text-gray-900">{case_.handler.fullName}</div>
                             <div className="text-xs text-gray-500">{case_.handler.position}</div>
                           </td>
                           
-                          {/* Loại bảo trì */}
-                          <td className="px-2 py-2 whitespace-nowrap">
-                            <div className="text-xs text-gray-900">
-                              {case_.maintenanceCaseType?.name || (
-                                <span className="text-gray-500 italic">
-                                  {case_.maintenanceType}
-                                </span>
-                              )}
+                          {/* Khách hàng */}
+                          <td className="px-2 py-4 whitespace-nowrap w-48">
+                            <div className="text-xs font-medium text-gray-900">
+                              {case_.customer?.shortName || case_.customerName || 'N/A'}
                             </div>
                           </td>
                           
                           {/* Trạng thái */}
-                          <td className="px-2 py-2 whitespace-nowrap">
+                          <td className="px-2 py-4 whitespace-nowrap w-24">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(case_.status)}`}>
                               {getStatusLabel(case_.status)}
                             </span>
                           </td>
                           
                           {/* Thời gian */}
-                          <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-900">
+                          <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 w-36">
                             <div>Bắt đầu: {new Date(case_.startDate).toLocaleString('vi-VN', { 
                               year: 'numeric', 
                               month: '2-digit', 
@@ -1125,7 +1128,7 @@ export default function AdminMaintenanceWorkPage() {
                           </td>
                           
                           {/* Tổng điểm User */}
-                          <td className="px-2 py-2 whitespace-nowrap text-center">
+                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
                             {case_.userDifficultyLevel && case_.userEstimatedTime && case_.userImpactLevel && case_.userUrgencyLevel ? (
                               <span className="text-xs font-medium text-blue-600">
                                 {case_.userDifficultyLevel + case_.userEstimatedTime + case_.userImpactLevel + case_.userUrgencyLevel}
@@ -1136,7 +1139,7 @@ export default function AdminMaintenanceWorkPage() {
                           </td>
                           
                           {/* Điểm Admin */}
-                          <td className="px-2 py-2 whitespace-nowrap text-center">
+                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
                             {isMaintenanceCaseEvaluatedByAdmin(case_) ? (
                               <span className="text-xs font-medium text-green-600">
                                 {(case_.adminDifficultyLevel || 0) + (case_.adminEstimatedTime || 0) + (case_.adminImpactLevel || 0) + (case_.adminUrgencyLevel || 0)}
@@ -1152,7 +1155,7 @@ export default function AdminMaintenanceWorkPage() {
                           </td>
                           
                           {/* Tổng điểm */}
-                          <td className="px-2 py-2 whitespace-nowrap text-center">
+                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
                             {(() => {
                               const userScore = case_.userDifficultyLevel && case_.userEstimatedTime && case_.userImpactLevel && case_.userUrgencyLevel 
                                 ? case_.userDifficultyLevel + case_.userEstimatedTime + case_.userImpactLevel + case_.userUrgencyLevel 
@@ -1185,15 +1188,21 @@ export default function AdminMaintenanceWorkPage() {
                           </td>
                           
                           {/* Hành động */}
-                          <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                          <td className="px-2 py-4 whitespace-nowrap text-sm font-medium w-20">
                             <div className="flex items-center space-x-1">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedMaintenanceCase(case_);
                                   setShowEvaluationModal(true);
+                                  setEvaluationForm({
+                                    adminDifficultyLevel: case_.adminDifficultyLevel?.toString() || '',
+                                    adminEstimatedTime: case_.adminEstimatedTime?.toString() || '',
+                                    adminImpactLevel: case_.adminImpactLevel?.toString() || '',
+                                    adminUrgencyLevel: case_.adminUrgencyLevel?.toString() || ''
+                                  });
                                 }}
-                                className={`p-1.5 rounded-md transition-colors duration-200 cursor-pointer ${
+                                className={`p-1.5 rounded-md transition-colors duration-200 ${
                                   isMaintenanceCaseEvaluatedByAdmin(case_) 
                                     ? 'text-green-600 hover:bg-green-50' 
                                     : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
@@ -1208,7 +1217,7 @@ export default function AdminMaintenanceWorkPage() {
                                   setSelectedMaintenanceCase(case_);
                                   setShowDeleteModal(true);
                                 }}
-                                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200 cursor-pointer"
+                                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200"
                                 title="Xóa"
                               >
                                 <Trash className="h-3 w-3" />
@@ -1220,7 +1229,7 @@ export default function AdminMaintenanceWorkPage() {
                         {/* Expanded Row Content */}
                         {expandedRows.has(case_.id) && (
                           <tr>
-                            <td colSpan={10} className="px-2 py-2 bg-gray-50" onClick={(e) => e.stopPropagation()}>
+                            <td colSpan={10} className="px-3 py-6 bg-gray-50" onClick={(e) => e.stopPropagation()}>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Mô tả chi tiết */}
                                 <div>
@@ -1231,39 +1240,24 @@ export default function AdminMaintenanceWorkPage() {
                                   <p className="text-xs text-gray-600 leading-relaxed">{case_.description}</p>
                                 </div>
                                 
-                                {/* Thông tin thiết bị */}
+                                {/* Tên công ty đầy đủ */}
                                 <div>
                                   <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
-                                    <Wrench className="h-3 w-3 mr-2 text-orange-600" />
-                                    Thông tin thiết bị
+                                    <AlertTriangle className="h-3 w-3 mr-2 text-orange-600" />
+                                    Tên công ty đầy đủ
                                   </h4>
                                   <div className="text-xs text-gray-600">
-                                    {case_.equipment ? (
-                                      <>
-                                        <div className="font-medium text-gray-900">
-                                          {case_.equipment.name}
-                                        </div>
-                                        {case_.equipment.model && (
-                                          <div className="mt-1 text-gray-500">
-                                            Model: {case_.equipment.model}
-                                          </div>
-                                        )}
-                                        {case_.equipment.serialNumber && (
-                                          <div className="text-gray-500">
-                                            Số serial: {case_.equipment.serialNumber}
-                                          </div>
-                                        )}
-                                        {case_.equipment.location && (
-                                          <div className="text-gray-500">
-                                            Vị trí: {case_.equipment.location}
-                                          </div>
-                                        )}
-                                      </>
-                                    ) : (
-                                      <div className="text-gray-500 italic">
-                                        Không có thông tin thiết bị
+                                    <div className="font-medium text-gray-900">
+                                      {case_.customer?.fullCompanyName || case_.customerName || 'N/A'}
+                                    </div>
+                                    {case_.customer?.contactPerson && (
+                                      <div className="mt-1 text-gray-500">
+                                        Người liên hệ: {case_.customer.contactPerson}
                                       </div>
                                     )}
+                                    <div className="mt-1 text-gray-500">
+                                      Loại bảo trì: {case_.maintenanceCaseType?.name || formatMaintenanceType(case_.maintenanceType)}
+                                    </div>
                                   </div>
                                 </div>
                               </div>

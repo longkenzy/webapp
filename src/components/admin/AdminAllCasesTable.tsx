@@ -113,7 +113,7 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
             <div className="text-gray-600 text-xs">{case_.customerName.split('\n')[1]}</div>
           </div>
         ) : (
-          <span className="text-gray-900">{case_.customerName}</span>
+          <span className="text-green-700 font-medium">{case_.customerName}</span>
         )}
       </div>
     </td>
@@ -164,7 +164,7 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
       </div>
     </td>
     <td className="px-2 py-2 whitespace-nowrap">
-      <span className={`inline-flex px-2 py-0.5 text-xs font-bold rounded-full ${getStatusColor(case_.status)} shadow-sm`}>
+      <span className={`inline-flex px-3 py-1 text-xs font-bold rounded ${getStatusColor(case_.status)} shadow-sm`}>
         {getStatusLabel(case_.status)}
       </span>
     </td>
@@ -210,6 +210,7 @@ function AdminAllCasesTable() {
         return 'bg-blue-100 text-blue-800';
       case 'IN_PROGRESS':
       case 'INVESTIGATING':
+      case 'PROCESSING':
       case 'ĐANG XỬ LÝ':
         return 'bg-yellow-100 text-yellow-800';
       case 'RESOLVED':
@@ -231,6 +232,7 @@ function AdminAllCasesTable() {
         return 'Tiếp nhận';
       case 'IN_PROGRESS':
       case 'INVESTIGATING':
+      case 'PROCESSING':
         return 'Đang xử lý';
       case 'RESOLVED':
       case 'COMPLETED':
@@ -434,7 +436,7 @@ function AdminAllCasesTable() {
             handler: case_.handler ? {
               avatar: case_.handler.avatar
             } : undefined,
-            customerName: case_.customerName || 'Khách hàng',
+            customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || case_.customerName || 'Khách hàng',
             status: case_.status,
             startDate: case_.startDate,
             endDate: case_.endDate,

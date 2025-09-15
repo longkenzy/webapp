@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
       description,
       handlerId,
       warrantyType,
+      warrantyTypeId,
       customerId,
       customerName,
       startDate,
@@ -31,8 +32,15 @@ export async function POST(request: NextRequest) {
       userFormScore
     } = body;
 
+    console.log('=== API Create Warranty ===');
+    console.log('Body received:', body);
+
+    // Use warrantyTypeId if provided, otherwise use warrantyType
+    const warrantyTypeToUse = warrantyTypeId || warrantyType;
+
     // Validate required fields
-    if (!title || !description || !handlerId || !warrantyType || !customerName) {
+    if (!title || !description || !handlerId || !warrantyTypeToUse || !customerName) {
+      console.log('Missing required fields:', { title, description, handlerId, warrantyTypeToUse, customerName });
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -48,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Get warranty type and default employee in parallel
     const [warrantyTypeRecord, defaultEmployee] = await Promise.all([
-      db.warrantyType.findFirst({ where: { name: warrantyType } }),
+      db.warrantyType.findFirst({ where: { name: warrantyTypeToUse } }),
       db.employee.findFirst()
     ]);
 

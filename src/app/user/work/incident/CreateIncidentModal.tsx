@@ -424,11 +424,6 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                       </option>
                     )}
                   </select>
-                  {formData.handler && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Tự động chọn: {employees.find(emp => emp.id === formData.handler)?.fullName}
-                    </p>
-                  )}
                 </div>
 
                 <div className="space-y-1">

@@ -20,11 +20,19 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const notificationHook = useNotifications();
 
-  // Add focus listener to refresh when window gains focus (only when tab is visible)
+  // Add focus listener to refresh when window gains focus (with throttling)
   useEffect(() => {
+    let lastRefreshTime = 0;
+    const REFRESH_COOLDOWN = 60000; // 60 seconds cooldown (increased from 30s)
+    
     const handleFocus = () => {
-      if (!document.hidden) {
+      const now = Date.now();
+      if (!document.hidden && (now - lastRefreshTime) > REFRESH_COOLDOWN) {
+        lastRefreshTime = now;
+        console.log('Refreshing notifications due to focus (cooldown applied)');
         notificationHook.forceRefresh();
+      } else {
+        console.log('Skipping notification refresh due to cooldown');
       }
     };
 

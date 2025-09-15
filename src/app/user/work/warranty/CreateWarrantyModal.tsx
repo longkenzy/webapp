@@ -49,14 +49,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
     customerName: '',
     title: '',
     description: '',
-    startDate: new Date().toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }),
+    startDate: new Date().toISOString().slice(0, 16),
     endDate: '',
     status: 'RECEIVED',
     notes: '',
@@ -144,14 +137,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       customerName: '',
       title: '',
       description: '',
-      startDate: new Date().toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }),
+      startDate: new Date().toISOString().slice(0, 16),
       endDate: '',
       status: 'RECEIVED',
       notes: '',
@@ -257,8 +243,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
     const selectedPartner = partners.find(p => p.id === partnerId);
     setFormData(prev => ({
       ...prev,
-      customer: partnerId,
-      customerName: selectedPartner ? selectedPartner.fullCompanyName : ''
+      customer: partnerId
+      // Don't auto-fill customerName - let user input manually
     }));
     setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
     setShowCustomerDropdown(false);

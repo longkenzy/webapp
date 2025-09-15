@@ -1,32 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CheckCircle, Clock, AlertTriangle, XCircle, RefreshCw } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { CheckCircle, Clock, AlertTriangle, XCircle, RefreshCw, FileText, Truck, Package, Wrench, Shield, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LabelList } from 'recharts';
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { useDashboardRefresh } from '@/contexts/DashboardRefreshContext';
 
-interface ChartData {
-  label: string;
+interface CaseTypeData {
+  name: string;
   value: number;
   color: string;
-  percentage: string;
+  icon: any;
+  label: string;
 }
 
 interface CasesStats {
-  monthly: {
-    totalCases: number;
-    completedCases: number;
-    completionRate: string;
-    chartData: ChartData[];
-    month: string;
-  };
-  total: {
-    totalCases: number;
-    completedCases: number;
-    completionRate: string;
-    chartData: ChartData[];
-  };
+  caseTypes: CaseTypeData[];
+  totalCases: number;
 }
 
 export default function CasesPieChart() {
@@ -44,20 +34,87 @@ export default function CasesPieChart() {
         setLoading(true);
       }
       
-      const response = await fetch('/api/dashboard/cases-stats', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
+      // Fetch all case types data
+      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes] = await Promise.all([
+        fetch('/api/internal-cases?limit=1000'),
+        fetch('/api/delivery-cases?limit=1000'),
+        fetch('/api/receiving-cases?limit=1000'),
+        fetch('/api/maintenance-cases?limit=1000'),
+        fetch('/api/incidents?limit=1000'),
+        fetch('/api/warranties?limit=1000')
+      ]);
+
+      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData] = await Promise.all([
+        internalRes.json(),
+        deliveryRes.json(),
+        receivingRes.json(),
+        maintenanceRes.json(),
+        incidentRes.json(),
+        warrantyRes.json()
+      ]);
+
+      // Process case type statistics
+      const caseTypeCounts = {
+        internal: internalData.data?.length || 0,
+        delivery: deliveryData.deliveryCases?.length || 0,
+        receiving: receivingData.receivingCases?.length || 0,
+        maintenance: maintenanceData.data?.length || 0,
+        incident: incidentData.data?.length || 0,
+        warranty: warrantyData.data?.length || 0
+      };
+
+      const totalCases = Object.values(caseTypeCounts).reduce((sum, count) => sum + count, 0);
+
+      const caseTypes: CaseTypeData[] = [
+        {
+          name: 'Case nội bộ',
+          value: caseTypeCounts.internal,
+          color: '#3B82F6',
+          icon: FileText,
+          label: 'Case nội bộ'
         },
+        {
+          name: 'Case giao hàng',
+          value: caseTypeCounts.delivery,
+          color: '#10B981',
+          icon: Truck,
+          label: 'Case giao hàng'
+        },
+        {
+          name: 'Case nhận hàng',
+          value: caseTypeCounts.receiving,
+          color: '#F59E0B',
+          icon: Package,
+          label: 'Case nhận hàng'
+        },
+        {
+          name: 'Case bảo trì',
+          value: caseTypeCounts.maintenance,
+          color: '#8B5CF6',
+          icon: Wrench,
+          label: 'Case bảo trì'
+        },
+        {
+          name: 'Case sự cố',
+          value: caseTypeCounts.incident,
+          color: '#EF4444',
+          icon: AlertTriangle,
+          label: 'Case sự cố'
+        },
+        {
+          name: 'Case bảo hành',
+          value: caseTypeCounts.warranty,
+          color: '#6366F1',
+          icon: Shield,
+          label: 'Case bảo hành'
+        }
+      ].filter(item => item.value > 0); // Only show types with cases
+
+      setStats({
+        caseTypes,
+        totalCases
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data.data);
-        setLastUpdate(new Date());
-      } else {
-        console.error('Failed to fetch cases stats:', response.status, response.statusText);
-      }
+      setLastUpdate(new Date());
     } catch (error) {
       console.error('Error fetching cases stats:', error);
     } finally {
@@ -91,20 +148,6 @@ export default function CasesPieChart() {
     registerRefreshStats(() => fetchStats(false));
   }, [registerRefreshStats]);
 
-  const getStatusIcon = (label: string) => {
-    switch (label) {
-      case 'Hoàn thành':
-        return <CheckCircle className="h-4 w-4" />;
-      case 'Đang xử lý':
-        return <Clock className="h-4 w-4" />;
-      case 'Tiếp nhận':
-        return <AlertTriangle className="h-4 w-4" />;
-      case 'Hủy':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <CheckCircle className="h-4 w-4" />;
-    }
-  };
 
   if (loading) {
     return (
@@ -134,10 +177,17 @@ export default function CasesPieChart() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">Thống kê Case</h3>
-          <p className="text-sm text-gray-600">Tháng hiện tại & Tổng số</p>
+          <div className="flex items-center space-x-2">
+            <div className="p-2 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg">
+              <PieChartIcon className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Thống kê loại Case</h3>
+              <p className="text-sm text-gray-600">Phân bố các loại case trong hệ thống</p>
+            </div>
+          </div>
           {lastUpdate && (
-            <p className="text-xs text-gray-500 flex items-center space-x-1">
+            <p className="text-xs text-gray-500 flex items-center space-x-1 mt-2">
               <span>Cập nhật lần cuối: {lastUpdate.toLocaleTimeString('vi-VN')}</span>
               {isAutoRefreshing && (
                 <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
@@ -148,132 +198,109 @@ export default function CasesPieChart() {
         <button
           onClick={refreshStats}
           disabled={refreshing}
-          className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 shadow-sm"
+          className="flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 shadow-sm"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           <span className="text-sm font-medium">Làm mới</span>
         </button>
       </div>
 
-
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Chart */}
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-900 mb-3">Tháng {stats.monthly.month}</h4>
-          
-          {stats.monthly.chartData.length > 0 ? (
-            <div className="space-y-4">
-              {/* Chart */}
-              <div className="h-40">
+      {/* Pie Chart */}
+      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        {stats && stats.caseTypes.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+            {/* Chart */}
+            <div className="relative">
+              <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={stats.monthly.chartData}
+                      data={stats.caseTypes}
                       cx="50%"
                       cy="50%"
-                      innerRadius={25}
-                      outerRadius={50}
+                      innerRadius={60}
+                      outerRadius={120}
                       paddingAngle={2}
                       dataKey="value"
+                      label={({value, name}) => {
+                        const total = stats.totalCases;
+                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                        const shortName = name.replace('Case ', '').replace(/^\w/, c => c.toUpperCase());
+                        const caseText = value === 1 ? 'case' : 'cases';
+                        return percentage >= 3 ? `${shortName}\n(${value} ${caseText})\n${percentage}%` : ''; // Show name, count in parentheses, and percentage
+                      }}
+                      labelLine={false}
                     >
-                      {stats.monthly.chartData.map((entry, index) => (
+                      {stats.caseTypes.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value: number, name: string) => [
-                        `${value} case (${stats.monthly.chartData.find(item => item.label === name)?.percentage}%)`,
-                        name
-                      ]}
+                      formatter={(value: number, name: string) => {
+                        const total = stats.totalCases;
+                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                        return [`${value} case (${percentage}%)`, name];
+                      }}
+                      contentStyle={{
+                        backgroundColor: '#fff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
+              
+              {/* Center label */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-gray-900">{stats.totalCases}</div>
+                  <div className="text-sm text-gray-600 font-medium">Tổng case</div>
+                </div>
+              </div>
+            </div>
 
-              {/* Summary */}
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{stats.monthly.totalCases}</div>
-                <div className="text-sm text-gray-600">Tổng case tháng</div>
-              </div>
+            {/* Legend */}
+            <div className="space-y-3">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Chi tiết</h4>
+              {stats.caseTypes
+                .sort((a, b) => b.value - a.value)
+                .map((item, index) => {
+                  const Icon = item.icon;
+                  const percentage = stats.totalCases > 0 ? Math.round((item.value / stats.totalCases) * 100) : 0;
+                  
+                  return (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="p-2 rounded-lg shadow-sm"
+                          style={{ backgroundColor: `${item.color}20`, color: item.color }}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg font-bold text-gray-900">{item.value}</span>
+                        <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full shadow-sm">
+                          {percentage}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
-          ) : (
-            <div className="text-center py-6">
-              <div className="text-gray-400 mb-2">
-                <CheckCircle className="h-12 w-12 mx-auto" />
-              </div>
-              <p className="text-sm text-gray-500">Chưa có case nào</p>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <PieChartIcon className="h-10 w-10 text-gray-400" />
             </div>
-          )}
-        </div>
-
-        {/* Total Chart */}
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <h4 className="text-lg font-semibold text-gray-900 mb-3">Tổng số (Tất cả thời gian)</h4>
-          
-          {stats.total.chartData.length > 0 ? (
-            <div className="space-y-4">
-              {/* Chart */}
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={stats.total.chartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={25}
-                      outerRadius={50}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {stats.total.chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: number, name: string) => [
-                        `${value} case (${stats.total.chartData.find(item => item.label === name)?.percentage}%)`,
-                        name
-                      ]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Summary */}
-              <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{stats.total.totalCases}</div>
-                <div className="text-sm text-gray-600">Tổng case</div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <div className="text-gray-400 mb-2">
-                <CheckCircle className="h-12 w-12 mx-auto" />
-              </div>
-              <p className="text-sm text-gray-500">Chưa có case nào</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Legend */}
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <h4 className="text-sm font-semibold text-gray-900 mb-3">Chú thích</h4>
-        <div className="grid grid-cols-2 gap-3">
-          {stats.monthly.chartData.length > 0 && stats.monthly.chartData.map((item, index) => (
-            <div key={index} className="flex items-center space-x-2">
-              <div 
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: item.color }}
-              ></div>
-              <div className="flex items-center space-x-1">
-                {getStatusIcon(item.label)}
-                <span className="text-sm font-medium text-gray-900">{item.label}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có dữ liệu</h3>
+            <p className="text-gray-500">Chưa có case nào được tạo trong hệ thống</p>
+          </div>
+        )}
       </div>
     </div>
   );

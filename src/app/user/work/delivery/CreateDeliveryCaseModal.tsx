@@ -393,10 +393,10 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         requesterId: employeeId,
         handlerId: employeeId,
         customerId: formData.customerId,
-        form: 'Giao hàng',
+        form: formData.form || 'Giao hàng',
         startDate: formData.deliveryDateTime,
         endDate: formData.completionDateTime || null,
-        status: ReceivingCaseStatus.RECEIVED,
+        status: formData.status as ReceivingCaseStatus,
         notes: null,
         userDifficultyLevel: formData.difficultyLevel,
         userEstimatedTime: formData.estimatedTime,
@@ -432,6 +432,20 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
       if (response.ok) {
         const result = await response.json();
         console.log('Created delivery case:', result);
+        
+        // Show success notification
+        toast.success('Tạo case giao hàng thành công!', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
+        
+        // Trigger case creation event for real-time notifications
+        window.dispatchEvent(new CustomEvent('case-created'));
+        
         onSuccess(result);
         handleClose();
       } else {
@@ -439,28 +453,39 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         let errorDetails = '';
         
         try {
-          const responseText = await response.text();
-          console.error('Raw response:', responseText);
-          console.error('Response status:', response.status);
-          console.error('Response statusText:', response.statusText);
-          
-          if (responseText) {
-            const errorData = JSON.parse(responseText);
-            errorMessage = errorData.error || errorMessage;
-            errorDetails = errorData.details || '';
-          } else {
-            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-          }
+          const errorData = await response.json();
+          console.error('Error response:', errorData);
+          errorMessage = errorData.error || errorData.message || 'Unknown error';
+          errorDetails = errorData.details || '';
         } catch (parseError) {
           console.error('Failed to parse error response:', parseError);
           errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
         
-        setError(`${errorMessage}${errorDetails ? ` - ${errorDetails}` : ''}`);
+        const fullErrorMessage = errorDetails ? `${errorMessage} (${errorDetails})` : errorMessage;
+        
+        // Show error notification
+        toast.error(`Lỗi tạo case: ${fullErrorMessage}`, {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
+        });
       }
     } catch (error) {
       console.error('Error creating delivery case:', error);
-      setError('Có lỗi xảy ra khi tạo case giao hàng. Vui lòng thử lại.');
+      
+      // Show error notification
+      toast.error('Có lỗi xảy ra khi tạo case. Vui lòng thử lại.', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
+      });
     } finally {
       setLoading(false);
     }
@@ -815,7 +840,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
               )}
             </div>
 
-            {/* Section 4: Thời gian và hình thức */}
+            {/* Section 4: Thời gian */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-green-100 rounded-md">
@@ -826,14 +851,15 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span>Ngày giờ giao *</span>
+                    <span className="w-32">Ngày giờ giao</span>
+                    <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     name="deliveryDateTime"
                     value={formData.deliveryDateTime}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 ${
+                    className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors ${
                       errors.deliveryDateTime ? 'border-red-300' : 'border-gray-300'
                     }`}
                   />
@@ -846,20 +872,46 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span>Ngày giờ hoàn thành</span>
+                    <span className="w-32">Ngày giờ hoàn thành</span>
                   </label>
                   <input
                     type="datetime-local"
                     name="completionDateTime"
                     value={formData.completionDateTime}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Section 5: Đánh giá của User */}
+            {/* Section 5: Trạng thái */}
+            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="p-1.5 bg-green-100 rounded-md">
+                  <FileText className="h-4 w-4 text-green-600" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-700">Trạng thái</h3>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600">
+                  <span className="w-24">Trạng thái</span>
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
+                >
+                  <option value="RECEIVED">Tiếp nhận</option>
+                  <option value="IN_PROGRESS">Đang xử lý</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="CANCELLED">Hủy</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Section 6: Đánh giá của User */}
             <div className="bg-yellow-50 rounded-md p-4 border border-yellow-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">

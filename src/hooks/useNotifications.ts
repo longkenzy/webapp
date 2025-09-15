@@ -38,7 +38,15 @@ export function useNotifications(): UseNotificationsReturn {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/notifications?limit=50');
+      
+      // Track last fetch time
+      (window as any).lastNotificationFetch = Date.now();
+      
+      const response = await fetch('/api/notifications?limit=50', {
+        headers: {
+          'Cache-Control': 'max-age=30' // Cache for 30 seconds
+        }
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch notifications');
@@ -162,8 +170,14 @@ export function useNotifications(): UseNotificationsReturn {
       if (document.hidden) {
         stopPolling();
       } else {
-        // Refresh immediately when tab becomes visible
-        fetchNotifications();
+        // Only refresh if we've been away for more than 30 seconds
+        const now = Date.now();
+        const timeSinceLastFetch = now - (window as any).lastNotificationFetch || 0;
+        if (timeSinceLastFetch > 30000) {
+          console.log('Refreshing notifications due to visibility change');
+          fetchNotifications();
+          (window as any).lastNotificationFetch = now;
+        }
         startPolling();
       }
     };

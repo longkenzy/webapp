@@ -5,7 +5,7 @@ import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notification
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("=== Internal Case API Called ===");
+    console.log("=== Deployment Case API Called ===");
     
     const session = await getSession();
     if (!session) {
@@ -20,10 +20,11 @@ export async function POST(request: NextRequest) {
     const {
       title,
       description,
-      requesterId,
+      reporterId,
       handlerId,
-      caseType,
-      form,
+      deploymentTypeId,
+      customerName,
+      customerId,
       startDate,
       endDate,
       status,
@@ -37,8 +38,8 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!title || !description || !requesterId || !handlerId || !caseType) {
-      console.log("Missing required fields:", { title, description, requesterId, handlerId, caseType });
+    if (!title || !description || !reporterId || !handlerId || !deploymentTypeId || !customerName) {
+      console.log("Missing required fields:", { title, description, reporterId, handlerId, deploymentTypeId, customerName });
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -58,12 +59,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate requester and handler exist
-    console.log("Checking requester:", requesterId);
-    const requester = await db.employee.findUnique({
-      where: { id: requesterId }
+    // Validate reporter and handler exist
+    console.log("Checking reporter:", reporterId);
+    const reporter = await db.employee.findUnique({
+      where: { id: reporterId }
     });
-    console.log("Requester found:", requester);
+    console.log("Reporter found:", reporter);
 
     console.log("Checking handler:", handlerId);
     const handler = await db.employee.findUnique({
@@ -71,36 +72,38 @@ export async function POST(request: NextRequest) {
     });
     console.log("Handler found:", handler);
 
-    if (!requester || !handler) {
-      console.log("Requester or handler not found");
+    if (!reporter || !handler) {
+      console.log("Reporter or handler not found");
       return NextResponse.json(
-        { error: "Requester or handler not found" },
+        { error: "Reporter or handler not found" },
         { status: 400 }
       );
     }
 
-    // Create internal case
-    console.log("Creating internal case with data:", {
+    // Create deployment case
+    console.log("Creating deployment case with data:", {
       title,
       description,
-      requesterId,
+      reporterId,
       handlerId,
-      caseType,
-      form,
+      deploymentTypeId,
+      customerName,
+      customerId,
       startDate,
       endDate,
       status,
       notes
     });
 
-    const internalCase = await db.internalCase.create({
+    const deploymentCase = await db.deploymentCase.create({
       data: {
         title,
         description,
-        requesterId,
+        reporterId,
         handlerId,
-        caseType,
-        form: form || "Onsite",
+        deploymentTypeId,
+        customerName,
+        customerId: customerId || null,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         status: status || "RECEIVED",
@@ -114,12 +117,13 @@ export async function POST(request: NextRequest) {
         userAssessmentDate: new Date()
       },
       include: {
-        requester: {
+        reporter: {
           select: {
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            companyEmail: true
           }
         },
         handler: {
@@ -127,25 +131,32 @@ export async function POST(request: NextRequest) {
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            companyEmail: true
+          }
+        },
+        deploymentType: {
+          select: {
+            id: true,
+            name: true
           }
         }
       }
     });
 
-    console.log("Internal case created successfully:", internalCase);
+    console.log("Deployment case created successfully:", deploymentCase);
 
     // Create notifications for admin users
     try {
       const adminUsers = await getAdminUsers();
-      const requesterName = requester.fullName;
+      const reporterName = reporter.fullName;
       
       for (const admin of adminUsers) {
         await createCaseCreatedNotification(
-          'internal',
-          internalCase.id,
-          internalCase.title,
-          requesterName,
+          'deployment',
+          deploymentCase.id,
+          deploymentCase.title,
+          reporterName,
           admin.id
         );
       }
@@ -156,12 +167,12 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: "Internal case created successfully",
-      data: internalCase
+      message: "Deployment case created successfully",
+      data: deploymentCase
     }, { status: 201 });
 
   } catch (error) {
-    console.error("Error creating internal case:", error);
+    console.error("Error creating deployment case:", error);
     return NextResponse.json(
       { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
@@ -179,46 +190,30 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "50"); // Increased default limit
+    const limit = parseInt(searchParams.get("limit") || "10");
     const status = searchParams.get("status");
-    const search = searchParams.get("search");
-    const requesterId = searchParams.get("requesterId");
-    const handlerId = searchParams.get("handlerId");
-    const caseType = searchParams.get("caseType");
 
     const skip = (page - 1) * limit;
 
-    // Build where clause with better filtering
+    // Build where clause
     const where: Record<string, unknown> = {};
     if (status) where.status = status;
-    if (requesterId) where.requesterId = requesterId;
-    if (handlerId) where.handlerId = handlerId;
-    if (caseType) where.caseType = caseType;
-    
-    // Add search functionality
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { requester: { fullName: { contains: search, mode: 'insensitive' } } },
-        { handler: { fullName: { contains: search, mode: 'insensitive' } } }
-      ];
-    }
 
-    // Get internal cases with pagination - optimized query
-    const [internalCases, total] = await Promise.all([
-      db.internalCase.findMany({
+    // Get deployment cases with pagination
+    const [deploymentCases, total] = await Promise.all([
+      db.deploymentCase.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" }, // Show newest first
+        orderBy: { createdAt: "desc" },
         include: {
-          requester: {
+          reporter: {
             select: {
               id: true,
               fullName: true,
               position: true,
-              department: true
+              department: true,
+              companyEmail: true
             }
           },
           handler: {
@@ -226,16 +221,23 @@ export async function GET(request: NextRequest) {
               id: true,
               fullName: true,
               position: true,
-              department: true
+              department: true,
+              companyEmail: true
+            }
+          },
+          deploymentType: {
+            select: {
+              id: true,
+              name: true
             }
           }
         }
       }),
-      db.internalCase.count({ where })
+      db.deploymentCase.count({ where })
     ]);
 
     const response = NextResponse.json({
-      data: internalCases,
+      data: deploymentCases,
       pagination: {
         page,
         limit,
@@ -244,14 +246,14 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Improved caching headers
-    response.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    // Add caching headers
+    response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     response.headers.set('ETag', `"${Date.now()}"`);
     
     return response;
 
   } catch (error) {
-    console.error("Error fetching internal cases:", error);
+    console.error("Error fetching deployment cases:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

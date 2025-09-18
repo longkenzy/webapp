@@ -76,12 +76,17 @@ export default function UserDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'current' | 'all'>('current');
+  
   // Filter states
   const [filters, setFilters] = useState({
     caseType: '',
     handler: '',
     status: '',
-    customer: ''
+    customer: '',
+    startDate: '',
+    endDate: ''
   });
   
   // Customer search states
@@ -405,9 +410,28 @@ export default function UserDashboardPage() {
     }
   };
 
-  // Filter cases based on current filters
+  // Filter cases based on current filters and tab
   const applyFilters = () => {
     let filtered = [...cases];
+
+    // Apply tab filter first
+    if (activeTab === 'current') {
+      // Show only cases from today with active status (received or in progress)
+      filtered = filtered.filter(case_ => {
+        const caseStatus = case_.status.toUpperCase();
+        const caseDate = new Date(case_.startDate);
+        const today = new Date();
+        
+        // Check if case is from today
+        const isToday = caseDate.toDateString() === today.toDateString();
+        
+        // Check if case has active status (received or in progress)
+        const isActiveStatus = ['RECEIVED', 'REPORTED', 'IN_PROGRESS', 'INVESTIGATING', 'PROCESSING', 'TIẾP NHẬN', 'ĐANG XỬ LÝ'].includes(caseStatus);
+        
+        return isToday && isActiveStatus;
+      });
+    }
+    // For 'all' tab, show all cases (no additional filtering)
 
     if (filters.caseType) {
       filtered = filtered.filter(case_ => case_.type === filters.caseType);
@@ -446,13 +470,34 @@ export default function UserDashboardPage() {
       );
     }
 
+    // Date range filter
+    if (filters.startDate) {
+      const startDate = new Date(filters.startDate);
+      startDate.setHours(0, 0, 0, 0); // Start of day
+      filtered = filtered.filter(case_ => {
+        const caseDate = new Date(case_.startDate);
+        caseDate.setHours(0, 0, 0, 0);
+        return caseDate >= startDate;
+      });
+    }
+
+    if (filters.endDate) {
+      const endDate = new Date(filters.endDate);
+      endDate.setHours(23, 59, 59, 999); // End of day
+      filtered = filtered.filter(case_ => {
+        const caseDate = new Date(case_.startDate);
+        caseDate.setHours(0, 0, 0, 0);
+        return caseDate <= endDate;
+      });
+    }
+
     setFilteredCases(filtered);
   };
 
   useEffect(() => {
     applyFilters();
     setCurrentPage(1); // Reset to first page when filters change
-  }, [cases, filters]);
+  }, [cases, filters, activeTab]);
   
   // Calculate pagination
   const totalPages = Math.ceil(filteredCases.length / itemsPerPage);
@@ -496,7 +541,9 @@ export default function UserDashboardPage() {
       caseType: '',
       handler: '',
       status: '',
-      customer: ''
+      customer: '',
+      startDate: '',
+      endDate: ''
     });
     setCustomerSearch('');
     setShowCustomerDropdown(false);
@@ -555,8 +602,59 @@ export default function UserDashboardPage() {
           Dashboard Tổng Quan Cases
         </h1>
         <p className="text-gray-600 mt-2">
-          Tổng hợp tất cả các case: nội bộ, giao hàng, nhận hàng, bảo trì, sự cố, bảo hành
+          Tổng hợp tất cả các case: nội bộ, giao hàng, nhận hàng, bảo trì, sự cố, bảo hành. Tab "Cases hiện tại" hiển thị cases hôm nay chưa hoàn thành.
         </p>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="mb-8">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('current')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                activeTab === 'current'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <Clock className="h-4 w-4" />
+                <span>Cases hiện tại</span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  activeTab === 'current' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {cases.filter(c => {
+                    const status = c.status.toUpperCase();
+                    const caseDate = new Date(c.startDate);
+                    const today = new Date();
+                    const isToday = caseDate.toDateString() === today.toDateString();
+                    const isActiveStatus = ['RECEIVED', 'REPORTED', 'IN_PROGRESS', 'INVESTIGATING', 'PROCESSING', 'TIẾP NHẬN', 'ĐANG XỬ LÝ'].includes(status);
+                    return isToday && isActiveStatus;
+                  }).length}
+                </span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                activeTab === 'all'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <FileText className="h-4 w-4" />
+                <span>Tất cả cases</span>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  activeTab === 'all' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {cases.length}
+                </span>
+              </div>
+            </button>
+          </nav>
+        </div>
       </div>
 
       {/* Statistics */}
@@ -603,7 +701,7 @@ export default function UserDashboardPage() {
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {/* Case Type Filter */}
           <div className="space-y-1">
             <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
@@ -707,10 +805,38 @@ export default function UserDashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Start Date Filter */}
+          <div className="space-y-1">
+            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
+              <Calendar className="h-3 w-3 text-indigo-600" />
+              <span>Từ ngày</span>
+            </label>
+            <input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
+            />
+          </div>
+
+          {/* End Date Filter */}
+          <div className="space-y-1">
+            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
+              <Calendar className="h-3 w-3 text-indigo-600" />
+              <span>Đến ngày</span>
+            </label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
+            />
+          </div>
         </div>
 
         {/* Active Filters Display */}
-        {(filters.caseType || filters.handler || filters.status || filters.customer) && (
+        {(filters.caseType || filters.handler || filters.status || filters.customer || filters.startDate || filters.endDate) && (
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="flex items-center space-x-2 mb-3">
               <span className="text-sm font-medium text-gray-700">Bộ lọc đang áp dụng:</span>
@@ -760,6 +886,28 @@ export default function UserDashboardPage() {
                   </button>
                 </span>
               )}
+              {filters.startDate && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                  Từ: {new Date(filters.startDate).toLocaleDateString('vi-VN')}
+                  <button
+                    onClick={() => handleFilterChange('startDate', '')}
+                    className="ml-2 text-indigo-600 hover:text-indigo-800"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {filters.endDate && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                  Đến: {new Date(filters.endDate).toLocaleDateString('vi-VN')}
+                  <button
+                    onClick={() => handleFilterChange('endDate', '')}
+                    className="ml-2 text-indigo-600 hover:text-indigo-800"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -770,9 +918,16 @@ export default function UserDashboardPage() {
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Danh sách tất cả cases</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                {activeTab === 'current' ? 'Danh sách cases hiện tại' : 'Danh sách tất cả cases'}
+              </h2>
               <p className="text-sm text-gray-600 mt-1">
                 Hiển thị: <span className="font-semibold text-blue-600">{startIndex + 1}-{Math.min(endIndex, filteredCases.length)}</span> / <span className="font-semibold text-gray-600">{filteredCases.length}</span> cases (trang {currentPage}/{totalPages})
+                {activeTab === 'current' && (
+                  <span className="ml-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
+                    Chỉ hiển thị cases hôm nay chưa hoàn thành
+                  </span>
+                )}
               </p>
             </div>
             <button
@@ -934,8 +1089,15 @@ export default function UserDashboardPage() {
             <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
               <FileText className="h-8 w-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy case nào</h3>
-            <p className="text-gray-500">Thử thay đổi bộ lọc để xem thêm kết quả</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {activeTab === 'current' ? 'Không có case nào hôm nay' : 'Không tìm thấy case nào'}
+            </h3>
+            <p className="text-gray-500">
+              {activeTab === 'current' 
+                ? 'Không có case nào được tạo hôm nay hoặc tất cả cases hôm nay đã hoàn thành. Chuyển sang tab "Tất cả cases" để xem toàn bộ.'
+                : 'Thử thay đổi bộ lọc để xem thêm kết quả'
+              }
+            </p>
           </div>
         )}
 

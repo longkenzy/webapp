@@ -96,7 +96,7 @@ export async function PUT(
     const body = await request.json();
     console.log("Request body:", body);
     
-    const { endDate, status } = body;
+    const { endDate, status, notes } = body;
 
     // Check if internal case exists
     const existingCase = await db.internalCase.findUnique({
@@ -127,6 +127,7 @@ export async function PUT(
       data: {
         endDate: endDate ? new Date(endDate) : null,
         status: status || existingCase.status,
+        notes: notes !== undefined ? notes : existingCase.notes,
         updatedAt: new Date()
       },
       include: {

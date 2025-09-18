@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
+import { X, User, Rocket, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
@@ -16,24 +16,51 @@ interface Employee {
   companyEmail: string;
 }
 
-interface CaseType {
+interface DeploymentCase {
   id: string;
-  name: string;
-  isActive: boolean;
+  title: string;
+  description: string;
+  reporter: Employee;
+  handler: Employee;
+  deploymentType: any;
+  customerName: string;
+  customer?: any;
+  status: string;
+  startDate: string;
+  endDate?: string;
   createdAt: string;
   updatedAt: string;
+  notes?: string;
+  // User assessment fields
+  userDifficultyLevel?: number;
+  userEstimatedTime?: number;
+  userImpactLevel?: number;
+  userUrgencyLevel?: number;
+  userFormScore?: number;
+  userAssessmentDate?: string;
+  // Admin assessment fields
+  adminDifficultyLevel?: number;
+  adminEstimatedTime?: number;
+  adminImpactLevel?: number;
+  adminUrgencyLevel?: number;
+  adminAssessmentDate?: string;
+  adminAssessmentNotes?: string;
 }
 
-interface CreateInternalCaseModalProps {
+interface EditDeploymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newCase: unknown) => void;
+  onSuccess: (updatedCase: DeploymentCase) => void;
+  caseData: DeploymentCase | null;
 }
 
-export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: CreateInternalCaseModalProps) {
+export default function EditDeploymentModal({ isOpen, onClose, onSuccess, caseData }: EditDeploymentModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
+  const [deploymentTypes, setDeploymentTypes] = useState<string[]>([]);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // User evaluation categories
@@ -48,22 +75,22 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
   const [formData, setFormData] = useState({
-    requester: '',
-    position: '',
+    customerName: '',
     handler: '',
-    caseType: '',
-    form: 'Onsite',
+    deploymentType: '',
+    customer: '',
     title: '',
     description: '',
-    startDate: '03/09/2025 08:31 AM',
+    startDate: new Date().toISOString().slice(0, 16),
     endDate: '',
-    status: 'Tiếp nhận',
+    status: 'RECEIVED',
     notes: '',
     // User self-assessment fields
     difficultyLevel: '',
     estimatedTime: '',
     impactLevel: '',
     urgencyLevel: '',
+    form: 'Onsite',
     formScore: '2' // Default for Onsite
   });
 
@@ -72,7 +99,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
       const response = await fetch('/api/employees/list', {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=600', // Increased cache time
+          'Cache-Control': 'max-age=300',
         },
       });
       if (response.ok) {
@@ -88,123 +115,126 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
     }
   }, []);
 
-  const fetchCaseTypes = useCallback(async () => {
+  const fetchPartners = useCallback(async () => {
     try {
-      const response = await fetch('/api/case-types', {
+      const response = await fetch('/api/partners/list', {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=600', // Increased cache time
+          'Cache-Control': 'max-age=300',
         },
       });
       if (response.ok) {
-        const result = await response.json();
-        
-        // Check if response has data array
-        if (result.success && Array.isArray(result.data)) {
-          // Filter only active case types
-          const activeCaseTypes = result.data.filter((caseType: CaseType) => caseType.isActive);
-          setCaseTypes(activeCaseTypes);
-        } else {
-          console.error('Invalid response format:', result);
-          setCaseTypes([]);
-        }
+        const data = await response.json();
+        setPartners(data || []);
       } else {
-        console.error('Failed to fetch case types:', response.status, response.statusText);
-        setCaseTypes([]);
+        console.error('Failed to fetch partners:', response.status, response.statusText);
+        setPartners([]);
       }
     } catch (error) {
-      console.error('Error fetching case types:', error);
-      setCaseTypes([]);
+      console.error('Error fetching partners:', error);
+      setPartners([]);
+    }
+  }, []);
+
+  const fetchDeploymentTypes = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/deployment-types?t=${Date.now()}`, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Convert to array of strings for backward compatibility
+        const typeNames = data.data?.map((type: any) => type.name) || [];
+        setDeploymentTypes(typeNames);
+      } else {
+        console.error('Failed to fetch deployment types:', response.status, response.statusText);
+        setDeploymentTypes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching deployment types:', error);
+      setDeploymentTypes([]);
     }
   }, []);
 
   const resetForm = useCallback(() => {
     setFormData({
-      requester: '',
-      position: '',
+      customerName: '',
       handler: '',
-      caseType: '',
-      form: 'Onsite',
+      deploymentType: '',
+      customer: '',
       title: '',
       description: '',
-      startDate: new Date().toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }),
+      startDate: new Date().toISOString().slice(0, 16),
       endDate: '',
-      status: 'Tiếp nhận',
+      status: 'RECEIVED',
       notes: '',
       // User self-assessment fields
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
       urgencyLevel: '',
+      form: 'Onsite',
       formScore: '2' // Default for Onsite
     });
+    setCustomerSearch('');
+    setShowCustomerDropdown(false);
   }, []);
 
-  // Reset form when modal opens
+  // Populate form when caseData changes
   useEffect(() => {
-    if (isOpen) {
-      resetForm();
+    if (caseData && isOpen) {
+      setFormData({
+        customerName: caseData.customerName || '',
+        handler: caseData.handler?.id || '',
+        deploymentType: caseData.deploymentType?.id || '',
+        customer: caseData.customer || '',
+        title: caseData.title || '',
+        description: caseData.description || '',
+        startDate: caseData.startDate ? caseData.startDate.slice(0, 16) : new Date().toISOString().slice(0, 16),
+        endDate: caseData.endDate ? caseData.endDate.slice(0, 16) : '',
+        status: caseData.status || 'RECEIVED',
+        notes: caseData.notes || '',
+        difficultyLevel: caseData.userDifficultyLevel?.toString() || '',
+        estimatedTime: caseData.userEstimatedTime?.toString() || '',
+        impactLevel: caseData.userImpactLevel?.toString() || '',
+        urgencyLevel: caseData.userUrgencyLevel?.toString() || '',
+        form: 'Onsite', // Default value since form field doesn't exist in schema
+        formScore: caseData.userFormScore?.toString() || '2'
+      });
+      setCustomerSearch('');
+      setShowCustomerDropdown(false);
     }
-  }, [isOpen, resetForm]);
+  }, [caseData, isOpen]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.customer-dropdown-container')) {
+        setShowCustomerDropdown(false);
+      }
+    };
+
+    if (showCustomerDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCustomerDropdown]);
 
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchEmployees();
-      fetchCaseTypes();
+      fetchPartners();
+      fetchDeploymentTypes();
       // Refresh evaluation configs to get latest options
       fetchConfigs();
     }
-  }, [isOpen]);
-
-  // Auto-fill handler with current user when employees are loaded
-  useEffect(() => {
-    if (employees.length > 0 && session?.user) {
-      console.log('Session user:', session.user);
-      console.log('Available employees:', employees.map(emp => ({ id: emp.id, fullName: emp.fullName, companyEmail: emp.companyEmail })));
-      
-      // Try to find current user by email first
-      let currentUser = null;
-      if (session.user.email) {
-        currentUser = employees.find(emp => emp.companyEmail === session.user.email);
-      }
-      
-      // If not found by email, try to find by username or name
-      if (!currentUser && session.user.name) {
-        currentUser = employees.find(emp => 
-          emp.fullName.toLowerCase().includes(session.user.name?.toLowerCase() || '') ||
-          emp.companyEmail.toLowerCase().includes(session.user.name?.toLowerCase() || '')
-        );
-      }
-      
-      // If still not found, try to find by email from session
-      if (!currentUser && session.user.email) {
-        currentUser = employees.find(emp => 
-          emp.companyEmail.toLowerCase().includes(session.user.email?.toLowerCase() || '')
-        );
-      }
-      
-      if (currentUser) {
-        console.log('Auto-selected handler:', currentUser.fullName);
-        setFormData(prev => ({
-          ...prev,
-          handler: currentUser.id
-        }));
-      } else {
-        console.log('Could not find current user in employees list');
-        console.log('Session user email:', session.user.email);
-        console.log('Session user name:', session.user.name);
-        console.log('Session user email:', session.user.email);
-      }
-    }
-  }, [employees, session?.user]);
+  }, [isOpen, fetchEmployees, fetchPartners, fetchDeploymentTypes]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -237,21 +267,54 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
       [field]: value
     }));
 
-    // Auto-fill position when requester is selected
-    if (field === 'requester') {
+    // Auto-fill position when reporter is selected
+    if (field === 'reporter') {
       const selectedEmployee = employees.find(emp => emp.id === value);
       if (selectedEmployee) {
         setFormData(prev => ({
           ...prev,
-          requester: value,
+          reporter: value,
           position: selectedEmployee.position || ''
         }));
       }
     }
   };
 
+  // Filter partners based on search
+  const filteredPartners = partners.filter(partner =>
+    partner.fullCompanyName.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    partner.shortName.toLowerCase().includes(customerSearch.toLowerCase())
+  );
+
+  // Handle customer selection
+  const handleCustomerSelect = (partnerId: string) => {
+    const selectedPartner = partners.find(p => p.id === partnerId);
+    setFormData(prev => ({
+      ...prev,
+      customer: partnerId
+    }));
+    setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
+    setShowCustomerDropdown(false);
+  };
+
+  // Handle customer search change
+  const handleCustomerSearchChange = (value: string) => {
+    setCustomerSearch(value);
+    setShowCustomerDropdown(true);
+    
+    // If search is cleared, clear customer selection
+    if (!value) {
+      setFormData(prev => ({
+        ...prev,
+        customer: ''
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!caseData?.id) return;
     
     // Validate end date
     if (formData.endDate) {
@@ -269,18 +332,16 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
     
     try {
       // Prepare data for API
-      const caseData = {
+      const deploymentData = {
         title: formData.title,
         description: formData.description,
-        requesterId: formData.requester,
+        customerName: formData.customerName,
         handlerId: formData.handler,
-        caseType: formData.caseType,
-        form: formData.form,
+        deploymentType: formData.deploymentType,
+        customerId: formData.customer || null,
         startDate: formData.startDate,
         endDate: formData.endDate || null,
-        status: formData.status === 'Tiếp nhận' ? 'RECEIVED' : 
-                formData.status === 'Đang xử lý' ? 'IN_PROGRESS' :
-                formData.status === 'Hoàn thành' ? 'COMPLETED' : 'CANCELLED',
+        status: formData.status,
         notes: formData.notes || null,
         // User self-assessment data
         userDifficultyLevel: formData.difficultyLevel,
@@ -290,40 +351,30 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         userFormScore: formData.formScore
       };
 
-      console.log('=== Submitting Internal Case ===');
-      console.log('Form data:', formData);
-      console.log('Case data to send:', caseData);
-
       // Send to API
-      const response = await fetch('/api/internal-cases', {
-        method: 'POST',
+      const response = await fetch(`/api/deployment-cases/${caseData.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(caseData),
+        body: JSON.stringify(deploymentData),
       });
-
 
       if (response.ok) {
         const result = await response.json();
         
-        // Show success message (you can add a toast notification here)
-        toast.success('Tạo case nội bộ thành công!', {
+        // Show success message
+        toast.success('Cập nhật case triển khai thành công!', {
           duration: 3000,
           position: 'top-right',
         });
         
-        // Trigger case creation event for real-time notifications
-        window.dispatchEvent(new CustomEvent('case-created'));
+        // Trigger case update event for real-time notifications
+        window.dispatchEvent(new CustomEvent('case-updated'));
         
-        // Reset form data
-        resetForm();
-        
-        // Call onSuccess callback with new case data
-        if (onSuccess && result.data) {
-          console.log('=== Case Created Successfully ===');
-          console.log('New case data:', result.data);
-          await onSuccess(result.data);
+        // Call onSuccess callback with updated deployment data
+        if (result.data) {
+          onSuccess(result.data);
         }
         
         // Close modal
@@ -339,8 +390,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
           error = { error: 'Invalid JSON response' };
         }
          
-        console.error('Failed to create case:', error);
-        toast.error(`Lỗi: ${error.error || 'Không thể tạo case'}`, {
+        console.error('Failed to update deployment:', error);
+        toast.error(`Lỗi: ${error.error || 'Không thể cập nhật case triển khai'}`, {
           duration: 4000,
           position: 'top-right',
         });
@@ -354,21 +405,21 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !caseData) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-4 sm:my-8">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-8">
         {/* Compact Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 sm:px-6 py-3 sm:py-4 rounded-t-lg">
+        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-white/20 rounded-md">
-                <Wrench className="h-5 w-5" />
+                <Rocket className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Tạo Case Nội Bộ</h2>
-                <p className="text-blue-100 text-sm">Hệ thống quản lý case</p>
+                <h2 className="text-lg font-semibold">Chỉnh sửa Case Triển Khai</h2>
+                <p className="text-blue-100 text-sm">Cập nhật thông tin triển khai</p>
               </div>
             </div>
             <button
@@ -381,11 +432,11 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         </div>
 
         {/* Compact Form */}
-        <form onSubmit={handleSubmit} className="p-3 sm:p-6">
-          <div className="space-y-4 sm:space-y-6">
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="space-y-6">
             {/* Section 1: Thông tin cơ bản */}
-            <div className="bg-gray-50 rounded-md p-3 sm:p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-3 sm:mb-4">
+            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
+              <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-blue-100 rounded-md">
                   <User className="h-4 w-4 text-blue-600" />
                 </div>
@@ -395,88 +446,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Người yêu cầu</span>
+                    <span className="w-24">Người xử lý</span>
                     <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.requester}
-                    onChange={(e) => handleInputChange('requester', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
-                      </option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Chức danh</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.position}
-                    onChange={(e) => handleInputChange('position', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Tự động điền khi chọn nhân viên"
-                    readOnly
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <span className="w-28">Người xử lý</span>
-                      <span className="text-red-500 ml-1">*</span>
-                    </div>
-                    {session?.user && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          // Try to auto-select current user again
-                          if (employees.length > 0 && session?.user) {
-                            let currentUser = null;
-                            if (session.user.email) {
-                              currentUser = employees.find(emp => emp.companyEmail === session.user.email);
-                            }
-                            if (!currentUser && session.user.name) {
-                              currentUser = employees.find(emp => 
-                                emp.fullName.toLowerCase().includes(session.user.name?.toLowerCase() || '') ||
-                                emp.companyEmail.toLowerCase().includes(session.user.name?.toLowerCase() || '')
-                              );
-                            }
-                            if (!currentUser && session.user.email) {
-                              currentUser = employees.find(emp =>
-                                emp.companyEmail.toLowerCase().includes(session.user.email?.toLowerCase() || '')
-                              );
-                            }
-                            if (currentUser) {
-                              setFormData(prev => ({
-                                ...prev,
-                                handler: currentUser.id
-                              }));
-                            }
-                          }
-                        }}
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
-                        title="Tự động chọn user hiện tại"
-                      >
-                        Chọn tôi
-                      </button>
-                    )}
                   </label>
                   <select
                     value={formData.handler}
@@ -500,64 +471,100 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                       </option>
                     )}
                   </select>
-                  {!formData.handler && employees.length > 0 && session?.user && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      ⚠️ Không tìm thấy user hiện tại trong danh sách nhân viên
-                    </p>
-                  )}
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Loại case</span>
+                    <span className="w-24">Loại triển khai</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
-                    value={formData.caseType}
-                    onChange={(e) => handleInputChange('caseType', e.target.value)}
+                    value={formData.deploymentType}
+                    onChange={(e) => handleInputChange('deploymentType', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
-                    disabled={loading}
                   >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn loại case'}
-                    </option>
-                    {caseTypes.length > 0 ? (
-                      caseTypes.map((caseType) => (
-                        <option key={caseType.id} value={caseType.name}>
-                          {caseType.name}
-                        </option>
-                      ))
-                    ) : (
+                    <option value="">Chọn loại triển khai</option>
+                    {deploymentTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                    {deploymentTypes.length === 0 && (
                       <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Chưa có loại case nào'}
+                        Chưa có loại triển khai nào được cấu hình
                       </option>
                     )}
                   </select>
-                  {caseTypes.length === 0 && !loading && (
-                    <p className="text-xs text-orange-600 mt-1">
-                      ⚠️ Chưa có loại case nào. Vui lòng liên hệ admin để tạo loại case.
-                    </p>
-                  )}
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-24">Khách hàng</span>
+                    <span className="ml-1 w-2"></span>
+                  </label>
+                  <div className="relative customer-dropdown-container">
+                    <input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Tìm kiếm khách hàng..."
+                    />
+                    {showCustomerDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {filteredPartners.length > 0 ? (
+                          filteredPartners.map((partner) => (
+                            <div
+                              key={partner.id}
+                              onClick={() => handleCustomerSelect(partner.id)}
+                              className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-medium">{partner.fullCompanyName}</div>
+                              <div className="text-gray-500 text-xs">{partner.shortName}</div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Không tìm thấy khách hàng
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-24">Tên khách hàng</span>
+                    <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.customerName}
+                    onChange={(e) => handleInputChange('customerName', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Nhập tên khách hàng"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
-
-            {/* Section 3: Chi tiết case */}
-            <div className="bg-gray-50 rounded-md p-3 sm:p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-3 sm:mb-4">
+            {/* Section 2: Chi tiết triển khai */}
+            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
+              <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-purple-100 rounded-md">
                   <FileText className="h-4 w-4 text-purple-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Chi tiết case</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Chi tiết triển khai</h3>
               </div>
               
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Vụ việc</span>
+                    <span className="w-24">Tiêu đề triển khai</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
@@ -565,14 +572,14 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                     value={formData.title}
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Nhập tiêu đề vụ việc"
+                    placeholder="Nhập tiêu đề triển khai"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Mô tả chi tiết</span>
+                    <span className="w-24">Mô tả chi tiết</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <textarea
@@ -580,16 +587,16 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                    placeholder="Mô tả chi tiết vấn đề..."
+                    placeholder="Mô tả chi tiết triển khai..."
                     required
                   />
                 </div>
               </div>
             </div>
 
-            {/* Section 4: Thời gian */}
-            <div className="bg-gray-50 rounded-md p-3 sm:p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-3 sm:mb-4">
+            {/* Section 3: Thời gian */}
+            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
+              <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-orange-100 rounded-md">
                   <Calendar className="h-4 w-4 text-orange-600" />
                 </div>
@@ -598,36 +605,35 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Bắt đầu</span>
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-32">Thời gian bắt đầu</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Kết thúc</span>
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-32">Thời gian hoàn thành</span>
+                    <span className="ml-1 w-2"></span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="dd/mm/yyyy --:--"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
                   />
                 </div>
               </div>
             </div>
 
-
-            {/* Section 5: Đánh giá của User */}
+            {/* Section 4: Đánh giá của User */}
             <div className="bg-yellow-50 rounded-md p-4 border border-yellow-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
@@ -762,12 +768,11 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                   </select>
                 </div>
               </div>
-
             </div>
 
-            {/* Section 6: Trạng thái & Ghi chú */}
-            <div className="bg-gray-50 rounded-md p-3 sm:p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-3 sm:mb-4">
+            {/* Section 5: Trạng thái & Ghi chú */}
+            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
+              <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-gray-100 rounded-md">
                   <CheckCircle className="h-4 w-4 text-gray-600" />
                 </div>
@@ -777,7 +782,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Trạng thái</span>
+                    <span className="w-24">Trạng thái</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
@@ -786,16 +791,17 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
                   >
-                    <option value="Tiếp nhận">Tiếp nhận</option>
-                    <option value="Đang xử lý">Đang xử lý</option>
-                    <option value="Hoàn thành">Hoàn thành</option>
-                    <option value="Hủy">Hủy</option>
+                    <option value="RECEIVED">Tiếp nhận</option>
+                    <option value="PROCESSING">Đang xử lý</option>
+                    <option value="COMPLETED">Hoàn thành</option>
+                    <option value="CANCELLED">Hủy</option>
                   </select>
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Ghi chú</span>
+                    <span className="w-24">Ghi chú</span>
+                    <span className="ml-1 w-2"></span>
                   </label>
                   <textarea
                     value={formData.notes}
@@ -810,20 +816,20 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
           </div>
 
           {/* Compact Form Actions */}
-          <div className="flex items-center justify-end space-x-2 sm:space-x-3 pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-gray-200">
+          <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 sm:px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
+              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
             >
-              <CheckCircle className="h-4 w-4 mr-1 sm:mr-2" />
-              Tạo Case
+              <Rocket className="h-4 w-4 mr-2" />
+              Cập nhật Case Triển Khai
             </button>
           </div>
         </form>

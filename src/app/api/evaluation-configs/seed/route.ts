@@ -1,22 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { EvaluationType, EvaluationCategory } from '@prisma/client';
 
-// POST /api/evaluation-configs/seed - Seed default evaluation configurations
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    // Check if configs already exist
-    const existingConfigs = await db.evaluationConfig.count();
-    if (existingConfigs > 0) {
-      return NextResponse.json({
-        success: false,
-        error: 'Evaluation configurations already exist',
-      });
-    }
+    console.log('=== Seeding Evaluation Configs ===');
 
-    // Default configurations
-    const defaultConfigs = [
-      // User configurations
+    // Define sample data for User evaluations
+    const userSampleData = [
+      // User Difficulty
       {
         type: EvaluationType.USER,
         category: EvaluationCategory.DIFFICULTY,
@@ -26,50 +18,59 @@ export async function POST(request: NextRequest) {
           { label: 'Trung bình', points: 3 },
           { label: 'Khó', points: 4 },
           { label: 'Rất khó', points: 5 },
-        ],
+        ]
       },
+      // User Time
       {
         type: EvaluationType.USER,
         category: EvaluationCategory.TIME,
         options: [
-          { label: '< 30 phút', points: 1 },
-          { label: '30-60 phút', points: 2 },
-          { label: '1-2 giờ', points: 3 },
-          { label: '2-4 giờ', points: 4 },
-          { label: '> 4 giờ', points: 5 },
-        ],
+          { label: 'Dưới 1 giờ', points: 1 },
+          { label: '1-2 giờ', points: 2 },
+          { label: 'Nửa ngày', points: 3 },
+          { label: '1 ngày', points: 4 },
+          { label: 'Nhiều ngày', points: 5 },
+        ]
       },
+      // User Impact
       {
         type: EvaluationType.USER,
         category: EvaluationCategory.IMPACT,
         options: [
-          { label: 'Rất thấp', points: 1 },
-          { label: 'Thấp', points: 2 },
-          { label: 'Trung bình', points: 3 },
-          { label: 'Cao', points: 4 },
-          { label: 'Rất cao', points: 5 },
-        ],
+          { label: 'Không ảnh hưởng', points: 1 },
+          { label: 'Ảnh hưởng nhỏ', points: 2 },
+          { label: 'Ảnh hưởng trung bình', points: 3 },
+          { label: 'Ảnh hưởng lớn', points: 4 },
+          { label: 'Ảnh hưởng nghiêm trọng', points: 5 },
+        ]
       },
+      // User Urgency
       {
         type: EvaluationType.USER,
         category: EvaluationCategory.URGENCY,
         options: [
-          { label: 'Rất thấp', points: 1 },
-          { label: 'Thấp', points: 2 },
-          { label: 'Trung bình', points: 3 },
-          { label: 'Cao', points: 4 },
-          { label: 'Rất cao', points: 5 },
-        ],
+          { label: 'Không khẩn cấp', points: 1 },
+          { label: 'Ít khẩn cấp', points: 2 },
+          { label: 'Khẩn cấp', points: 3 },
+          { label: 'Rất khẩn cấp', points: 4 },
+          { label: 'Cực kỳ khẩn cấp', points: 5 },
+        ]
       },
+      // User Form
       {
         type: EvaluationType.USER,
         category: EvaluationCategory.FORM,
         options: [
-          { label: 'Offsite/Remote', points: 1 },
           { label: 'Onsite', points: 2 },
-        ],
-      },
-      // Admin configurations
+          { label: 'Remote', points: 3 },
+          { label: 'Hybrid', points: 4 },
+        ]
+      }
+    ];
+
+    // Define sample data for Admin evaluations
+    const adminSampleData = [
+      // Admin Difficulty
       {
         type: EvaluationType.ADMIN,
         category: EvaluationCategory.DIFFICULTY,
@@ -79,76 +80,136 @@ export async function POST(request: NextRequest) {
           { label: 'Trung bình', points: 3 },
           { label: 'Khó', points: 4 },
           { label: 'Rất khó', points: 5 },
-        ],
+          { label: 'Cực kỳ khó', points: 6 },
+        ]
       },
+      // Admin Time
       {
         type: EvaluationType.ADMIN,
         category: EvaluationCategory.TIME,
         options: [
-          { label: '< 30 phút', points: 1 },
-          { label: '30-60 phút', points: 2 },
+          { label: 'Dưới 30 phút', points: 1 },
+          { label: '30 phút - 1 giờ', points: 2 },
           { label: '1-2 giờ', points: 3 },
-          { label: '2-4 giờ', points: 4 },
-          { label: '> 4 giờ', points: 5 },
-        ],
+          { label: 'Nửa ngày', points: 4 },
+          { label: '1 ngày', points: 5 },
+          { label: '2-3 ngày', points: 6 },
+          { label: 'Hơn 1 tuần', points: 7 },
+        ]
       },
+      // Admin Impact
       {
         type: EvaluationType.ADMIN,
         category: EvaluationCategory.IMPACT,
         options: [
-          { label: 'Rất thấp', points: 1 },
-          { label: 'Thấp', points: 2 },
-          { label: 'Trung bình', points: 3 },
-          { label: 'Cao', points: 4 },
-          { label: 'Rất cao', points: 5 },
-        ],
+          { label: 'Không ảnh hưởng', points: 1 },
+          { label: 'Ảnh hưởng cá nhân', points: 2 },
+          { label: 'Ảnh hưởng phòng ban', points: 3 },
+          { label: 'Ảnh hưởng công ty', points: 4 },
+          { label: 'Ảnh hưởng khách hàng', points: 5 },
+          { label: 'Ảnh hưởng nghiêm trọng', points: 6 },
+        ]
       },
+      // Admin Urgency
       {
         type: EvaluationType.ADMIN,
         category: EvaluationCategory.URGENCY,
         options: [
-          { label: 'Rất thấp', points: 1 },
-          { label: 'Thấp', points: 2 },
-          { label: 'Trung bình', points: 3 },
-          { label: 'Cao', points: 4 },
-          { label: 'Rất cao', points: 5 },
-        ],
-      },
+          { label: 'Không khẩn cấp', points: 1 },
+          { label: 'Có thể chờ', points: 2 },
+          { label: 'Bình thường', points: 3 },
+          { label: 'Khẩn cấp', points: 4 },
+          { label: 'Rất khẩn cấp', points: 5 },
+          { label: 'Cực kỳ khẩn cấp', points: 6 },
+        ]
+      }
     ];
 
-    // Create all configurations
-    const createdConfigs = [];
-    for (const configData of defaultConfigs) {
-      const config = await db.evaluationConfig.create({
-        data: {
-          type: configData.type,
-          category: configData.category,
-          options: {
-            create: configData.options.map((option, index) => ({
+    // Combine all sample data
+    const allSampleData = [...userSampleData, ...adminSampleData];
+
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    // Create configurations
+    for (const configData of allSampleData) {
+      try {
+        // Check if config already exists
+        const existingConfig = await db.evaluationConfig.findFirst({
+          where: {
+            type: configData.type,
+            category: configData.category,
+            isActive: true,
+          },
+        });
+
+        if (existingConfig) {
+          console.log(`Config already exists: ${configData.type}-${configData.category}, updating options...`);
+          
+          // Delete existing options
+          await db.evaluationOption.deleteMany({
+            where: { configId: existingConfig.id }
+          });
+          
+          // Create new options
+          await db.evaluationOption.createMany({
+            data: configData.options.map((option, index) => ({
+              configId: existingConfig.id,
               label: option.label,
               points: option.points,
               order: index,
-            })),
+              isActive: true,
+            }))
+          });
+          
+          console.log(`Updated config: ${configData.type}-${configData.category} with ${configData.options.length} options`);
+          createdCount++;
+          continue;
+        }
+
+        // Create new config with options
+        await db.evaluationConfig.create({
+          data: {
+            type: configData.type,
+            category: configData.category,
+            options: {
+              create: configData.options.map((option, index) => ({
+                label: option.label,
+                points: option.points,
+                order: index,
+                isActive: true,
+              })),
+            },
           },
-        },
-        include: {
-          options: {
-            orderBy: { order: 'asc' },
-          },
-        },
-      });
-      createdConfigs.push(config);
+        });
+
+        console.log(`Created config: ${configData.type}-${configData.category} with ${configData.options.length} options`);
+        createdCount++;
+      } catch (error) {
+        console.error(`Error creating config ${configData.type}-${configData.category}:`, error);
+      }
     }
+
+    console.log(`Seeding completed: ${createdCount} created, ${skippedCount} skipped`);
 
     return NextResponse.json({
       success: true,
-      data: createdConfigs,
-      message: 'Default evaluation configurations created successfully',
+      message: `Đã tạo thành công ${createdCount} cấu hình đánh giá`,
+      data: {
+        created: createdCount,
+        skipped: skippedCount,
+        total: allSampleData.length
+      }
     });
+
   } catch (error) {
     console.error('Error seeding evaluation configs:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to seed evaluation configurations' },
+      { 
+        success: false, 
+        error: 'Có lỗi xảy ra khi tạo dữ liệu mẫu',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }

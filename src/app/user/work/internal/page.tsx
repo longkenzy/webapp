@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Filter, MoreVertical, Edit, RefreshCw, X } from 'lucide-react';
+import { Plus, Search, RefreshCw, X } from 'lucide-react';
 import CreateInternalCaseModal from './CreateInternalCaseModal';
 import EditInternalCaseModal from './EditInternalCaseModal';
+import InternalCaseRow from './InternalCaseRow';
+import InternalCaseCard from './InternalCaseCard';
+import { useInternalCases } from '@/hooks/useInternalCases';
 
 interface Employee {
   id: string;
@@ -48,124 +51,93 @@ export default function InternalCasePage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<InternalCase | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [cases, setCases] = useState<InternalCase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   
-  // Filter states
-  const [filters, setFilters] = useState({
-    requester: '',
-    handler: '',
-    caseType: '',
-    status: '',
-    startDate: '',
-    endDate: ''
-  });
+  // Use optimized hook
+  const {
+    internalCases: cases,
+    filteredCases,
+    loading,
+    refreshing,
+    searchTerm,
+    setSearchTerm,
+    selectedHandler,
+    setSelectedHandler,
+    selectedStatus,
+    setSelectedStatus,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+    fetchInternalCases,
+    refreshInternalCases,
+    clearFilters,
+    uniqueHandlers,
+    uniqueStatuses,
+    // Pagination
+    currentPage,
+    totalPages,
+    totalCases,
+    casesPerPage,
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
+  } = useInternalCases();
 
-  // Fetch internal cases from API with caching
-  const fetchCases = useCallback(async () => {
-    try {
-      setLoading(true);
-      
-      const response = await fetch('/api/internal-cases', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=60',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCases(data.data || []);
-      } else {
-        console.error('Failed to fetch cases:', response.status, response.statusText);
-        setCases([]);
-      }
-    } catch (error) {
-      console.error('Error fetching cases:', error);
-      setCases([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []); // Empty dependency array since it doesn't depend on any props/state
-
-  // Refresh cases
-  const refreshCases = async () => {
-    setRefreshing(true);
-    await fetchCases();
-    setRefreshing(false);
-  };
+  // Memoized filter summary
+  const filterSummary = useMemo(() => ({
+    hasActiveFilters: searchTerm || selectedHandler || selectedStatus || dateFrom || dateTo,
+    isDateRangeValid: !dateFrom || !dateTo || new Date(dateFrom) <= new Date(dateTo)
+  }), [searchTerm, selectedHandler, selectedStatus, dateFrom, dateTo]);
 
   // Handle edit modal
-  const handleOpenEditModal = (caseData: InternalCase) => {
+  const handleOpenEditModal = useCallback((caseData: InternalCase) => {
     setSelectedCase(caseData);
     setIsEditModalOpen(true);
-  };
+  }, []);
 
-  const handleCloseEditModal = () => {
+  const handleCloseEditModal = useCallback(() => {
     setIsEditModalOpen(false);
     setSelectedCase(null);
-  };
+  }, []);
 
-  const handleEditSuccess = (updatedCase: InternalCase) => {
-    // Update the case in the current list instead of refetching
-    setCases(prevCases => 
-      prevCases.map(case_ => 
-        case_.id === updatedCase.id ? updatedCase : case_
-      )
-    );
-  };
+  const handleEditSuccess = useCallback(async (updatedCase: InternalCase) => {
+    // Refresh cases to get updated data without showing loading
+    await fetchInternalCases(0, false);
+  }, [fetchInternalCases]);
+
+  const handleCloseCase = useCallback(async (caseId: string) => {
+    try {
+      const response = await fetch(`/api/internal-cases/${caseId}/close`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Refresh cases to get updated data without showing loading
+        await fetchInternalCases(0, false);
+        return result;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to close case');
+      }
+    } catch (error) {
+      console.error('Error closing case:', error);
+      throw error;
+    }
+  }, [fetchInternalCases]);
 
   // Load cases on component mount
   useEffect(() => {
     if (status === 'authenticated') {
-      fetchCases();
+      fetchInternalCases();
     }
-  }, [status, fetchCases]); // Include fetchCases in dependencies
+  }, [status, fetchInternalCases]);
 
-  // Filter and sort cases based on search term and filters
-  const filteredCases = cases
-    .filter(case_ => {
-      // Search term filter
-      const matchesSearch = searchTerm === '' || (
-      case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      case_.requester.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      case_.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        case_.caseType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        case_.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      
-      // Requester filter
-      const matchesRequester = filters.requester === '' || 
-        case_.requester.fullName.toLowerCase().includes(filters.requester.toLowerCase());
-      
-      // Handler filter
-      const matchesHandler = filters.handler === '' || 
-        case_.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
-      
-      // Case type filter
-      const matchesCaseType = filters.caseType === '' || 
-        case_.caseType === filters.caseType;
-      
-      // Status filter
-      const matchesStatus = filters.status === '' || 
-        case_.status === filters.status;
-      
-      // Date range filter
-      const caseDate = new Date(case_.startDate);
-      const startDate = filters.startDate ? new Date(filters.startDate) : null;
-      const endDate = filters.endDate ? new Date(filters.endDate) : null;
-      
-      const matchesDateRange = (!startDate || caseDate >= startDate) && 
-        (!endDate || caseDate <= endDate);
-      
-      return matchesSearch && matchesRequester && matchesHandler && 
-             matchesCaseType && matchesStatus && matchesDateRange;
-    })
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
-
-  const getStatusColor = (status: string) => {
+  // Memoized utility functions
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'RECEIVED':
       case 'Tiếp nhận':
@@ -184,9 +156,9 @@ export default function InternalCasePage() {
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
-  };
+  }, []);
 
-  const getStatusText = (status: string) => {
+  const getStatusText = useCallback((status: string) => {
     switch (status) {
       case 'RECEIVED':
         return 'Tiếp nhận';
@@ -199,9 +171,9 @@ export default function InternalCasePage() {
       default:
         return status;
     }
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN', {
       day: '2-digit',
@@ -210,9 +182,9 @@ export default function InternalCasePage() {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
+  }, []);
 
-  const formatCaseType = (caseType: string) => {
+  const formatCaseType = useCallback((caseType: string) => {
     switch (caseType) {
       case 'cai-dat-phan-mem':
         return 'Cài đặt phần mềm';
@@ -227,53 +199,8 @@ export default function InternalCasePage() {
       default:
         return caseType;
     }
-  };
+  }, []);
 
-  // Get unique values for filter dropdowns
-  const getUniqueRequesters = () => {
-    const requesters = cases.map(case_ => case_.requester.fullName);
-    return [...new Set(requesters)].sort();
-  };
-
-  const getUniqueHandlers = () => {
-    const handlers = cases.map(case_ => case_.handler.fullName);
-    return [...new Set(handlers)].sort();
-  };
-
-  const getUniqueCaseTypes = () => {
-    const caseTypes = cases.map(case_ => case_.caseType);
-    return [...new Set(caseTypes)].sort();
-  };
-
-  const getUniqueStatuses = () => {
-    const statuses = cases.map(case_ => case_.status);
-    return [...new Set(statuses)].sort();
-  };
-
-  // Clear all filters
-  const clearFilters = () => {
-    setFilters({
-      requester: '',
-      handler: '',
-      caseType: '',
-      status: '',
-      startDate: '',
-      endDate: ''
-    });
-  };
-
-  // Check if any filters are active
-  const hasActiveFilters = () => {
-    return Object.values(filters).some(value => value !== '');
-  };
-
-  // Validate date range
-  const isDateRangeValid = () => {
-    if (filters.startDate && filters.endDate) {
-      return new Date(filters.startDate) <= new Date(filters.endDate);
-    }
-    return true;
-  };
 
   // Show loading while checking session
   if (status === 'loading') {
@@ -298,8 +225,8 @@ export default function InternalCasePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6 pt-4">
-      <div className="max-w-full mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-3 sm:p-6 pt-4">
+      <div className="max-w-full mx-auto px-2 sm:px-4">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -309,9 +236,9 @@ export default function InternalCasePage() {
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Tạo Case Nội Bộ</span>
             </button>
           </div>
@@ -332,12 +259,13 @@ export default function InternalCasePage() {
               </div>
             </div>
               <button 
-                onClick={refreshCases}
+                onClick={refreshInternalCases}
                 disabled={refreshing}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs sm:text-sm"
               >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span>Làm mới</span>
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Làm mới</span>
+                <span className="sm:hidden">Mới</span>
               </button>
             </div>
           </div>
@@ -376,16 +304,12 @@ export default function InternalCasePage() {
                         <span>Yêu cầu</span>
                       </div>
                     </label>
-                    <select
-                      value={filters.requester}
-                      onChange={(e) => setFilters(prev => ({ ...prev, requester: e.target.value }))}
+                    <input
+                      type="text"
+                      placeholder="Tìm theo người yêu cầu..."
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả người yêu cầu</option>
-                      {getUniqueRequesters().map(requester => (
-                        <option key={requester} value={requester}>{requester}</option>
-                      ))}
-                    </select>
+                      disabled
+                    />
                   </div>
 
                   {/* Người xử lý */}
@@ -397,13 +321,13 @@ export default function InternalCasePage() {
                       </div>
                     </label>
                     <select
-                      value={filters.handler}
-                      onChange={(e) => setFilters(prev => ({ ...prev, handler: e.target.value }))}
+                      value={selectedHandler}
+                      onChange={(e) => setSelectedHandler(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                     >
                       <option value="">Tất cả người xử lý</option>
-                      {getUniqueHandlers().map(handler => (
-                        <option key={handler} value={handler}>{handler}</option>
+                      {uniqueHandlers.map(handler => (
+                        <option key={handler.id} value={handler.id}>{handler.fullName}</option>
                       ))}
                     </select>
                   </div>
@@ -416,16 +340,12 @@ export default function InternalCasePage() {
                         <span>Loại</span>
                       </div>
                     </label>
-                    <select
-                      value={filters.caseType}
-                      onChange={(e) => setFilters(prev => ({ ...prev, caseType: e.target.value }))}
+                    <input
+                      type="text"
+                      placeholder="Tìm theo loại case..."
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả loại case</option>
-                      {getUniqueCaseTypes().map(caseType => (
-                        <option key={caseType} value={caseType}>{formatCaseType(caseType)}</option>
-                      ))}
-                    </select>
+                      disabled
+                    />
                   </div>
 
                   {/* Trạng thái */}
@@ -437,12 +357,12 @@ export default function InternalCasePage() {
                       </div>
                     </label>
                     <select
-                      value={filters.status}
-                      onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                      value={selectedStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                     >
                       <option value="">Tất cả trạng thái</option>
-                      {getUniqueStatuses().map(status => (
+                      {uniqueStatuses.map(status => (
                         <option key={status} value={status}>{getStatusText(status)}</option>
                       ))}
                     </select>
@@ -458,8 +378,8 @@ export default function InternalCasePage() {
                     </label>
                     <input
                       type="date"
-                      value={filters.startDate}
-                      onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                     />
                   </div>
@@ -474,13 +394,13 @@ export default function InternalCasePage() {
                     </label>
                     <input
                       type="date"
-                      value={filters.endDate}
-                      onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
                       className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm ${
-                        !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
+                        !filterSummary.isDateRangeValid ? 'border-red-300' : 'border-gray-200'
                       }`}
                     />
-                    {!isDateRangeValid() && (
+                    {!filterSummary.isDateRangeValid && (
                       <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
                     )}
                   </div>
@@ -488,7 +408,7 @@ export default function InternalCasePage() {
               </div>
 
               {/* Active Filters & Actions */}
-              {hasActiveFilters() && (
+              {filterSummary.hasActiveFilters && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md p-2.5 border border-blue-100">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="flex-1">
@@ -503,40 +423,28 @@ export default function InternalCasePage() {
                             &quot;{searchTerm}&quot;
                           </span>
                         )}
-                        {filters.requester && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></div>
-                            Yêu cầu: {filters.requester}
-                          </span>
-                        )}
-                        {filters.handler && (
+                        {selectedHandler && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
-                            Xử lý: {filters.handler}
+                            Xử lý: {uniqueHandlers.find(h => h.id === selectedHandler)?.fullName}
                           </span>
                         )}
-                        {filters.caseType && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
-                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
-                            Loại: {formatCaseType(filters.caseType)}
-                          </span>
-                        )}
-                        {filters.status && (
+                        {selectedStatus && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
                             <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
-                            Trạng thái: {getStatusText(filters.status)}
+                            Trạng thái: {getStatusText(selectedStatus)}
                           </span>
                         )}
-                        {filters.startDate && (
+                        {dateFrom && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
-                            Từ: {new Date(filters.startDate).toLocaleDateString('vi-VN')}
+                            Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
                           </span>
                         )}
-                        {filters.endDate && (
+                        {dateTo && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
                             <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
-                            Đến: {new Date(filters.endDate).toLocaleDateString('vi-VN')}
+                            Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
                           </span>
                         )}
                       </div>
@@ -557,8 +465,8 @@ export default function InternalCasePage() {
               {/* Results Summary */}
               <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                 <div className="text-sm text-gray-600">
-                  Hiển thị <span className="font-medium text-gray-900">{filteredCases.length}</span> trong tổng số <span className="font-medium text-gray-900">{cases.length}</span> case
-                  {hasActiveFilters() && (
+                  Trang {currentPage} / {totalPages} - Hiển thị <span className="font-medium text-gray-900">{filteredCases.length}</span> case
+                  {filterSummary.hasActiveFilters && (
                     <span className="ml-2 text-blue-600 font-medium">
                       (đã lọc)
                     </span>
@@ -569,34 +477,78 @@ export default function InternalCasePage() {
           </div>
         </div>
 
-        {/* Cases Table */}
+        {/* Cases Display - Responsive */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200/50 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile Card Layout */}
+          <div className="block sm:hidden p-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex items-center space-x-2">
+                  <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
+                  <span className="text-slate-600">Đang tải danh sách case...</span>
+                </div>
+              </div>
+            ) : filteredCases.length > 0 ? (
+              <div className="space-y-3">
+                {filteredCases.map((case_, index) => {
+                  // Calculate correct STT based on pagination
+                  const actualIndex = totalCases - ((currentPage - 1) * casesPerPage + index);
+                  return (
+                    <InternalCaseCard
+                      key={case_.id}
+                      case_={case_}
+                      index={actualIndex}
+                      onEdit={handleOpenEditModal}
+                      onClose={handleCloseCase}
+                      getStatusColor={getStatusColor}
+                      getStatusText={getStatusText}
+                      formatDate={formatDate}
+                      formatCaseType={formatCaseType}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <div className="text-slate-400 mb-4">
+                  <Search className="h-16 w-16 mx-auto" />
+                </div>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">Không tìm thấy case nào</h3>
+                <p className="text-slate-500">Thử thay đổi từ khóa tìm kiếm hoặc tạo case mới</p>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop Table Layout */}
+          <div className="hidden sm:block overflow-x-auto -mx-1 sm:mx-0">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-blue-50">
                 <tr>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     STT
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Thông tin Case
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Ghi chú
+                  </th>
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Người yêu cầu
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Người xử lý
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Loại case
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Trạng thái
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Thời gian
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <th className="px-2 sm:px-3 py-2 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">
                     Hành động
                   </th>
                 </tr>
@@ -604,7 +556,7 @@ export default function InternalCasePage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={9} className="px-3 py-8 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
                         <span className="text-slate-600">Đang tải danh sách case...</span>
@@ -612,70 +564,26 @@ export default function InternalCasePage() {
                     </td>
                   </tr>
                 ) : filteredCases.length > 0 ? (
-                  filteredCases.map((case_, index) => (
-                    <tr key={case_.id} className="hover:bg-slate-50/50 transition-colors duration-150">
-                      <td className="px-3 py-2 text-center">
-                        <span className="text-sm font-medium text-slate-600">
-                          {filteredCases.length - index}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div>
-                          <div className="text-sm font-medium text-slate-900 mb-1">
-                            {case_.title}
-                          </div>
-                          <div className="text-xs text-slate-500 mb-1 line-clamp-2">
-                            {case_.description}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            Tạo: {formatDate(case_.createdAt)}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div>
-                          <div className="text-sm text-slate-900">{case_.requester.fullName}</div>
-                          <div className="text-xs text-slate-500">{case_.requester.position}</div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div>
-                          <div className="text-sm text-slate-900">{case_.handler.fullName}</div>
-                          <div className="text-xs text-slate-500">{case_.handler.position}</div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="text-sm text-slate-700">{formatCaseType(case_.caseType)}</div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
-                          {getStatusText(case_.status)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="text-sm text-slate-700">
-                          <div>Bắt đầu: {formatDate(case_.startDate)}</div>
-                          {case_.endDate && (
-                            <div className="text-slate-500">Kết thúc: {formatDate(case_.endDate)}</div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <div className="flex items-center justify-center space-x-1">
-                          <button 
-                            onClick={() => handleOpenEditModal(case_)}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  filteredCases.map((case_, index) => {
+                    // Calculate correct STT based on pagination
+                    const actualIndex = totalCases - ((currentPage - 1) * casesPerPage + index);
+                    return (
+                      <InternalCaseRow
+                        key={case_.id}
+                        case_={case_}
+                        index={actualIndex}
+                        onEdit={handleOpenEditModal}
+                        onClose={handleCloseCase}
+                        getStatusColor={getStatusColor}
+                        getStatusText={getStatusText}
+                        formatDate={formatDate}
+                        formatCaseType={formatCaseType}
+                      />
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={9} className="px-3 py-8 text-center">
                       <div className="text-slate-400 mb-4">
                         <Search className="h-16 w-16 mx-auto" />
                       </div>
@@ -688,6 +596,96 @@ export default function InternalCasePage() {
             </table>
           </div>
           
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white px-2 sm:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+              <div className="flex-1 flex justify-between sm:hidden">
+                <button
+                  onClick={goToPrevPage}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Trước
+                </button>
+                <button
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Sau
+                </button>
+              </div>
+              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Hiển thị{' '}
+                    <span className="font-medium">{(currentPage - 1) * casesPerPage + 1}</span>
+                    {' '}đến{' '}
+                    <span className="font-medium">
+                      {Math.min(currentPage * casesPerPage, totalCases)}
+                    </span>
+                    {' '}của{' '}
+                    <span className="font-medium">{totalCases}</span>
+                    {' '}kết quả
+                  </p>
+                </div>
+                <div>
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button
+                      onClick={goToPrevPage}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Trước</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => goToPage(pageNum)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            pageNum === currentPage
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages}
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Sau</span>
+                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
+          
         </div>
       </div>
 
@@ -695,9 +693,9 @@ export default function InternalCasePage() {
       <CreateInternalCaseModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newCase: any) => {
-          // Add new case to the beginning of the list (since we sort by newest first)
-          setCases(prevCases => [newCase as InternalCase, ...prevCases]);
+        onSuccess={async () => {
+          // Refresh cases to get updated data without showing loading
+          await fetchInternalCases(0, false);
         }}
       />
 

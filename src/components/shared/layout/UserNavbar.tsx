@@ -21,7 +21,8 @@ import {
   Truck,
   AlertTriangle,
   Wrench,
-  Shield
+  Shield,
+  Rocket
 } from 'lucide-react';
 import NotificationDropdown from '@/components/shared/common/NotificationDropdown';
 
@@ -46,6 +47,7 @@ export default function UserNavbar() {
     { name: 'Case nội bộ', href: '/user/work/internal', icon: Building2 },
     { name: 'Case nhận hàng', href: '/user/work/receiving', icon: Package },
     { name: 'Case giao hàng', href: '/user/work/delivery', icon: Truck },
+    { name: 'Case triển khai', href: '/user/work/deployment', icon: Rocket },
     { name: 'Case xử lý sự cố', href: '/user/work/incident', icon: AlertTriangle },
     { name: 'Case bảo trì', href: '/user/work/maintenance', icon: Wrench },
     { name: 'Case bảo hành', href: '/user/work/warranty', icon: Shield },

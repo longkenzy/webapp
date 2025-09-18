@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 
 interface Employee {
   id: string;
@@ -51,6 +51,12 @@ export function useInternalCases({ initialCases = [] }: UseInternalCasesProps = 
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCases, setTotalCases] = useState(0);
+  const casesPerPage = 10;
 
   // Memoized filtered cases
   const filteredCases = useMemo(() => {
@@ -84,43 +90,60 @@ export function useInternalCases({ initialCases = [] }: UseInternalCasesProps = 
     return [...new Set(internalCases.map(case_ => case_.status))];
   }, [internalCases]);
 
-  // Fetch cases with retry logic
-  const fetchInternalCases = useCallback(async (retryCount = 0) => {
+  // Fetch cases with optimized parameters
+  const fetchInternalCases = useCallback(async (retryCount = 0, showLoading = true) => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/internal-cases', {
+      if (showLoading) {
+        setLoading(true);
+      }
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      params.append('page', currentPage.toString());
+      params.append('limit', casesPerPage.toString());
+      if (searchTerm) params.append('search', searchTerm);
+      if (selectedHandler) params.append('handlerId', selectedHandler);
+      if (selectedStatus) params.append('status', selectedStatus);
+      
+      const response = await fetch(`/api/internal-cases?${params.toString()}`, {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=60',
+          'Cache-Control': 'no-cache', // Disable cache for fresh data
         },
       });
       
       if (response.ok) {
         const data = await response.json();
         setInternalCases(data.data || []);
+        
+        // Update pagination info
+        if (data.pagination) {
+          setTotalCases(data.pagination.total);
+          setTotalPages(data.pagination.totalPages);
+        }
       } else {
         console.error('Failed to fetch internal cases:', response.status, response.statusText);
-        if (retryCount < 2) {
-          console.log(`Retrying fetch internal cases... (${retryCount + 1}/2)`);
-          setTimeout(() => fetchInternalCases(retryCount + 1), 1000);
+        if (retryCount < 1) { // Reduced retries for faster failure
+          console.log(`Retrying fetch internal cases... (${retryCount + 1}/1)`);
+          setTimeout(() => fetchInternalCases(retryCount + 1, showLoading), 500); // Faster retry
         } else {
           setInternalCases([]);
         }
       }
     } catch (error) {
       console.error('Error fetching internal cases:', error);
-      if (retryCount < 2) {
-        console.log(`Retrying fetch internal cases... (${retryCount + 1}/2)`);
-        setTimeout(() => fetchInternalCases(retryCount + 1), 1000);
+      if (retryCount < 1) {
+        console.log(`Retrying fetch internal cases... (${retryCount + 1}/1)`);
+        setTimeout(() => fetchInternalCases(retryCount + 1, showLoading), 500);
       } else {
         setInternalCases([]);
       }
     } finally {
-      if (retryCount === 0) {
+      if (showLoading && retryCount === 0) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [searchTerm, selectedHandler, selectedStatus, currentPage, casesPerPage]);
 
   // Refresh cases
   const refreshInternalCases = useCallback(async () => {
@@ -128,6 +151,28 @@ export function useInternalCases({ initialCases = [] }: UseInternalCasesProps = 
     await fetchInternalCases();
     setRefreshing(false);
   }, [fetchInternalCases]);
+
+  // Pagination functions
+  const goToPage = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
+  const goToNextPage = useCallback(() => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  }, [currentPage, totalPages]);
+
+  const goToPrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  }, [currentPage]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedHandler, selectedStatus]);
 
   // Toggle row expansion
   const toggleRowExpansion = useCallback((id: string) => {
@@ -216,6 +261,12 @@ export function useInternalCases({ initialCases = [] }: UseInternalCasesProps = 
     uniqueHandlers,
     uniqueStatuses,
     
+    // Pagination state
+    currentPage,
+    totalPages,
+    totalCases,
+    casesPerPage,
+    
     // Actions
     setInternalCases,
     setSearchTerm,
@@ -229,5 +280,10 @@ export function useInternalCases({ initialCases = [] }: UseInternalCasesProps = 
     clearFilters,
     deleteCase,
     updateCase,
+    
+    // Pagination actions
+    goToPage,
+    goToNextPage,
+    goToPrevPage,
   };
 }

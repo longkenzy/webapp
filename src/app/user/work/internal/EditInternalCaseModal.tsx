@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, CheckCircle } from 'lucide-react';
+import { X, Calendar, CheckCircle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface InternalCase {
@@ -58,7 +58,8 @@ export default function EditInternalCaseModal({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     endDate: '',
-    status: 'RECEIVED'
+    status: 'RECEIVED',
+    notes: ''
   });
 
   // Initialize form data when modal opens
@@ -66,7 +67,8 @@ export default function EditInternalCaseModal({
     if (isOpen && caseData) {
       setFormData({
         endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
-        status: caseData.status
+        status: caseData.status,
+        notes: caseData.notes || ''
       });
     }
   }, [isOpen, caseData]);
@@ -118,7 +120,8 @@ export default function EditInternalCaseModal({
       // Prepare data for API
       const updateData = {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        status: formData.status
+        status: formData.status,
+        notes: formData.notes || null
       };
 
       console.log('=== Updating Internal Case ===');
@@ -229,6 +232,24 @@ export default function EditInternalCaseModal({
               <option value="COMPLETED">Hoàn thành</option>
               <option value="CANCELLED">Hủy</option>
             </select>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <FileText className="w-4 h-4 inline mr-2" />
+              Ghi chú
+            </label>
+            <textarea
+              value={formData.notes || ''}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder="Thêm ghi chú cho case..."
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Ghi chú sẽ hiển thị trong cột "Ghi chú" của bảng danh sách
+            </p>
           </div>
 
           {/* Action Buttons */}

@@ -17,14 +17,34 @@ Trước đây, tôi đã nhầm lẫn giữa database development và productio
 
 ## 🛠️ **Scripts quản lý:**
 
-### **Chuyển sang Development:**
+### **Chuyển môi trường:**
 ```powershell
+# Chuyển sang Development
 .\to-dev.ps1
+
+# Chuyển sang Production
+.\to-prod.ps1
 ```
 
-### **Chuyển sang Production:**
+### **Đồng bộ database:**
 ```powershell
-.\to-prod.ps1
+# Kiểm tra trạng thái cả hai database
+.\check-db-status.ps1
+
+# Đồng bộ CHỈ SCHEMA từ production sang development (an toàn)
+.\sync-dev-schema-only.ps1
+
+# Đồng bộ SCHEMA + DỮ LIỆU từ production sang development (cẩn thận)
+.\sync-dev-from-prod.ps1
+```
+
+### **Copy dữ liệu:**
+```powershell
+# Copy dữ liệu từ production sang development (đơn giản)
+.\copy-prod-data-simple.ps1
+
+# Copy dữ liệu từ production sang development (chi tiết)
+.\copy-prod-data-to-dev.ps1
 ```
 
 ### **Kiểm tra database hiện tại:**
@@ -50,6 +70,90 @@ Trước đây, tôi đã nhầm lẫn giữa database development và productio
 - ✅ **Development database:** Đã có đầy đủ dữ liệu khách hàng và nhân viên
 - ✅ **Production database:** Đã đồng bộ với development
 - ✅ **Scripts:** Đã tạo sẵn để quản lý dễ dàng
+
+## 🔄 **Hướng dẫn đồng bộ Development từ Production:**
+
+### **Bước 1: Kiểm tra trạng thái**
+```powershell
+.\check-db-status.ps1
+```
+Script này sẽ hiển thị:
+- Schema của cả hai database
+- Số lượng bản ghi trong mỗi bảng
+- So sánh giữa development và production
+
+### **Bước 2: Chọn phương thức đồng bộ**
+
+#### **Option A: Chỉ đồng bộ Schema (Khuyến nghị)**
+```powershell
+.\sync-dev-schema-only.ps1
+```
+- ✅ An toàn 100%
+- ✅ Giữ nguyên dữ liệu hiện có
+- ✅ Chỉ cập nhật cấu trúc bảng
+- ✅ Phù hợp khi production có schema mới
+
+#### **Option B: Đồng bộ Schema + Dữ liệu**
+```powershell
+.\sync-dev-from-prod.ps1
+```
+- ⚠️ **CẢNH BÁO:** Sẽ thay thế toàn bộ dữ liệu development
+- ⚠️ Tự động backup trước khi đồng bộ
+- ⚠️ Cần xác nhận trước khi thực hiện
+- ✅ Phù hợp khi muốn development giống hệt production
+
+### **Bước 3: Xác minh kết quả**
+```powershell
+# Mở Prisma Studio để kiểm tra
+npx prisma studio --schema=src/prisma/schema.prisma
+
+# Hoặc kiểm tra lại trạng thái
+.\check-db-status.ps1
+```
+
+## 📋 **Hướng dẫn Copy Dữ liệu từ Production sang Development:**
+
+### **Bước 1: Kiểm tra trạng thái**
+```powershell
+.\check-db-status.ps1
+```
+
+### **Bước 2: Chọn phương thức copy**
+
+#### **Option A: Copy đơn giản (Khuyến nghị)**
+```powershell
+.\copy-prod-data-simple.ps1
+```
+- ✅ Sử dụng pg_dump/pg_restore
+- ✅ Tự động backup trước khi copy
+- ✅ Có tùy chọn xóa dữ liệu cũ
+- ✅ Nhanh và đơn giản
+
+#### **Option B: Copy chi tiết**
+```powershell
+.\copy-prod-data-to-dev.ps1
+```
+- ✅ Export/import từng bảng riêng biệt
+- ✅ Kiểm soát chi tiết từng bước
+- ✅ Có thể tùy chỉnh quá trình
+- ⚠️ Phức tạp hơn, cần nhiều thời gian
+
+### **Bước 3: Xác minh kết quả**
+```powershell
+# Kiểm tra lại trạng thái
+.\check-db-status.ps1
+
+# Hoặc mở Prisma Studio
+npx prisma studio --schema=src/prisma/schema.prisma
+```
+
+## 🚨 **Lưu ý quan trọng:**
+1. **Luôn backup** trước khi copy dữ liệu
+2. **Kiểm tra kỹ** script trước khi chạy
+3. **Test trên development** trước khi deploy lên production
+4. **Không bao giờ** chạy script copy trên production
+5. **Xác nhận** trước khi xóa dữ liệu cũ
+6. **Kiểm tra** kết quả sau khi copy
 
 
 

@@ -33,6 +33,8 @@ model User {
   maintenanceCaseWorklogs MaintenanceCaseWorklog[]
   warrantyComments        WarrantyComment[]
   warrantyWorklogs        WarrantyWorklog[]
+  deploymentCaseComments  DeploymentCaseComment[]
+  deploymentCaseWorklogs  DeploymentCaseWorklog[]
   schedules             Schedule[]
   notifications         Notification[]
   employee              Employee?              @relation(fields: [employeeId], references: [id])
@@ -73,6 +75,8 @@ model Employee {
   maintenanceCasesHandler  MaintenanceCase[] @relation("HandlerMaintenanceCases")
   warrantiesReporter       Warranty[]        @relation("ReporterWarranties")
   warrantiesHandler        Warranty[]        @relation("HandlerWarranties")
+  deploymentCasesReporter  DeploymentCase[]  @relation("ReporterDeploymentCases")
+  deploymentCasesHandler   DeploymentCase[]  @relation("HandlerDeploymentCases")
   user                    User?
 }
 
@@ -106,6 +110,7 @@ model Partner {
   incidents       Incident[]
   maintenanceCases MaintenanceCase[]
   warranties      Warranty[]
+  deploymentCases DeploymentCase[]
 }
 
 model CaseType {
@@ -349,6 +354,16 @@ model MaintenanceCaseType {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   maintenanceCases MaintenanceCase[]
+}
+
+model DeploymentType {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deploymentCases DeploymentCase[]
 }
 
 model Incident {
@@ -611,7 +626,70 @@ model WarrantyWorklog {
   user       User     @relation(fields: [userId], references: [id])
 }
 
+model DeploymentCase {
+  id                   String                 @id @default(cuid())
+  title                String
+  description          String
+  reporterId           String
+  handlerId            String
+  deploymentTypeId     String
+  customerId           String?
+  customerName         String
+  startDate            DateTime
+  endDate              DateTime?
+  status               DeploymentCaseStatus   @default(RECEIVED)
+  notes                String?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  userAssessmentDate   DateTime?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  reporter             Employee               @relation("ReporterDeploymentCases", fields: [reporterId], references: [id])
+  handler              Employee               @relation("HandlerDeploymentCases", fields: [handlerId], references: [id])
+  deploymentType       DeploymentType         @relation(fields: [deploymentTypeId], references: [id])
+  customer             Partner?               @relation(fields: [customerId], references: [id])
+  comments             DeploymentCaseComment[]
+  worklogs             DeploymentCaseWorklog[]
+}
+
+model DeploymentCaseComment {
+  id              String         @id @default(cuid())
+  deploymentCaseId String
+  userId          String
+  content         String
+  createdAt       DateTime       @default(now())
+  deploymentCase  DeploymentCase @relation(fields: [deploymentCaseId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+}
+
+model DeploymentCaseWorklog {
+  id              String         @id @default(cuid())
+  deploymentCaseId String
+  userId          String
+  duration        Int
+  description     String
+  createdAt       DateTime       @default(now())
+  deploymentCase  DeploymentCase @relation(fields: [deploymentCaseId], references: [id])
+  user            User           @relation(fields: [userId], references: [id])
+}
+
 enum WarrantyStatus {
+  RECEIVED
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
+
+enum DeploymentCaseStatus {
   RECEIVED
   PROCESSING
   COMPLETED

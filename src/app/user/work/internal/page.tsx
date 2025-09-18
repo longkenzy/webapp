@@ -56,12 +56,17 @@ export default function InternalCasePage() {
   const {
     internalCases: cases,
     filteredCases,
+    paginatedCases,
     loading,
     refreshing,
     searchTerm,
     setSearchTerm,
     selectedHandler,
     setSelectedHandler,
+    selectedRequester,
+    setSelectedRequester,
+    selectedCaseType,
+    setSelectedCaseType,
     selectedStatus,
     setSelectedStatus,
     dateFrom,
@@ -72,6 +77,8 @@ export default function InternalCasePage() {
     refreshInternalCases,
     clearFilters,
     uniqueHandlers,
+    uniqueRequesters,
+    uniqueCaseTypes,
     uniqueStatuses,
     // Pagination
     currentPage,
@@ -85,9 +92,9 @@ export default function InternalCasePage() {
 
   // Memoized filter summary
   const filterSummary = useMemo(() => ({
-    hasActiveFilters: searchTerm || selectedHandler || selectedStatus || dateFrom || dateTo,
+    hasActiveFilters: searchTerm || selectedHandler || selectedRequester || selectedCaseType || selectedStatus || dateFrom || dateTo,
     isDateRangeValid: !dateFrom || !dateTo || new Date(dateFrom) <= new Date(dateTo)
-  }), [searchTerm, selectedHandler, selectedStatus, dateFrom, dateTo]);
+  }), [searchTerm, selectedHandler, selectedRequester, selectedCaseType, selectedStatus, dateFrom, dateTo]);
 
   // Handle edit modal
   const handleOpenEditModal = useCallback((caseData: InternalCase) => {
@@ -256,8 +263,8 @@ export default function InternalCasePage() {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
                   <p className="text-xs text-gray-600">Tìm kiếm và lọc case nội bộ theo nhiều tiêu chí</p>
+                </div>
               </div>
-            </div>
               <button 
                 onClick={refreshInternalCases}
                 disabled={refreshing}
@@ -304,12 +311,16 @@ export default function InternalCasePage() {
                         <span>Yêu cầu</span>
                       </div>
                     </label>
-                    <input
-                      type="text"
-                      placeholder="Tìm theo người yêu cầu..."
+                    <select
+                      value={selectedRequester}
+                      onChange={(e) => setSelectedRequester(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                      disabled
-                    />
+                    >
+                      <option value="">Tất cả người yêu cầu</option>
+                      {uniqueRequesters.map(requester => (
+                        <option key={requester.id} value={requester.id}>{requester.fullName}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Người xử lý */}
@@ -340,12 +351,16 @@ export default function InternalCasePage() {
                         <span>Loại</span>
                       </div>
                     </label>
-                    <input
-                      type="text"
-                      placeholder="Tìm theo loại case..."
+                    <select
+                      value={selectedCaseType}
+                      onChange={(e) => setSelectedCaseType(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                      disabled
-                    />
+                    >
+                      <option value="">Tất cả loại case</option>
+                      {uniqueCaseTypes.map(caseType => (
+                        <option key={caseType} value={caseType}>{caseType}</option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Trạng thái */}
@@ -488,10 +503,10 @@ export default function InternalCasePage() {
                   <span className="text-slate-600">Đang tải danh sách case...</span>
                 </div>
               </div>
-            ) : filteredCases.length > 0 ? (
+            ) : paginatedCases.length > 0 ? (
               <div className="space-y-3">
-                {filteredCases.map((case_, index) => {
-                  // Calculate correct STT based on pagination
+                {paginatedCases.map((case_, index) => {
+                  // Calculate correct STT based on filtered results
                   const actualIndex = totalCases - ((currentPage - 1) * casesPerPage + index);
                   return (
                     <InternalCaseCard
@@ -563,9 +578,9 @@ export default function InternalCasePage() {
                       </div>
                     </td>
                   </tr>
-                ) : filteredCases.length > 0 ? (
-                  filteredCases.map((case_, index) => {
-                    // Calculate correct STT based on pagination
+                ) : paginatedCases.length > 0 ? (
+                  paginatedCases.map((case_, index) => {
+                    // Calculate correct STT based on filtered results
                     const actualIndex = totalCases - ((currentPage - 1) * casesPerPage + index);
                     return (
                       <InternalCaseRow

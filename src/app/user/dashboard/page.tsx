@@ -249,11 +249,26 @@ export default function UserDashboardPage() {
       if (deliveryData.deliveryCases) {
         deliveryData.deliveryCases.forEach((case_: any) => {
           // Format products for delivery cases
-          const productsInfo = case_.products && case_.products.length > 0 
-            ? case_.products.map((product: any) => 
+          let productsInfo = case_.description;
+          
+          if (case_.products && case_.products.length > 0) {
+            // Handle both array and JSON string formats
+            let products = case_.products;
+            if (typeof products === 'string') {
+              try {
+                products = JSON.parse(products);
+              } catch (e) {
+                console.error('Error parsing products JSON:', e);
+                products = [];
+              }
+            }
+            
+            if (Array.isArray(products) && products.length > 0) {
+              productsInfo = products.map((product: any) => 
                 `**${product.name}** | SL: ${product.quantity} | Mã: ${product.code || product.serialNumber || ''}`
-              ).join('\n')
-            : case_.description;
+              ).join('\n');
+            }
+          }
 
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
 
@@ -281,11 +296,26 @@ export default function UserDashboardPage() {
       if (receivingData.receivingCases) {
         receivingData.receivingCases.forEach((case_: any) => {
           // Format products for receiving cases
-          const productsInfo = case_.products && case_.products.length > 0 
-            ? case_.products.map((product: any) => 
+          let productsInfo = case_.description;
+          
+          if (case_.products && case_.products.length > 0) {
+            // Handle both array and JSON string formats
+            let products = case_.products;
+            if (typeof products === 'string') {
+              try {
+                products = JSON.parse(products);
+              } catch (e) {
+                console.error('Error parsing products JSON:', e);
+                products = [];
+              }
+            }
+            
+            if (Array.isArray(products) && products.length > 0) {
+              productsInfo = products.map((product: any) => 
                 `**${product.name}** | SL: ${product.quantity} | Mã: ${product.code || product.serialNumber || ''}`
-              ).join('\n')
-            : case_.description;
+              ).join('\n');
+            }
+          }
 
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
 
@@ -416,7 +446,9 @@ export default function UserDashboardPage() {
 
     // Apply tab filter first
     if (activeTab === 'current') {
-      // Show only cases from today with active status (received or in progress)
+      // Show cases that are either:
+      // 1. Not completed and not cancelled (active cases)
+      // 2. OR cases that start today (regardless of status)
       filtered = filtered.filter(case_ => {
         const caseStatus = case_.status.toUpperCase();
         const caseDate = new Date(case_.startDate);
@@ -425,10 +457,11 @@ export default function UserDashboardPage() {
         // Check if case is from today
         const isToday = caseDate.toDateString() === today.toDateString();
         
-        // Check if case has active status (received or in progress)
-        const isActiveStatus = ['RECEIVED', 'REPORTED', 'IN_PROGRESS', 'INVESTIGATING', 'PROCESSING', 'TIẾP NHẬN', 'ĐANG XỬ LÝ'].includes(caseStatus);
+        // Check if case is not completed and not cancelled (active cases)
+        const isActiveStatus = !['COMPLETED', 'RESOLVED', 'HOÀN THÀNH', 'CANCELLED', 'HỦY'].includes(caseStatus);
         
-        return isToday && isActiveStatus;
+        // Show if: (not completed and not cancelled) OR (starts today)
+        return isActiveStatus || isToday;
       });
     }
     // For 'all' tab, show all cases (no additional filtering)
@@ -602,7 +635,7 @@ export default function UserDashboardPage() {
           Dashboard Tổng Quan Cases
         </h1>
         <p className="text-gray-600 mt-2">
-          Tổng hợp tất cả các case: nội bộ, giao hàng, nhận hàng, bảo trì, sự cố, bảo hành. Tab "Cases hiện tại" hiển thị cases hôm nay chưa hoàn thành.
+          Tổng hợp tất cả các case: nội bộ, giao hàng, nhận hàng, bảo trì, sự cố, bảo hành. Tab "Cases hiện tại" hiển thị cases chưa hoàn thành/hủy và cases bắt đầu hôm nay.
         </p>
       </div>
 
@@ -629,8 +662,8 @@ export default function UserDashboardPage() {
                     const caseDate = new Date(c.startDate);
                     const today = new Date();
                     const isToday = caseDate.toDateString() === today.toDateString();
-                    const isActiveStatus = ['RECEIVED', 'REPORTED', 'IN_PROGRESS', 'INVESTIGATING', 'PROCESSING', 'TIẾP NHẬN', 'ĐANG XỬ LÝ'].includes(status);
-                    return isToday && isActiveStatus;
+                    const isActiveStatus = !['COMPLETED', 'RESOLVED', 'HOÀN THÀNH', 'CANCELLED', 'HỦY'].includes(status);
+                    return isActiveStatus || isToday;
                   }).length}
                 </span>
               </div>
@@ -925,7 +958,7 @@ export default function UserDashboardPage() {
                 Hiển thị: <span className="font-semibold text-blue-600">{startIndex + 1}-{Math.min(endIndex, filteredCases.length)}</span> / <span className="font-semibold text-gray-600">{filteredCases.length}</span> cases (trang {currentPage}/{totalPages})
                 {activeTab === 'current' && (
                   <span className="ml-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
-                    Chỉ hiển thị cases hôm nay chưa hoàn thành
+                    Hiển thị cases chưa hoàn thành/hủy và cases bắt đầu hôm nay
                   </span>
                 )}
               </p>
@@ -1090,11 +1123,11 @@ export default function UserDashboardPage() {
               <FileText className="h-8 w-8 text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {activeTab === 'current' ? 'Không có case nào hôm nay' : 'Không tìm thấy case nào'}
+              {activeTab === 'current' ? 'Không có case hiện tại' : 'Không tìm thấy case nào'}
             </h3>
             <p className="text-gray-500">
               {activeTab === 'current' 
-                ? 'Không có case nào được tạo hôm nay hoặc tất cả cases hôm nay đã hoàn thành. Chuyển sang tab "Tất cả cases" để xem toàn bộ.'
+                ? 'Không có case nào chưa hoàn thành/hủy hoặc bắt đầu hôm nay. Chuyển sang tab "Tất cả cases" để xem toàn bộ.'
                 : 'Thử thay đổi bộ lọc để xem thêm kết quả'
               }
             </p>

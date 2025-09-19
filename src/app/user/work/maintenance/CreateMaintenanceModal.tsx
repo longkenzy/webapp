@@ -37,6 +37,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
 
   // User evaluation categories
   const userCategories = [
@@ -49,21 +50,43 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
+
+  const fetchCurrentEmployee = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/basic-info');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.employee) {
+          setCurrentEmployee({
+            id: data.employee.id,
+            fullName: data.employee.fullName,
+            position: data.employee.position,
+            department: data.employee.department,
+            companyEmail: data.employee.companyEmail
+          });
+        } else {
+          setCurrentEmployee({
+            id: data.id,
+            fullName: data.name || '',
+            position: '',
+            department: '',
+            companyEmail: data.email || ''
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching current employee:', error);
+    }
+  }, []);
   const [formData, setFormData] = useState({
+    customerTitle: 'Anh', // Default title
+    customerName: '',
     handler: '',
     maintenanceType: '',
-    customerName: '',
     customer: '',
     title: '',
     description: '',
-    startDate: new Date().toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    }),
+    startDate: new Date().toISOString().slice(0, 16),
     endDate: '',
     status: 'RECEIVED',
     notes: '',
@@ -120,18 +143,26 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
 
   const fetchMaintenanceTypes = useCallback(async () => {
     try {
-      const response = await fetch('/api/maintenance-types?isActive=true', {
+      console.log('Fetching maintenance types...');
+      const response = await fetch('/api/maintenance-types', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=300',
         },
       });
       
+      console.log('Maintenance types response status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Maintenance types API error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const result = await response.json();
+      console.log('Maintenance types response data:', result);
+      console.log('Maintenance types data array:', result.data);
+      console.log('Setting maintenance types to:', result.data || []);
       setMaintenanceTypes(result.data || []);
     } catch (error) {
       console.error('Error fetching maintenance types:', error);
@@ -144,30 +175,23 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
 
   const resetForm = useCallback(() => {
     setFormData({
+      customerTitle: 'Anh',
+      customerName: '',
       handler: '',
       maintenanceType: '',
-      customerName: '',
       customer: '',
       title: '',
       description: '',
-      startDate: new Date().toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      }),
+      startDate: new Date().toISOString().slice(0, 16),
       endDate: '',
       status: 'RECEIVED',
       notes: '',
-      // User self-assessment fields
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
       urgencyLevel: '',
       form: 'Onsite',
-      formScore: '2' // Default for Onsite
+      formScore: '2'
     });
     setCustomerSearch('');
     setShowCustomerDropdown(false);
@@ -183,31 +207,29 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Fetch all data in parallel for better performance
-      Promise.all([
-        fetchEmployees(),
-        fetchPartners(),
-        fetchMaintenanceTypes(),
-        fetchConfigs()
-      ]).catch(error => {
-        console.error('Error fetching modal data:', error);
-      });
+      fetchCurrentEmployee();
+      fetchEmployees();
+      fetchPartners();
+      fetchMaintenanceTypes();
+      // Refresh evaluation configs to get latest options
+      fetchConfigs();
     }
-  }, [isOpen, fetchEmployees, fetchPartners, fetchMaintenanceTypes, fetchConfigs]);
+  }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchMaintenanceTypes, fetchConfigs]);
 
-  // Auto-fill handler with current user when employees are loaded
+  // Debug maintenance types
   useEffect(() => {
-    if (employees.length > 0 && session?.user?.email) {
-      // Find current user in employees list
-      const currentUser = employees.find(emp => emp.companyEmail === session.user.email);
-      if (currentUser) {
-        setFormData(prev => ({
-          ...prev,
-          handler: currentUser.id
-        }));
-      }
+    console.log('Maintenance types state changed:', maintenanceTypes);
+  }, [maintenanceTypes]);
+
+  // Auto-select current employee when both currentEmployee and employees are loaded
+  useEffect(() => {
+    if (currentEmployee && employees.length > 0 && formData.handler === '') {
+      setFormData(prev => ({
+        ...prev,
+        handler: currentEmployee.id
+      }));
     }
-  }, [employees, session?.user?.email]);
+  }, [currentEmployee, employees, formData.handler]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -291,8 +313,28 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
     e.preventDefault();
     
     // Validate required fields
+    if (!formData.customerName.trim()) {
+      toast.error('Vui lòng nhập tên khách hàng!');
+      return;
+    }
+
+    if (!formData.handler) {
+      toast.error('Vui lòng chọn người xử lý!');
+      return;
+    }
+
     if (!formData.maintenanceType) {
       toast.error('Vui lòng chọn loại bảo trì!');
+      return;
+    }
+
+    if (!formData.title.trim()) {
+      toast.error('Vui lòng nhập tiêu đề bảo trì!');
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      toast.error('Vui lòng nhập mô tả bảo trì!');
       return;
     }
     
@@ -312,23 +354,27 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
     
     try {
       // Prepare data for API
+      const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
+      
       const maintenanceData = {
         title: formData.title,
         description: formData.description,
+        customerName: fullCustomerName,
+        reporterId: session?.user?.id,
         handlerId: formData.handler,
-        maintenanceTypeId: formData.maintenanceType, // Now sending the ID instead of enum
-        customerName: formData.customerName,
+        maintenanceTypeId: formData.maintenanceType, // Send the ID instead of the name
         customerId: formData.customer || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: new Date(formData.startDate).toISOString(),
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
-        notes: formData.notes || null,
-        // User self-assessment data
-        userDifficultyLevel: formData.difficultyLevel,
-        userEstimatedTime: formData.estimatedTime,
-        userImpactLevel: formData.impactLevel,
-        userUrgencyLevel: formData.urgencyLevel,
-        userFormScore: formData.formScore
+        notes: formData.notes,
+        // User assessment fields
+        userDifficultyLevel: formData.difficultyLevel ? parseInt(formData.difficultyLevel) : null,
+        userEstimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : null,
+        userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
+        userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
+        userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
+        userAssessmentDate: new Date().toISOString()
       };
 
       console.log('=== Submitting Maintenance Case ===');
@@ -484,16 +530,22 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                       onChange={(e) => handleInputChange('maintenanceType', e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                       required
-                      disabled={maintenanceTypes.length === 0}
+                      disabled={loading}
                     >
                       <option value="">
-                        {maintenanceTypes.length > 0 ? 'Chọn loại bảo trì' : 'Đang tải loại bảo trì...'}
+                        {loading ? 'Đang tải...' : 'Chọn loại bảo trì'}
                       </option>
-                      {maintenanceTypes.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.name}
+                      {maintenanceTypes.length > 0 ? (
+                        maintenanceTypes.map((type) => (
+                          <option key={type.id} value={type.id}>
+                            {type.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>
+                          {loading ? 'Đang tải...' : 'Không có loại bảo trì nào'}
                         </option>
-                      ))}
+                      )}
                     </select>
                   </div>
                 </div>
@@ -502,6 +554,31 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600 flex items-center h-5">
                       <span className="w-24">Khách hàng</span>
+                      <span className="ml-1 w-2"></span>
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={formData.customerTitle}
+                        onChange={(e) => handleInputChange('customerTitle', e.target.value)}
+                        className="w-20 px-2 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      >
+                        <option value="Anh">Anh</option>
+                        <option value="Chị">Chị</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={formData.customerName}
+                        onChange={(e) => handleInputChange('customerName', e.target.value)}
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                        placeholder="Nhập tên khách hàng..."
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                      <span className="w-24">Tên công ty</span>
                       <span className="ml-1 w-2"></span>
                     </label>
                     <div className="relative customer-dropdown-container">
@@ -514,7 +591,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                         placeholder="Tìm kiếm khách hàng..."
                       />
                       {showCustomerDropdown && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                           {filteredPartners.length > 0 ? (
                             filteredPartners.map((partner) => (
                               <div
@@ -522,8 +599,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                                 onClick={() => handleCustomerSelect(partner.id)}
                                 className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
                               >
-                                <div className="font-medium">{partner.fullCompanyName}</div>
-                                <div className="text-gray-500 text-xs">{partner.shortName}</div>
+                                <div className="font-medium">{partner.shortName}</div>
+                                <div className="text-gray-500 text-xs">{partner.fullCompanyName}</div>
                               </div>
                             ))
                           ) : (
@@ -534,21 +611,6 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                      <span className="w-24">Tên khách hàng</span>
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.customerName}
-                      onChange={(e) => handleInputChange('customerName', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      placeholder="Nhập tên khách hàng"
-                      required
-                    />
                   </div>
                 </div>
               </div>
@@ -640,7 +702,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
                   <div className="p-1.5 bg-yellow-100 rounded-md">
-                    <CheckCircle className="h-4 w-4 text-yellow-600" />
+                    <Settings className="h-4 w-4 text-yellow-600" />
                   </div>
                   <h3 className="text-sm font-semibold text-yellow-700">Đánh giá của User</h3>
                 </div>
@@ -772,13 +834,13 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
               </div>
             </div>
 
-            {/* Section 5: Trạng thái & Ghi chú */}
+            {/* Section 5: Trạng thái */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-gray-100 rounded-md">
-                  <CheckCircle className="h-4 w-4 text-gray-600" />
+                <div className="p-1.5 bg-orange-100 rounded-md">
+                  <CheckCircle className="h-4 w-4 text-orange-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Trạng thái & Ghi chú</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Trạng thái</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -817,21 +879,31 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
             </div>
           </div>
 
-          {/* Compact Form Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+          {/* Submit Button */}
+          <div className="flex justify-end pt-4 border-t border-gray-200 mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="mr-3 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-sm font-medium flex items-center"
+              disabled={loading}
+              className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-600 to-amber-600 rounded-md hover:from-orange-700 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center"
             >
-              <Wrench className="h-4 w-4 mr-2" />
-              Tạo Case Bảo Trì
+              {loading ? (
+                <>
+                  <RefreshCw className="animate-spin h-4 w-4 mr-2" />
+                  Đang tạo...
+                </>
+              ) : (
+                <>
+                  <Wrench className="h-4 w-4 mr-2" />
+                  Tạo Case
+                </>
+              )}
             </button>
           </div>
         </form>

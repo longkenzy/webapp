@@ -1102,69 +1102,90 @@ export default function UserDashboardPage() {
         )}
 
         {/* Pagination */}
-        {filteredCases.length > 0 && totalPages > 1 && (
-          <div className="bg-white px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center text-sm text-gray-700">
-                <span>
-                  Hiển thị {startIndex + 1} đến {Math.min(endIndex, filteredCases.length)} trong tổng số {filteredCases.length} kết quả
-                </span>
+        {totalPages > 1 && (
+          <div className="bg-white px-2 sm:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sau
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Hiển thị{' '}
+                  <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
+                  {' '}đến{' '}
+                  <span className="font-medium">
+                    {Math.min(currentPage * itemsPerPage, filteredCases.length)}
+                  </span>
+                  {' '}của{' '}
+                  <span className="font-medium">{filteredCases.length}</span>
+                  {' '}kết quả
+                </p>
               </div>
-              
-              <div className="flex items-center space-x-2">
-                {/* Previous Button */}
-                <button
-                  onClick={goToPreviousPage}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  Trước
-                </button>
-                
-                {/* Page Numbers */}
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    // Show first page, last page, current page, and pages around current page
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => goToPage(page)}
-                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    } else if (
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
-                    ) {
-                      return (
-                        <span key={page} className="px-2 text-gray-500">
-                          ...
-                        </span>
-                      );
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Trước</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
                     }
-                    return null;
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => goToPage(pageNum)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          pageNum === currentPage
+                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
                   })}
-                </div>
-                
-                {/* Next Button */}
-                <button
-                  onClick={goToNextPage}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  Sau
-                </button>
+                  
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Sau</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
               </div>
             </div>
           </div>

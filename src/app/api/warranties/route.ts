@@ -145,55 +145,46 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 100); // Max 100 items
-    const status = searchParams.get("status");
-    const warrantyType = searchParams.get("warrantyType");
-    const customerId = searchParams.get("customerId");
-
-    // Build where clause
-    const where: any = {};
-    
-    if (status) {
-      where.status = status;
-    }
-    if (warrantyType) {
-      where.warrantyType = {
-        name: warrantyType
-      };
-    }
-    if (customerId) {
-      where.customerId = customerId;
-    }
-
-    // Get warranties from database with pagination
-    const skip = (page - 1) * limit;
-    
-    const [warranties, total] = await Promise.all([
-      db.warranty.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          reporter: { select: { id: true, fullName: true, position: true } },
-          handler: { select: { id: true, fullName: true, position: true } },
-          warrantyType: { select: { id: true, name: true } },
-          customer: { select: { id: true, fullCompanyName: true, shortName: true } }
+    // Get all warranties from database (client-side pagination)
+    const warranties = await db.warranty.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        reporter: { 
+          select: { 
+            id: true, 
+            fullName: true, 
+            position: true,
+            department: true
+          } 
+        },
+        handler: { 
+          select: { 
+            id: true, 
+            fullName: true, 
+            position: true,
+            department: true
+          } 
+        },
+        warrantyType: { 
+          select: { 
+            id: true, 
+            name: true 
+          } 
+        },
+        customer: { 
+          select: { 
+            id: true, 
+            fullCompanyName: true, 
+            shortName: true,
+            contactPerson: true,
+            contactPhone: true
+          } 
         }
-      }),
-      db.warranty.count({ where })
-    ]);
+      }
+    });
     
     const response = NextResponse.json({
-      data: warranties,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
+      data: warranties
     });
 
     // Add caching headers for better performance

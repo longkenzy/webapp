@@ -291,7 +291,7 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
             </div>
           )}
 
-          {/* Case Info */}
+          {/* Case Info Display */}
           <div className="bg-gray-50 rounded-lg p-4 space-y-3">
             <h3 className="font-medium text-gray-900">Thông tin Case</h3>
             <div className="space-y-2 text-sm">
@@ -356,110 +356,124 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
             </div>
           </div>
 
-          {/* Product Details */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          {/* Products */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-gray-700">
-                Chi tiết sản phẩm giao hàng
+                <Package className="inline h-4 w-4 mr-1" />
+                Chi tiết hàng hóa
               </label>
               <button
                 type="button"
                 onClick={addProduct}
-                className="flex items-center space-x-1 px-3 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors text-sm"
+                className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 <Plus className="h-4 w-4" />
                 <span>Thêm sản phẩm</span>
               </button>
             </div>
             
-            <div className="space-y-3">
-              {products.map((product, index) => (
-                <div key={product.id} className="grid grid-cols-12 gap-3 items-end p-4 bg-gray-50 rounded-lg">
-                  <div className="col-span-4">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Tên sản phẩm</label>
-                    <input
-                      type="text"
-                      value={product.name}
-                      onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-                      placeholder="Nhập tên sản phẩm"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Mã sản phẩm</label>
-                    <input
-                      type="text"
-                      value={product.code}
-                      onChange={(e) => handleProductChange(index, 'code', e.target.value)}
-                      placeholder="Mã SP"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Số lượng</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={product.quantity}
-                      onChange={(e) => handleProductChange(index, 'quantity', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    />
-                  </div>
-                  <div className="col-span-3">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">S/N</label>
-                    <input
-                      type="text"
-                      value={product.serialNumber}
-                      onChange={(e) => handleProductChange(index, 'serialNumber', e.target.value)}
-                      placeholder="Số serial"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                    />
-                  </div>
-                  <div className="col-span-1">
-                    {products.length > 1 && (
+            {products.length > 0 ? (
+              <div className="space-y-3">
+                {products.map((product, index) => (
+                  <div key={product.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-medium text-gray-900">Sản phẩm {index + 1}</h4>
                       <button
                         type="button"
                         onClick={() => removeProduct(index)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        title="Xóa sản phẩm"
+                        className="text-red-600 hover:text-red-800 transition-colors"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
-                    )}
+                    </div>
+                    
+                    <div className="grid grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Tên sản phẩm *
+                        </label>
+                        <input
+                          type="text"
+                          value={product.name}
+                          onChange={(e) => handleProductChange(index, 'name', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Nhập tên sản phẩm"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Mã sản phẩm
+                        </label>
+                        <input
+                          type="text"
+                          value={product.code}
+                          onChange={(e) => handleProductChange(index, 'code', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Nhập mã sản phẩm"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Số lượng *
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={product.quantity}
+                          onChange={(e) => handleProductChange(index, 'quantity', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Nhập số lượng"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          S/N
+                        </label>
+                        <input
+                          type="text"
+                          value={product.serialNumber}
+                          onChange={(e) => handleProductChange(index, 'serialNumber', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Nhập S/N"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                <Package className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm text-gray-500">Chưa có sản phẩm nào</p>
+                <p className="text-xs text-gray-400 mt-1">Nhấn &quot;Thêm sản phẩm&quot; để bắt đầu</p>
+              </div>
+            )}
           </div>
 
 
 
 
-          {/* Form Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+          {/* Buttons */}
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center space-x-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {loading ? (
-                <>
-                  <Calendar className="h-4 w-4 animate-spin" />
-                  <span>Đang cập nhật...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Cập nhật Case Giao Hàng</span>
-                </>
-              )}
+              {loading ? 'Đang cập nhật...' : 'Cập nhật'}
             </button>
           </div>
         </form>

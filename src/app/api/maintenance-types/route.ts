@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
+// Test db import
+console.log("DB import check:", typeof db);
+console.log("DB maintenanceCaseType check:", typeof db.maintenanceCaseType);
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
@@ -9,12 +13,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    console.log("Fetching maintenance types from database...");
+    console.log("Database URL:", process.env.DATABASE_URL ? "Set" : "Not set");
+    
+    // Test database connection first
+    try {
+      const testQuery = await db.$queryRaw`SELECT COUNT(*) as count FROM "MaintenanceCaseType"`;
+      console.log("Database test query result:", testQuery);
+    } catch (testError) {
+      console.error("Database connection test failed:", testError);
+    }
+    
+    // Get all maintenance types first (without where clause)
+    const allTypes = await db.maintenanceCaseType.findMany();
+    console.log("All maintenance types (no filter):", allTypes);
+    
     // Get all active maintenance types from database
     const maintenanceTypes = await db.maintenanceCaseType.findMany({
       where: { isActive: true },
       orderBy: { name: 'asc' },
-      select: { id: true, name: true, description: true }
+      select: { id: true, name: true, description: true, isActive: true }
     });
+
+    console.log("Found maintenance types:", maintenanceTypes);
+    console.log("Maintenance types count:", maintenanceTypes.length);
 
     const response = NextResponse.json({ data: maintenanceTypes });
     

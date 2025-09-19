@@ -68,7 +68,7 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/deployment-cases', {
+      const response = await fetch('/api/deployment-cases?page=1&limit=100', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',

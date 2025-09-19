@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Filter, MoreVertical, Edit, RefreshCw, X, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Edit, RefreshCw, X, AlertTriangle, Check } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import CreateIncidentModal from './CreateIncidentModal';
 import EditIncidentModal from './EditIncidentModal';
 
@@ -62,6 +63,11 @@ export default function IncidentPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const [closingCaseId, setClosingCaseId] = useState<string | null>(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [casesPerPage] = useState(10);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -78,7 +84,7 @@ export default function IncidentPage() {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/incidents', {
+      const response = await fetch('/api/incidents?page=1&limit=100', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
@@ -90,6 +96,7 @@ export default function IncidentPage() {
       if (response.ok) {
         const data = await response.json();
         console.log('Incidents API response:', data);
+        console.log('Number of incidents fetched:', data.data?.length || 0);
         setIncidents(data.data || []);
       } else {
         console.error('Failed to fetch incidents:', response.status, response.statusText);
@@ -159,6 +166,43 @@ export default function IncidentPage() {
     );
   };
 
+  const handleCloseCase = async (caseId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn đóng case này?')) {
+      return;
+    }
+
+    try {
+      setClosingCaseId(caseId);
+      
+      const response = await fetch(`/api/incidents/${caseId}/close`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        toast.success('Case đã được đóng thành công!');
+        // Optimistic update - update the case status locally
+        setIncidents(prevIncidents => 
+          prevIncidents.map(incident => 
+            incident.id === caseId 
+              ? { ...incident, status: 'COMPLETED', endDate: new Date().toISOString() }
+              : incident
+          )
+        );
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Có lỗi xảy ra khi đóng case');
+      }
+    } catch (error) {
+      console.error('Error closing case:', error);
+      toast.error('Có lỗi xảy ra khi đóng case');
+    } finally {
+      setClosingCaseId(null);
+    }
+  };
+
   // Load incidents and customers on component mount
   useEffect(() => {
     if (status === 'authenticated') {
@@ -223,6 +267,48 @@ export default function IncidentPage() {
     return matchesSearch && matchesHandler && 
            matchesIncidentType && matchesCustomer && matchesStatus && matchesDateRange;
   });
+
+  // Pagination logic
+  const totalCases = filteredIncidents.length;
+  const totalPages = Math.ceil(totalCases / casesPerPage);
+  const startIndex = (currentPage - 1) * casesPerPage;
+  const endIndex = startIndex + casesPerPage;
+  const paginatedIncidents = filteredIncidents.slice(startIndex, endIndex);
+
+  // Debug pagination
+  console.log('Pagination Debug:', {
+    totalIncidents: incidents.length,
+    filteredIncidents: filteredIncidents.length,
+    totalCases,
+    totalPages,
+    currentPage,
+    casesPerPage,
+    paginatedCount: paginatedIncidents.length
+  });
+
+  // Pagination functions
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -536,8 +622,7 @@ export default function IncidentPage() {
                               onClick={() => handleCustomerSelect(customer.id)}
                               className="px-3 py-2 hover:bg-purple-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
                             >
-                              <div className="font-medium text-gray-900">{customer.shortName}</div>
-                              <div className="text-xs text-gray-500">{customer.fullCompanyName}</div>
+                              <div className="font-normal text-gray-900">{customer.shortName}</div>
                               {customer.contactPerson && (
                                 <div className="text-xs text-gray-400">Liên hệ: {customer.contactPerson}</div>
                               )}
@@ -681,10 +766,10 @@ export default function IncidentPage() {
               {/* Results Summary */}
               <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                 <div className="text-sm text-gray-600">
-                  Hiển thị <span className="font-medium text-gray-900">{filteredIncidents.length}</span> trong tổng số <span className="font-medium text-gray-900">{incidents.length}</span> sự cố
+                  Hiển thị <span className="font-medium text-gray-900">{startIndex + 1}-{Math.min(endIndex, totalCases)}</span> trong tổng số <span className="font-medium text-gray-900">{totalCases}</span> sự cố
                   {hasActiveFilters() && (
                     <span className="ml-2 text-red-600 font-medium">
-                      (đã lọc)
+                      (đã lọc từ {incidents.length} sự cố)
                     </span>
                   )}
                 </div>
@@ -735,13 +820,13 @@ export default function IncidentPage() {
                       </div>
                     </td>
                   </tr>
-                ) : filteredIncidents.length > 0 ? (
-                  filteredIncidents.map((incident, index) => (
+                ) : paginatedIncidents.length > 0 ? (
+                  paginatedIncidents.map((incident, index) => (
                     <tr key={incident.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       {/* STT */}
                       <td className="px-2 py-1 text-center w-16">
                         <span className="text-sm font-medium text-slate-600">
-                          {filteredIncidents.length - index}
+                          {totalCases - startIndex - index}
                         </span>
                       </td>
                       
@@ -796,10 +881,16 @@ export default function IncidentPage() {
                       
                       {/* Thời gian */}
                       <td className="px-2 py-1 w-36">
-                        <div className="text-sm text-slate-700">
-                          <div>Bắt đầu: {formatDate(incident.startDate)}</div>
+                        <div className="text-xs space-y-1">
+                          <div className="flex items-center">
+                            <span className="text-green-600 font-medium">Bắt đầu:</span>
+                            <span className="text-green-600 ml-1">{formatDate(incident.startDate)}</span>
+                          </div>
                           {incident.endDate && (
-                            <div className="text-slate-500">Kết thúc: {formatDate(incident.endDate)}</div>
+                            <div className="flex items-center">
+                              <span className="text-red-600 font-medium">Kết thúc:</span>
+                              <span className="text-red-600 ml-1">{formatDate(incident.endDate)}</span>
+                            </div>
                           )}
                         </div>
                       </td>
@@ -807,13 +898,30 @@ export default function IncidentPage() {
                       {/* Hành động */}
                       <td className="px-2 py-1 w-20 text-center">
                         <div className="flex items-center justify-center space-x-1">
-                          <button 
-                            onClick={() => handleOpenEditModal(incident)}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
+                          {incident.status !== 'COMPLETED' && (
+                            <button 
+                              onClick={() => handleOpenEditModal(incident)}
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
+                              title="Chỉnh sửa"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          )}
+                          
+                          {incident.status !== 'COMPLETED' && (
+                            <button
+                              onClick={() => handleCloseCase(incident.id)}
+                              disabled={closingCaseId === incident.id}
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Đóng case"
+                            >
+                              {closingCaseId === incident.id ? (
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Check className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -832,7 +940,93 @@ export default function IncidentPage() {
               </tbody>
             </table>
           </div>
+          
         </div>
+
+        {/* Pagination */}
+        {totalCases > 0 && (
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={goToPrevPage}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sau
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Hiển thị <span className="font-medium">{startIndex + 1}</span> đến{' '}
+                  <span className="font-medium">{Math.min(endIndex, totalCases)}</span> trong tổng số{' '}
+                  <span className="font-medium">{totalCases}</span> kết quả
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {(() => {
+                    const pages = [];
+                    const maxVisiblePages = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                    
+                    if (endPage - startPage + 1 < maxVisiblePages) {
+                      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                    }
+                    
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(
+                        <button
+                          key={i}
+                          onClick={() => goToPage(i)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            i === currentPage
+                              ? 'z-10 bg-red-50 border-red-500 text-red-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {i}
+                        </button>
+                      );
+                    }
+                    return pages;
+                  })()}
+                  
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Incident Modal */}

@@ -50,8 +50,7 @@ export async function GET(request: NextRequest) {
     // Fetch delivery cases from new DeliveryCase model
     const deliveryCases = await db.deliveryCase.findMany({
       where: {
-        ...where,
-        form: 'Giao hàng'
+        ...where
       },
       include: {
         requester: {

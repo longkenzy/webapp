@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Filter, MoreVertical, Eye, Edit, RefreshCw, X, Shield } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Eye, Edit, RefreshCw, X, Shield, Check } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import CreateWarrantyModal from './CreateWarrantyModal';
 import EditWarrantyModal from './EditWarrantyModal';
 import ViewWarrantyModal from './ViewWarrantyModal';
@@ -62,6 +63,13 @@ export default function WarrantyPage() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+  const [closingCaseId, setClosingCaseId] = useState<string | null>(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [casesPerPage] = useState(10);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -169,6 +177,43 @@ export default function WarrantyPage() {
     );
   };
 
+  // Handle close case
+  const handleCloseCase = async (caseId: string) => {
+    if (!confirm('Bạn có chắc chắn muốn đóng case này?')) {
+      return;
+    }
+
+    try {
+      setClosingCaseId(caseId);
+      
+      const response = await fetch(`/api/warranties/${caseId}/close`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        toast.success('Case đã được đóng thành công!');
+        setWarranties(prevCases => 
+          prevCases.map(warranty => 
+            warranty.id === caseId 
+              ? { ...warranty, status: 'COMPLETED', endDate: new Date().toISOString() }
+              : warranty
+          )
+        );
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Có lỗi xảy ra khi đóng case');
+      }
+    } catch (error) {
+      console.error('Error closing case:', error);
+      toast.error('Có lỗi xảy ra khi đóng case');
+    } finally {
+      setClosingCaseId(null);
+    }
+  };
+
   // Load warranties and customers on component mount
   useEffect(() => {
     if (status === 'authenticated') {
@@ -176,6 +221,54 @@ export default function WarrantyPage() {
       fetchCustomers();
     }
   }, [status, fetchWarranties, fetchCustomers]);
+
+  // Handle click outside customer dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.customer-dropdown-container')) {
+        setIsCustomerDropdownOpen(false);
+      }
+    };
+
+    if (isCustomerDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCustomerDropdownOpen]);
+
+  // Handle customer selection
+  const handleCustomerSelect = (customerId: string) => {
+    setFilters(prev => ({ ...prev, customer: customerId }));
+    setIsCustomerDropdownOpen(false);
+    setCustomerSearchTerm('');
+  };
+
+  // Clear customer filter
+  const clearCustomerFilter = () => {
+    setFilters(prev => ({ ...prev, customer: '' }));
+    setCustomerSearchTerm('');
+  };
+
+  // Get selected customer name for display
+  const getSelectedCustomerName = () => {
+    if (!filters.customer) return '';
+    const customer = customers.find(c => c.id === filters.customer);
+    return customer ? `${customer.shortName} (${customer.fullCompanyName})` : '';
+  };
+
+  // Filter customers based on search term
+  const filteredCustomers = customers.filter(customer => {
+    const searchLower = customerSearchTerm.toLowerCase();
+    return (
+      customer.fullCompanyName.toLowerCase().includes(searchLower) ||
+      customer.shortName.toLowerCase().includes(searchLower) ||
+      (customer.contactPerson && customer.contactPerson.toLowerCase().includes(searchLower))
+    );
+  });
 
   // Filter warranties based on search term and filters
   const filteredWarranties = warranties
@@ -222,6 +315,35 @@ export default function WarrantyPage() {
              matchesWarrantyType && matchesCustomer && matchesStatus && matchesDateRange;
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
+
+  // Pagination logic
+  const totalCases = filteredWarranties.length;
+  const totalPages = Math.ceil(totalCases / casesPerPage);
+  const startIndex = (currentPage - 1) * casesPerPage;
+  const endIndex = startIndex + casesPerPage;
+  const paginatedWarranties = filteredWarranties.slice(startIndex, endIndex);
+
+  // Pagination functions
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Reset to first page when search or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -422,8 +544,8 @@ export default function WarrantyPage() {
           </div>
 
           {/* Content */}
-          <div className="p-6">
-            <div className="space-y-4">
+          <div className="p-4">
+            <div className="space-y-3">
               {/* Search Section */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -446,13 +568,13 @@ export default function WarrantyPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Bộ lọc
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
                   {/* Người xử lý */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span>Người xử lý</span>
+                        <span>Xử lý</span>
                       </div>
                     </label>
                     <select
@@ -469,10 +591,10 @@ export default function WarrantyPage() {
 
                   {/* Loại bảo hành */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                        <span>Loại bảo hành</span>
+                        <span>Loại</span>
                       </div>
                     </label>
                     <select
@@ -488,31 +610,66 @@ export default function WarrantyPage() {
                   </div>
 
                   {/* Khách hàng */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                  <div className="relative customer-dropdown-container">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
                         <span>Khách hàng</span>
                       </div>
                     </label>
-                    <select
-                      value={filters.customer}
-                      onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả khách hàng</option>
-                      {customers.map(customer => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.fullCompanyName} ({customer.shortName})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Tìm kiếm khách hàng..."
+                        value={filters.customer ? getSelectedCustomerName() : customerSearchTerm}
+                        onChange={(e) => {
+                          setCustomerSearchTerm(e.target.value);
+                          if (filters.customer) {
+                            clearCustomerFilter();
+                          }
+                        }}
+                        onFocus={() => setIsCustomerDropdownOpen(true)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      />
+                      {filters.customer && (
+                        <button
+                          onClick={clearCustomerFilter}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Dropdown */}
+                    {isCustomerDropdownOpen && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                        {filteredCustomers.length > 0 ? (
+                          filteredCustomers.map(customer => (
+                            <div
+                              key={customer.id}
+                              onClick={() => handleCustomerSelect(customer.id)}
+                              className="px-3 py-2 hover:bg-purple-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+                            >
+                              <div className="font-normal text-gray-900">{customer.shortName}</div>
+                              {customer.contactPerson && (
+                                <div className="text-xs text-gray-400">Liên hệ: {customer.contactPerson}</div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-gray-500">
+                            Không tìm thấy khách hàng
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Trạng thái */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
                         <span>Trạng thái</span>
                       </div>
@@ -531,10 +688,10 @@ export default function WarrantyPage() {
 
                   {/* Từ ngày */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
-                        <span>Từ ngày</span>
+                        <span>Từ</span>
                       </div>
                     </label>
                     <input
@@ -547,10 +704,10 @@ export default function WarrantyPage() {
 
                   {/* Đến ngày */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
+                      <div className="flex items-center space-x-1">
                         <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
-                        <span>Đến ngày</span>
+                        <span>Đến</span>
                       </div>
                     </label>
                     <input
@@ -638,7 +795,9 @@ export default function WarrantyPage() {
               {/* Results Summary */}
               <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                 <div className="text-sm text-gray-600">
-                  Hiển thị <span className="font-medium text-gray-900">{filteredWarranties.length}</span> trong tổng số <span className="font-medium text-gray-900">{warranties.length}</span> case bảo hành
+                  Hiển thị <span className="font-medium text-gray-900">{startIndex + 1}</span> đến{' '}
+                  <span className="font-medium text-gray-900">{Math.min(endIndex, totalCases)}</span> trong tổng số{' '}
+                  <span className="font-medium text-gray-900">{totalCases}</span> kết quả
                   {hasActiveFilters() && (
                     <span className="ml-2 text-blue-600 font-medium">
                       (đã lọc)
@@ -692,13 +851,13 @@ export default function WarrantyPage() {
                       </div>
                     </td>
                   </tr>
-                ) : filteredWarranties.length > 0 ? (
-                  filteredWarranties.map((warranty, index) => (
+                ) : paginatedWarranties.length > 0 ? (
+                  paginatedWarranties.map((warranty, index) => (
                     <tr key={warranty.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                       {/* STT */}
                       <td className="px-2 py-1 text-center w-16">
                         <span className="text-sm font-medium text-slate-600">
-                          {filteredWarranties.length - index}
+                          {totalCases - startIndex - index}
                         </span>
                       </td>
                       
@@ -751,10 +910,16 @@ export default function WarrantyPage() {
                       
                       {/* Thời gian */}
                       <td className="px-2 py-1 w-36">
-                        <div className="text-sm text-slate-700">
-                          <div>Bắt đầu: {formatDate(warranty.startDate)}</div>
+                        <div className="text-xs space-y-1">
+                          <div className="flex items-center">
+                            <span className="text-green-600 font-medium">Bắt đầu:</span>
+                            <span className="text-green-600 ml-1">{formatDate(warranty.startDate)}</span>
+                          </div>
                           {warranty.endDate && (
-                            <div className="text-slate-500">Kết thúc: {formatDate(warranty.endDate)}</div>
+                            <div className="flex items-center">
+                              <span className="text-red-600 font-medium">Kết thúc:</span>
+                              <span className="text-red-600 ml-1">{formatDate(warranty.endDate)}</span>
+                            </div>
                           )}
                         </div>
                       </td>
@@ -762,13 +927,30 @@ export default function WarrantyPage() {
                       {/* Hành động */}
                       <td className="px-2 py-1 w-20 text-center">
                         <div className="flex items-center justify-center space-x-1">
-                          <button 
-                            onClick={() => handleOpenEditModal(warranty)}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
-                            title="Chỉnh sửa"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
+                          {warranty.status !== 'COMPLETED' && (
+                            <button 
+                              onClick={() => handleOpenEditModal(warranty)}
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
+                              title="Chỉnh sửa"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          )}
+                          
+                          {warranty.status !== 'COMPLETED' && (
+                            <button
+                              onClick={() => handleCloseCase(warranty.id)}
+                              disabled={closingCaseId === warranty.id}
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Đóng case"
+                            >
+                              {closingCaseId === warranty.id ? (
+                                <RefreshCw className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Check className="h-4 w-4" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -788,6 +970,91 @@ export default function WarrantyPage() {
             </table>
           </div>
         </div>
+
+        {/* Pagination */}
+        {totalCases > 0 && (
+          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={goToPrevPage}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sau
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Hiển thị <span className="font-medium">{startIndex + 1}</span> đến{' '}
+                  <span className="font-medium">{Math.min(endIndex, totalCases)}</span> trong tổng số{' '}
+                  <span className="font-medium">{totalCases}</span> kết quả
+                </p>
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {(() => {
+                    const pages = [];
+                    const maxVisiblePages = 5;
+                    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                    
+                    if (endPage - startPage + 1 < maxVisiblePages) {
+                      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                    }
+                    
+                    for (let i = startPage; i <= endPage; i++) {
+                      pages.push(
+                        <button
+                          key={i}
+                          onClick={() => goToPage(i)}
+                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            i === currentPage
+                              ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                          }`}
+                        >
+                          {i}
+                        </button>
+                      );
+                    }
+                    return pages;
+                  })()}
+                  
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create Warranty Modal */}
@@ -812,6 +1079,32 @@ export default function WarrantyPage() {
         isOpen={isViewModalOpen}
         onClose={handleCloseViewModal}
         warrantyData={selectedWarranty}
+      />
+
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            style: {
+              background: '#10B981',
+              color: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            style: {
+              background: '#EF4444',
+              color: '#fff',
+            },
+          },
+        }}
       />
     </div>
   );

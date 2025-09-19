@@ -110,9 +110,19 @@ export async function PUT(
       adminFormScore
     } = body;
 
+    // Get current case to validate dates
+    const currentCase = await db.deploymentCase.findUnique({
+      where: { id },
+      select: { startDate: true }
+    });
+
+    if (!currentCase) {
+      return NextResponse.json({ error: "Deployment case not found" }, { status: 404 });
+    }
+
     // Validate end date
-    if (endDate && startDate) {
-      const startDateObj = new Date(startDate);
+    if (endDate && endDate !== null && endDate !== '') {
+      const startDateObj = new Date(startDate || currentCase.startDate);
       const endDateObj = new Date(endDate);
       
       if (endDateObj <= startDateObj) {
@@ -144,7 +154,13 @@ export async function PUT(
     if (caseType !== undefined) updateData.caseType = caseType;
     if (form !== undefined) updateData.form = form;
     if (startDate !== undefined) updateData.startDate = new Date(startDate);
-    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (endDate !== undefined) {
+      if (endDate === null || endDate === '') {
+        updateData.endDate = null;
+      } else {
+        updateData.endDate = new Date(endDate);
+      }
+    }
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
     
@@ -159,6 +175,9 @@ export async function PUT(
     if (Object.keys(updateData).some(key => key.startsWith('admin'))) {
       updateData.adminAssessmentDate = new Date();
     }
+
+    // Always update the updatedAt timestamp
+    updateData.updatedAt = new Date();
 
     const deploymentCase = await db.deploymentCase.update({
       where: { id },

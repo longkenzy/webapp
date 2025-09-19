@@ -19,7 +19,7 @@ interface Employee {
 interface CreateDeploymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newCase: unknown) => void;
+  onSuccess?: (newCase: any) => void;
 }
 
 export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: CreateDeploymentModalProps) {
@@ -30,6 +30,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
 
   // User evaluation categories
   const userCategories = [
@@ -43,6 +44,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
   const [formData, setFormData] = useState({
+    customerTitle: 'Anh', // Default title
     customerName: '',
     handler: '',
     deploymentType: '',
@@ -82,6 +84,42 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
       setEmployees([]);
     }
   }, []);
+
+  const fetchCurrentEmployee = useCallback(async () => {
+    if (!session?.user?.email) return;
+    
+    try {
+      const response = await fetch('/api/user/basic-info');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('User basic info data:', data);
+        
+        // Transform the data to match Employee interface
+        if (data.employee) {
+          setCurrentEmployee({
+            id: data.employee.id,
+            fullName: data.employee.fullName,
+            position: data.employee.position,
+            department: data.employee.department,
+            companyEmail: data.employee.companyEmail || session.user.email
+          });
+        } else {
+          // Fallback to user data if no employee record
+          setCurrentEmployee({
+            id: data.id,
+            fullName: data.name || data.email,
+            position: 'Nhân viên',
+            department: data.department || 'Chưa xác định',
+            companyEmail: session.user.email
+          });
+        }
+      } else {
+        console.error('Failed to load user basic info:', response.status);
+      }
+    } catch (error) {
+      console.error('Error loading current employee:', error);
+    }
+  }, [session?.user?.email]);
 
   const fetchPartners = useCallback(async () => {
     try {
@@ -129,8 +167,9 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
 
   const resetForm = useCallback(() => {
     setFormData({
+      customerTitle: 'Anh',
       customerName: '',
-      handler: '',
+      handler: currentEmployee?.id || '',
       deploymentType: '',
       customer: '',
       title: '',
@@ -149,7 +188,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
     });
     setCustomerSearch('');
     setShowCustomerDropdown(false);
-  }, []);
+  }, [currentEmployee?.id]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -157,6 +196,16 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
       resetForm();
     }
   }, [isOpen, resetForm]);
+
+  // Auto-select current employee when both currentEmployee and employees are loaded
+  useEffect(() => {
+    if (currentEmployee && employees.length > 0 && formData.handler === '') {
+      setFormData(prev => ({
+        ...prev,
+        handler: currentEmployee.id
+      }));
+    }
+  }, [currentEmployee, employees, formData.handler]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -176,13 +225,14 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
+      fetchCurrentEmployee();
       fetchEmployees();
       fetchPartners();
       fetchDeploymentTypes();
       // Refresh evaluation configs to get latest options
       fetchConfigs();
     }
-  }, [isOpen, fetchEmployees, fetchPartners, fetchDeploymentTypes]);
+  }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchDeploymentTypes]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -241,7 +291,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
       ...prev,
       customer: partnerId
     }));
-    setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
+    setCustomerSearch(selectedPartner ? selectedPartner.shortName : '');
     setShowCustomerDropdown(false);
   };
 
@@ -288,13 +338,33 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
         return;
       }
 
+      // Validate required fields
+      if (!formData.handler) {
+        toast.error('Vui lòng chọn người xử lý!', {
+          duration: 3000,
+          position: 'top-right',
+        });
+        return;
+      }
+
+      if (!formData.customerName.trim()) {
+        toast.error('Vui lòng nhập tên khách hàng!', {
+          duration: 3000,
+          position: 'top-right',
+        });
+        return;
+      }
+
+      // Combine customer title and name
+      const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
+
       // Prepare data for API
       const deploymentData = {
         title: formData.title,
         description: formData.description,
-        customerName: formData.customerName,
+        customerName: fullCustomerName,
         reporterId: session?.user?.id, // Current user as reporter
-        handlerId: formData.handler,
+        handlerId: formData.handler, // Use selected handler
         deploymentTypeId: selectedDeploymentType.id,
         customerId: formData.customer || null,
         startDate: formData.startDate,
@@ -464,6 +534,31 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
                     <span className="w-24">Khách hàng</span>
                     <span className="ml-1 w-2"></span>
                   </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.customerTitle}
+                      onChange={(e) => handleInputChange('customerTitle', e.target.value)}
+                      className="w-20 px-2 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="Anh">Anh</option>
+                      <option value="Chị">Chị</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => handleInputChange('customerName', e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Nhập tên khách hàng..."
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-24">Tên công ty</span>
+                    <span className="ml-1 w-2"></span>
+                  </label>
                   <div className="relative customer-dropdown-container">
                     <input
                       type="text"
@@ -482,8 +577,8 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
                               onClick={() => handleCustomerSelect(partner.id)}
                               className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
                             >
-                              <div className="font-medium">{partner.fullCompanyName}</div>
-                              <div className="text-gray-500 text-xs">{partner.shortName}</div>
+                              <div className="font-medium">{partner.shortName}</div>
+                              <div className="text-gray-500 text-xs">{partner.fullCompanyName}</div>
                             </div>
                           ))
                         ) : (
@@ -496,20 +591,6 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Tên khách hàng</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.customerName}
-                    onChange={(e) => handleInputChange('customerName', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Nhập tên khách hàng"
-                    required
-                  />
-                </div>
               </div>
             </div>
 

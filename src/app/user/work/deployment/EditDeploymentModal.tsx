@@ -1,11 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { X, User, Rocket, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
-import { useEvaluationForm } from '@/hooks/useEvaluation';
-import { useEvaluation } from '@/contexts/EvaluationContext';
-import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
+import { useState, useEffect } from 'react';
+import { X, Rocket, Calendar, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -22,9 +18,17 @@ interface DeploymentCase {
   description: string;
   reporter: Employee;
   handler: Employee;
-  deploymentType: any;
+  deploymentType: {
+    id: string;
+    name: string;
+  };
   customerName: string;
-  customer?: any;
+  customer?: {
+    id: string;
+    shortName: string;
+    fullCompanyName: string;
+    contactPerson?: string;
+  };
   status: string;
   startDate: string;
   endDate?: string;
@@ -54,271 +58,43 @@ interface EditDeploymentModalProps {
   caseData: DeploymentCase | null;
 }
 
-export default function EditDeploymentModal({ isOpen, onClose, onSuccess, caseData }: EditDeploymentModalProps) {
-  const { data: session } = useSession();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [partners, setPartners] = useState<any[]>([]);
-  const [deploymentTypes, setDeploymentTypes] = useState<string[]>([]);
-  const [customerSearch, setCustomerSearch] = useState('');
-  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+export default function EditDeploymentModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  caseData
+}: EditDeploymentModalProps) {
   const [loading, setLoading] = useState(false);
-
-  // User evaluation categories
-  const userCategories = [
-    EvaluationCategory.DIFFICULTY,
-    EvaluationCategory.TIME,
-    EvaluationCategory.IMPACT,
-    EvaluationCategory.URGENCY,
-    EvaluationCategory.FORM,
-  ];
-
-  const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
-  const { fetchConfigs } = useEvaluation();
   const [formData, setFormData] = useState({
-    customerName: '',
-    handler: '',
-    deploymentType: '',
-    customer: '',
-    title: '',
-    description: '',
-    startDate: new Date().toISOString().slice(0, 16),
     endDate: '',
-    status: 'RECEIVED',
-    notes: '',
-    // User self-assessment fields
-    difficultyLevel: '',
-    estimatedTime: '',
-    impactLevel: '',
-    urgencyLevel: '',
-    form: 'Onsite',
-    formScore: '2' // Default for Onsite
+    status: 'RECEIVED'
   });
 
-  const fetchEmployees = useCallback(async () => {
-    try {
-      const response = await fetch('/api/employees/list', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=300',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
-      } else {
-        console.error('Failed to fetch employees:', response.status, response.statusText);
-        setEmployees([]);
-      }
-    } catch (error) {
-      console.error('Error fetching employees:', error);
-      setEmployees([]);
-    }
-  }, []);
-
-  const fetchPartners = useCallback(async () => {
-    try {
-      const response = await fetch('/api/partners/list', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=300',
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setPartners(data || []);
-      } else {
-        console.error('Failed to fetch partners:', response.status, response.statusText);
-        setPartners([]);
-      }
-    } catch (error) {
-      console.error('Error fetching partners:', error);
-      setPartners([]);
-    }
-  }, []);
-
-  const fetchDeploymentTypes = useCallback(async () => {
-    try {
-      const response = await fetch(`/api/deployment-types?t=${Date.now()}`, {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        // Convert to array of strings for backward compatibility
-        const typeNames = data.data?.map((type: any) => type.name) || [];
-        setDeploymentTypes(typeNames);
-      } else {
-        console.error('Failed to fetch deployment types:', response.status, response.statusText);
-        setDeploymentTypes([]);
-      }
-    } catch (error) {
-      console.error('Error fetching deployment types:', error);
-      setDeploymentTypes([]);
-    }
-  }, []);
-
-  const resetForm = useCallback(() => {
-    setFormData({
-      customerName: '',
-      handler: '',
-      deploymentType: '',
-      customer: '',
-      title: '',
-      description: '',
-      startDate: new Date().toISOString().slice(0, 16),
-      endDate: '',
-      status: 'RECEIVED',
-      notes: '',
-      // User self-assessment fields
-      difficultyLevel: '',
-      estimatedTime: '',
-      impactLevel: '',
-      urgencyLevel: '',
-      form: 'Onsite',
-      formScore: '2' // Default for Onsite
-    });
-    setCustomerSearch('');
-    setShowCustomerDropdown(false);
-  }, []);
-
-  // Populate form when caseData changes
+  // Initialize form data when modal opens
   useEffect(() => {
-    if (caseData && isOpen) {
+    if (isOpen && caseData) {
       setFormData({
-        customerName: caseData.customerName || '',
-        handler: caseData.handler?.id || '',
-        deploymentType: caseData.deploymentType?.id || '',
-        customer: caseData.customer || '',
-        title: caseData.title || '',
-        description: caseData.description || '',
-        startDate: caseData.startDate ? caseData.startDate.slice(0, 16) : new Date().toISOString().slice(0, 16),
-        endDate: caseData.endDate ? caseData.endDate.slice(0, 16) : '',
-        status: caseData.status || 'RECEIVED',
-        notes: caseData.notes || '',
-        difficultyLevel: caseData.userDifficultyLevel?.toString() || '',
-        estimatedTime: caseData.userEstimatedTime?.toString() || '',
-        impactLevel: caseData.userImpactLevel?.toString() || '',
-        urgencyLevel: caseData.userUrgencyLevel?.toString() || '',
-        form: 'Onsite', // Default value since form field doesn't exist in schema
-        formScore: caseData.userFormScore?.toString() || '2'
+        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
+        status: caseData.status || 'RECEIVED'
       });
-      setCustomerSearch('');
-      setShowCustomerDropdown(false);
     }
-  }, [caseData, isOpen]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (!target.closest('.customer-dropdown-container')) {
-        setShowCustomerDropdown(false);
-      }
-    };
-
-    if (showCustomerDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showCustomerDropdown]);
-
-  // Fetch data when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchEmployees();
-      fetchPartners();
-      fetchDeploymentTypes();
-      // Refresh evaluation configs to get latest options
-      fetchConfigs();
-    }
-  }, [isOpen, fetchEmployees, fetchPartners, fetchDeploymentTypes]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      // Save current scroll position
-      const scrollY = window.scrollY;
-      
-      // Prevent body scroll
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
-      
-      return () => {
-        // Restore body scroll
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.overflow = '';
-        
-        // Restore scroll position
-        window.scrollTo(0, scrollY);
-      };
-    }
-  }, [isOpen]);
+  }, [isOpen, caseData]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
-
-    // Auto-fill position when reporter is selected
-    if (field === 'reporter') {
-      const selectedEmployee = employees.find(emp => emp.id === value);
-      if (selectedEmployee) {
-        setFormData(prev => ({
-          ...prev,
-          reporter: value,
-          position: selectedEmployee.position || ''
-        }));
-      }
-    }
-  };
-
-  // Filter partners based on search
-  const filteredPartners = partners.filter(partner =>
-    partner.fullCompanyName.toLowerCase().includes(customerSearch.toLowerCase()) ||
-    partner.shortName.toLowerCase().includes(customerSearch.toLowerCase())
-  );
-
-  // Handle customer selection
-  const handleCustomerSelect = (partnerId: string) => {
-    const selectedPartner = partners.find(p => p.id === partnerId);
-    setFormData(prev => ({
-      ...prev,
-      customer: partnerId
-    }));
-    setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
-    setShowCustomerDropdown(false);
-  };
-
-  // Handle customer search change
-  const handleCustomerSearchChange = (value: string) => {
-    setCustomerSearch(value);
-    setShowCustomerDropdown(true);
-    
-    // If search is cleared, clear customer selection
-    if (!value) {
-      setFormData(prev => ({
-        ...prev,
-        customer: ''
-      }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!caseData?.id) return;
-    
+    if (!caseData) return;
+
     // Validate end date
     if (formData.endDate) {
-      const startDate = new Date(formData.startDate);
+      const startDate = new Date(caseData.startDate);
       const endDate = new Date(formData.endDate);
       
       if (endDate <= startDate) {
@@ -329,26 +105,14 @@ export default function EditDeploymentModal({ isOpen, onClose, onSuccess, caseDa
         return;
       }
     }
-    
+
     try {
+      setLoading(true);
+      
       // Prepare data for API
-      const deploymentData = {
-        title: formData.title,
-        description: formData.description,
-        customerName: formData.customerName,
-        handlerId: formData.handler,
-        deploymentType: formData.deploymentType,
-        customerId: formData.customer || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
-        status: formData.status,
-        notes: formData.notes || null,
-        // User self-assessment data
-        userDifficultyLevel: formData.difficultyLevel,
-        userEstimatedTime: formData.estimatedTime,
-        userImpactLevel: formData.impactLevel,
-        userUrgencyLevel: formData.urgencyLevel,
-        userFormScore: formData.formScore
+      const updateData = {
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        status: formData.status
       };
 
       // Send to API
@@ -357,479 +121,218 @@ export default function EditDeploymentModal({ isOpen, onClose, onSuccess, caseDa
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(deploymentData),
+        body: JSON.stringify(updateData),
       });
 
       if (response.ok) {
         const result = await response.json();
         
-        // Show success message
+        // Show success notification
         toast.success('Cập nhật case triển khai thành công!', {
-          duration: 3000,
-          position: 'top-right',
-        });
-        
-        // Trigger case update event for real-time notifications
-        window.dispatchEvent(new CustomEvent('case-updated'));
-        
-        // Call onSuccess callback with updated deployment data
-        if (result.data) {
-          onSuccess(result.data);
-        }
-        
-        // Close modal
-        onClose();
-      } else {
-        const responseText = await response.text();
-        console.error('Response text:', responseText);
-        
-        let error;
-        try {
-          error = JSON.parse(responseText);
-        } catch (e) {
-          error = { error: 'Invalid JSON response' };
-        }
-         
-        console.error('Failed to update deployment:', error);
-        toast.error(`Lỗi: ${error.error || 'Không thể cập nhật case triển khai'}`, {
           duration: 4000,
           position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
+        
+        // Close modal and pass updated data
+        onClose();
+        if (onSuccess && result.data) {
+          onSuccess(result.data);
+        }
+      } else {
+        let errorMessage = 'Unknown error';
+        let errorDetails = '';
+        
+        try {
+          const responseText = await response.text();
+          console.error('Raw response:', responseText);
+          console.error('Response status:', response.status);
+          console.error('Response statusText:', response.statusText);
+          
+          if (responseText) {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || errorMessage;
+            errorDetails = errorData.details || '';
+          } else {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        
+        const fullErrorMessage = errorDetails ? `${errorMessage} (${errorDetails})` : errorMessage;
+        
+        // Show error notification
+        toast.error(`Lỗi cập nhật case: ${fullErrorMessage}`, {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
         });
       }
     } catch (error) {
-      console.error('Error submitting form:', error);
-      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+      console.error('Error updating deployment:', error);
+      toast.error('Có lỗi xảy ra khi cập nhật case triển khai. Vui lòng thử lại.', {
         duration: 4000,
         position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDeploymentType = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'software':
+        return 'Triển khai phần mềm';
+      case 'hardware':
+        return 'Triển khai phần cứng';
+      case 'network':
+        return 'Triển khai mạng';
+      case 'system':
+        return 'Triển khai hệ thống';
+      case 'upgrade':
+        return 'Nâng cấp hệ thống';
+      case 'migration':
+        return 'Di chuyển dữ liệu';
+      default:
+        return type || 'Không xác định';
     }
   };
 
   if (!isOpen || !caseData) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-8">
-        {/* Compact Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-md">
-                <Rocket className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Chỉnh sửa Case Triển Khai</h2>
-                <p className="text-blue-100 text-sm">Cập nhật thông tin triển khai</p>
-              </div>
+    <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-100 rounded-md">
+              <Rocket className="h-5 w-5 text-blue-600" />
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Chỉnh sửa Case Triển Khai</h2>
+              <p className="text-sm text-gray-600">Cập nhật thông tin case triển khai</p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
-        {/* Compact Form */}
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="space-y-6">
-            {/* Section 1: Thông tin cơ bản */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-blue-100 rounded-md">
-                  <User className="h-4 w-4 text-blue-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thông tin cơ bản</h3>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Deployment Info (Read-only) */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Thông tin Case Triển Khai</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm font-medium text-gray-600">Tiêu đề:</span>
+                <p className="text-sm text-gray-900 mt-1">{caseData.title}</p>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Người xử lý</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.handler}
-                    onChange={(e) => handleInputChange('handler', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
-                      </option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Loại triển khai</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.deploymentType}
-                    onChange={(e) => handleInputChange('deploymentType', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn loại triển khai</option>
-                    {deploymentTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                    {deploymentTypes.length === 0 && (
-                      <option value="" disabled>
-                        Chưa có loại triển khai nào được cấu hình
-                      </option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Khách hàng</span>
-                    <span className="ml-1 w-2"></span>
-                  </label>
-                  <div className="relative customer-dropdown-container">
-                    <input
-                      type="text"
-                      value={customerSearch}
-                      onChange={(e) => handleCustomerSearchChange(e.target.value)}
-                      onFocus={() => setShowCustomerDropdown(true)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Tìm kiếm khách hàng..."
-                    />
-                    {showCustomerDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                        {filteredPartners.length > 0 ? (
-                          filteredPartners.map((partner) => (
-                            <div
-                              key={partner.id}
-                              onClick={() => handleCustomerSelect(partner.id)}
-                              className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                            >
-                              <div className="font-medium">{partner.fullCompanyName}</div>
-                              <div className="text-gray-500 text-xs">{partner.shortName}</div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="px-3 py-2 text-sm text-gray-500">
-                            Không tìm thấy khách hàng
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Tên khách hàng</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.customerName}
-                    onChange={(e) => handleInputChange('customerName', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Nhập tên khách hàng"
-                    required
-                  />
-                </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600">Loại triển khai:</span>
+                <p className="text-sm text-gray-900 mt-1">{formatDeploymentType(caseData.deploymentType?.name)}</p>
               </div>
-            </div>
-
-            {/* Section 2: Chi tiết triển khai */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-purple-100 rounded-md">
-                  <FileText className="h-4 w-4 text-purple-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Chi tiết triển khai</h3>
+              <div>
+                <span className="text-sm font-medium text-gray-600">Khách hàng:</span>
+                <p className="text-sm text-gray-900 mt-1">{caseData.customerName}</p>
               </div>
-              
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Tiêu đề triển khai</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Nhập tiêu đề triển khai"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Mô tả chi tiết</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                    placeholder="Mô tả chi tiết triển khai..."
-                    required
-                  />
-                </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600">Người xử lý:</span>
+                <p className="text-sm text-gray-900 mt-1">
+                  {caseData.handler ? caseData.handler.fullName : 'Chưa xác định'}
+                </p>
               </div>
-            </div>
-
-            {/* Section 3: Thời gian */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-orange-100 rounded-md">
-                  <Calendar className="h-4 w-4 text-orange-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thời gian</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-32">Thời gian bắt đầu</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.startDate}
-                    onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-32">Thời gian hoàn thành</span>
-                    <span className="ml-1 w-2"></span>
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.endDate}
-                    onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 4: Đánh giá của User */}
-            <div className="bg-yellow-50 rounded-md p-4 border border-yellow-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-yellow-100 rounded-md">
-                    <CheckCircle className="h-4 w-4 text-yellow-600" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-yellow-700">Đánh giá của User</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={fetchConfigs}
-                  className="flex items-center space-x-1 px-2 py-1 text-xs text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100 rounded transition-colors"
-                  title="Làm mới options đánh giá"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  <span>Làm mới</span>
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Mức độ khó */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ khó</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.difficultyLevel}
-                    onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn mức độ khó</option>
-                    {getFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Thời gian ước tính */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Thời gian ước tính</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.estimatedTime}
-                    onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn thời gian ước tính</option>
-                    {getFieldOptions(EvaluationCategory.TIME).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Mức độ ảnh hưởng */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ ảnh hưởng</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.impactLevel}
-                    onChange={(e) => handleInputChange('impactLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn mức độ ảnh hưởng</option>
-                    {getFieldOptions(EvaluationCategory.IMPACT).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Mức độ khẩn cấp */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ khẩn cấp</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.urgencyLevel}
-                    onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn mức độ khẩn cấp</option>
-                    {getFieldOptions(EvaluationCategory.URGENCY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Hình thức làm việc */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Hình thức làm việc</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.form}
-                    onChange={(e) => {
-                      handleInputChange('form', e.target.value);
-                      // Auto-set form score based on selection
-                      const selectedOption = getFieldOptions(EvaluationCategory.FORM).find(
-                        option => option.label === e.target.value
-                      );
-                      if (selectedOption) {
-                        handleInputChange('formScore', selectedOption.points.toString());
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn hình thức làm việc</option>
-                    {getFieldOptions(EvaluationCategory.FORM).map((option) => (
-                      <option key={option.id} value={option.label}>
-                        {option.label} ({option.points} điểm)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 5: Trạng thái & Ghi chú */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-gray-100 rounded-md">
-                  <CheckCircle className="h-4 w-4 text-gray-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Trạng thái & Ghi chú</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Trạng thái</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                  >
-                    <option value="RECEIVED">Tiếp nhận</option>
-                    <option value="PROCESSING">Đang xử lý</option>
-                    <option value="COMPLETED">Hoàn thành</option>
-                    <option value="CANCELLED">Hủy</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Ghi chú</span>
-                    <span className="ml-1 w-2"></span>
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                    placeholder="Ghi chú thêm (nếu có)..."
-                  />
-                </div>
+              <div className="md:col-span-2">
+                <span className="text-sm font-medium text-gray-600">Mô tả:</span>
+                <p className="text-sm text-gray-900 mt-1">{caseData.description}</p>
               </div>
             </div>
           </div>
 
-          {/* Compact Form Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+          {/* Editable Fields */}
+          <div className="space-y-4">
+            {/* End Date and Status Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-2" />
+                  Thời gian hoàn thành
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.endDate}
+                  onChange={(e) => handleInputChange('endDate', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Chọn thời gian hoàn thành"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Để trống nếu chưa có thời gian hoàn thành
+                </p>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <CheckCircle className="w-4 h-4 inline mr-2" />
+                  Trạng thái
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => handleInputChange('status', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="RECEIVED">Tiếp nhận</option>
+                  <option value="PROCESSING">Đang xử lý</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="CANCELLED">Hủy</option>
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex space-x-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
+              disabled={loading}
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
-              <Rocket className="h-4 w-4 mr-2" />
-              Cập nhật Case Triển Khai
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Đang cập nhật...
+                </>
+              ) : (
+                <>
+                  <Rocket className="h-4 w-4 mr-2" />
+                  Cập nhật
+                </>
+              )}
             </button>
           </div>
         </form>

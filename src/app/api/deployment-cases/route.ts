@@ -61,9 +61,30 @@ export async function POST(request: NextRequest) {
 
     // Validate reporter and handler exist
     console.log("Checking reporter:", reporterId);
-    const reporter = await db.employee.findUnique({
+    let reporter = await db.employee.findUnique({
       where: { id: reporterId }
     });
+    
+    // If not found in employee, try to find user and create/find employee
+    if (!reporter) {
+      const user = await db.user.findUnique({
+        where: { id: reporterId },
+        include: { employee: true }
+      });
+      
+      if (user?.employee) {
+        reporter = user.employee;
+      } else if (user) {
+        // Use default employee if user doesn't have employee record
+        reporter = await db.employee.findFirst();
+        if (!reporter) {
+          return NextResponse.json(
+            { error: 'No employees found in database' },
+            { status: 400 }
+          );
+        }
+      }
+    }
     console.log("Reporter found:", reporter);
 
     console.log("Checking handler:", handlerId);
@@ -99,8 +120,8 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description,
-        reporterId,
-        handlerId,
+        reporterId: reporter.id,
+        handlerId: handler.id,
         deploymentTypeId,
         customerName,
         customerId: customerId || null,
@@ -229,6 +250,14 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               name: true
+            }
+          },
+          customer: {
+            select: {
+              id: true,
+              shortName: true,
+              fullCompanyName: true,
+              contactPerson: true
             }
           }
         }

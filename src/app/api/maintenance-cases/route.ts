@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
     const { 
       title, 
       description, 
-      maintenanceType, 
       maintenanceTypeId,
       handlerId, 
       customerName, 
@@ -110,7 +109,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!title || !description || !handlerId || !customerName || !startDate) {
+    if (!title || !description || !handlerId || !customerName || !startDate || !maintenanceTypeId) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -134,8 +133,8 @@ export async function POST(request: NextRequest) {
         handlerId,
         customerName,
         customerId: customerId || null,
-        maintenanceType: maintenanceType || 'PREVENTIVE', // Fallback to enum for backward compatibility
-        maintenanceTypeId: maintenanceTypeId || null,
+        maintenanceType: 'PREVENTIVE', // Default enum value - this field should be set based on business logic
+        maintenanceTypeId: maintenanceTypeId,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         notes: notes || '',

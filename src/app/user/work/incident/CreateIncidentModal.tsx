@@ -19,17 +19,18 @@ interface Employee {
 interface CreateIncidentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newIncident: unknown) => void;
+  onSuccess?: (newIncident: any) => void;
 }
 
 export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: CreateIncidentModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
-  const [incidentTypes, setIncidentTypes] = useState<string[]>([]);
+  const [incidentTypes, setIncidentTypes] = useState<any[]>([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
 
   // User evaluation categories
   const userCategories = [
@@ -43,6 +44,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
   const [formData, setFormData] = useState({
+    customerTitle: 'Anh', // Default title
     customerName: '',
     handler: '',
     incidentType: '',
@@ -61,6 +63,34 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
     form: 'Onsite',
     formScore: '2' // Default for Onsite
   });
+
+  const fetchCurrentEmployee = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user/basic-info');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.employee) {
+          setCurrentEmployee({
+            id: data.employee.id,
+            fullName: data.employee.fullName,
+            position: data.employee.position,
+            department: data.employee.department,
+            companyEmail: data.employee.companyEmail
+          });
+        } else {
+          setCurrentEmployee({
+            id: data.id,
+            fullName: data.name || '',
+            position: '',
+            department: '',
+            companyEmail: data.email || ''
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching current employee:', error);
+    }
+  }, []);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -106,18 +136,10 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
 
   const fetchIncidentTypes = useCallback(async () => {
     try {
-      const response = await fetch(`/api/incident-types?t=${Date.now()}`, {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-      });
-      
+      const response = await fetch('/api/incident-types');
       if (response.ok) {
         const data = await response.json();
-        // Convert to array of strings for backward compatibility
-        const typeNames = data.data?.map((type: any) => type.name) || [];
-        setIncidentTypes(typeNames);
+        setIncidentTypes(data.data || []);
       } else {
         console.error('Failed to fetch incident types:', response.status, response.statusText);
         setIncidentTypes([]);
@@ -128,8 +150,9 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
     }
   }, []);
 
-  const resetForm = useCallback(() => {
+  const resetForm = () => {
     setFormData({
+      customerTitle: 'Anh',
       customerName: '',
       handler: '',
       incidentType: '',
@@ -140,24 +163,26 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
       endDate: '',
       status: 'RECEIVED',
       notes: '',
-      // User self-assessment fields
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
       urgencyLevel: '',
       form: 'Onsite',
-      formScore: '2' // Default for Onsite
+      formScore: '2'
     });
     setCustomerSearch('');
     setShowCustomerDropdown(false);
-  }, []);
+  };
 
-  // Reset form when modal opens
+  // Auto-select current employee when both currentEmployee and employees are loaded
   useEffect(() => {
-    if (isOpen) {
-      resetForm();
+    if (currentEmployee && employees.length > 0 && formData.handler === '') {
+      setFormData(prev => ({
+        ...prev,
+        handler: currentEmployee.id
+      }));
     }
-  }, [isOpen, resetForm]);
+  }, [currentEmployee, employees, formData.handler]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -177,14 +202,14 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
   // Fetch data when modal opens
   useEffect(() => {
     if (isOpen) {
+      fetchCurrentEmployee();
       fetchEmployees();
       fetchPartners();
       fetchIncidentTypes();
       // Refresh evaluation configs to get latest options
       fetchConfigs();
     }
-  }, [isOpen, fetchEmployees, fetchPartners, fetchIncidentTypes]);
-
+  }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchIncidentTypes]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -252,7 +277,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
     setCustomerSearch(value);
     setShowCustomerDropdown(true);
     
-    // If search is cleared, clear customer selection
+    // Clear selected customer if search is cleared
     if (!value) {
       setFormData(prev => ({
         ...prev,
@@ -264,41 +289,67 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate end date
-    if (formData.endDate) {
-      const startDate = new Date(formData.startDate);
-      const endDate = new Date(formData.endDate);
-      
-      if (endDate <= startDate) {
-        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
-          duration: 3000,
-          position: 'top-right',
-        });
-        return;
-      }
+    if (!session?.user?.id) {
+      toast.error('Bạn cần đăng nhập để thực hiện chức năng này!');
+      return;
     }
-    
+
+    // Validate required fields
+    if (!formData.customerName.trim()) {
+      toast.error('Vui lòng nhập tên khách hàng!');
+      return;
+    }
+
+    if (!formData.handler) {
+      toast.error('Vui lòng chọn người xử lý!');
+      return;
+    }
+
+    if (!formData.incidentType) {
+      toast.error('Vui lòng chọn loại sự cố!');
+      return;
+    }
+
+    if (!formData.title.trim()) {
+      toast.error('Vui lòng nhập tiêu đề sự cố!');
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      toast.error('Vui lòng nhập mô tả sự cố!');
+      return;
+    }
+
     try {
+      setLoading(true);
+      
       // Prepare data for API
+      const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
+      
+      // Find incident type name from ID
+      const selectedIncidentType = incidentTypes.find(type => type.id === formData.incidentType);
+      const incidentTypeName = selectedIncidentType ? selectedIncidentType.name : formData.incidentType;
+
       const incidentData = {
         title: formData.title,
         description: formData.description,
-        customerName: formData.customerName,
+        customerName: fullCustomerName,
+        reporterId: session.user.id,
         handlerId: formData.handler,
-        incidentType: formData.incidentType,
+        incidentType: incidentTypeName,
         customerId: formData.customer || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: new Date(formData.startDate).toISOString(),
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
-        notes: formData.notes || null,
-        // User self-assessment data
-        userDifficultyLevel: formData.difficultyLevel,
-        userEstimatedTime: formData.estimatedTime,
-        userImpactLevel: formData.impactLevel,
-        userUrgencyLevel: formData.urgencyLevel,
-        userFormScore: formData.formScore
+        notes: formData.notes,
+        // User assessment fields
+        userDifficultyLevel: formData.difficultyLevel ? parseInt(formData.difficultyLevel) : null,
+        userEstimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : null,
+        userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
+        userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
+        userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
+        userAssessmentDate: new Date().toISOString()
       };
-
 
       // Send to API
       const response = await fetch('/api/incidents', {
@@ -309,17 +360,20 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
         body: JSON.stringify(incidentData),
       });
 
-
       if (response.ok) {
         const result = await response.json();
         
-        // Show success message
+        // Show success notification
         toast.success('Tạo case xử lý sự cố thành công!', {
-          duration: 3000,
+          duration: 4000,
           position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
         });
         
-        // Trigger case creation event for real-time notifications
+        // Dispatch custom event for case creation
         window.dispatchEvent(new CustomEvent('case-created'));
         
         // Reset form data
@@ -333,28 +387,51 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
         // Close modal
         onClose();
       } else {
-        const responseText = await response.text();
-        console.error('Response text:', responseText);
+        let errorMessage = 'Unknown error';
+        let errorDetails = '';
         
-        let error;
         try {
-          error = JSON.parse(responseText);
-        } catch (e) {
-          error = { error: 'Invalid JSON response' };
+          const responseText = await response.text();
+          console.error('Raw response:', responseText);
+          console.error('Response status:', response.status);
+          console.error('Response statusText:', response.statusText);
+          
+          if (responseText) {
+            const errorData = JSON.parse(responseText);
+            errorMessage = errorData.error || errorMessage;
+            errorDetails = errorData.details || '';
+          } else {
+            errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
-         
-        console.error('Failed to create incident:', error);
-        toast.error(`Lỗi: ${error.error || 'Không thể tạo sự cố'}`, {
+        
+        const fullErrorMessage = errorDetails ? `${errorMessage} (${errorDetails})` : errorMessage;
+        
+        // Show error notification
+        toast.error(`Lỗi tạo case: ${fullErrorMessage}`, {
           duration: 4000,
           position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: '#fff',
+          },
         });
       }
     } catch (error) {
-      console.error('Error submitting form:', error);
-      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+      console.error('Error creating incident:', error);
+      toast.error('Có lỗi xảy ra khi tạo case xử lý sự cố. Vui lòng thử lại.', {
         duration: 4000,
         position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: '#fff',
+        },
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -364,7 +441,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-8">
         {/* Compact Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-4 rounded-t-lg">
+        <div className="sticky top-0 z-20 bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-4 rounded-t-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-white/20 rounded-md">
@@ -439,8 +516,8 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                   >
                     <option value="">Chọn loại sự cố</option>
                     {incidentTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
+                      <option key={type.id} value={type.id}>
+                        {type.name}
                       </option>
                     ))}
                     {incidentTypes.length === 0 && (
@@ -456,6 +533,31 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                     <span className="w-24">Khách hàng</span>
                     <span className="ml-1 w-2"></span>
                   </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={formData.customerTitle}
+                      onChange={(e) => handleInputChange('customerTitle', e.target.value)}
+                      className="w-20 px-2 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
+                    >
+                      <option value="Anh">Anh</option>
+                      <option value="Chị">Chị</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => handleInputChange('customerName', e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
+                      placeholder="Nhập tên khách hàng..."
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                    <span className="w-24">Tên công ty</span>
+                    <span className="ml-1 w-2"></span>
+                  </label>
                   <div className="relative customer-dropdown-container">
                     <input
                       type="text"
@@ -466,7 +568,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                       placeholder="Tìm kiếm khách hàng..."
                     />
                     {showCustomerDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                      <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                         {filteredPartners.length > 0 ? (
                           filteredPartners.map((partner) => (
                             <div
@@ -474,8 +576,8 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                               onClick={() => handleCustomerSelect(partner.id)}
                               className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
                             >
-                              <div className="font-medium">{partner.fullCompanyName}</div>
-                              <div className="text-gray-500 text-xs">{partner.shortName}</div>
+                              <div className="font-medium">{partner.shortName}</div>
+                              <div className="text-gray-500 text-xs">{partner.fullCompanyName}</div>
                             </div>
                           ))
                         ) : (
@@ -488,61 +590,49 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Tên khách hàng</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.customerName}
-                    onChange={(e) => handleInputChange('customerName', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    placeholder="Nhập tên khách hàng"
-                    required
-                  />
-                </div>
               </div>
             </div>
 
             {/* Section 2: Chi tiết sự cố */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-purple-100 rounded-md">
-                  <FileText className="h-4 w-4 text-purple-600" />
+                <div className="p-1.5 bg-red-100 rounded-md">
+                  <FileText className="h-4 w-4 text-red-600" />
                 </div>
                 <h3 className="text-sm font-semibold text-gray-700">Chi tiết sự cố</h3>
               </div>
               
               <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Tiêu đề sự cố</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    placeholder="Nhập tiêu đề sự cố"
-                    required
-                  />
-                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center">
+                      <span>Tiêu đề sự cố</span>
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
+                      placeholder="Nhập tiêu đề sự cố..."
+                      required
+                    />
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Mô tả chi tiết</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors resize-none"
-                    placeholder="Mô tả chi tiết sự cố xảy ra..."
-                    required
-                  />
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center">
+                      <span>Mô tả chi tiết</span>
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors resize-none"
+                      placeholder="Mô tả chi tiết về sự cố..."
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -550,37 +640,30 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
             {/* Section 3: Thời gian */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-orange-100 rounded-md">
-                  <Calendar className="h-4 w-4 text-orange-600" />
+                <div className="p-1.5 bg-red-100 rounded-md">
+                  <Calendar className="h-4 w-4 text-red-600" />
                 </div>
                 <h3 className="text-sm font-semibold text-gray-700">Thời gian</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-32">Thời gian xảy ra</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
+                  <label className="text-xs font-medium text-gray-600">Thời gian bắt đầu</label>
                   <input
                     type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors min-h-[38px]"
-                    required
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-32">Thời gian giải quyết</span>
-                    <span className="ml-1 w-2"></span>
-                  </label>
+                  <label className="text-xs font-medium text-gray-600">Thời gian kết thúc (dự kiến)</label>
                   <input
                     type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors min-h-[38px]"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
                   />
                 </div>
               </div>
@@ -591,7 +674,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
                   <div className="p-1.5 bg-yellow-100 rounded-md">
-                    <CheckCircle className="h-4 w-4 text-yellow-600" />
+                    <Settings className="h-4 w-4 text-yellow-600" />
                   </div>
                   <h3 className="text-sm font-semibold text-yellow-700">Đánh giá của User</h3>
                 </div>
@@ -628,10 +711,10 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                   </select>
                 </div>
 
-                {/* Thời gian ước tính */}
+                {/* Thời gian dự kiến */}
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Thời gian ước tính</span>
+                    <span className="w-32">Thời gian dự kiến</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <select
@@ -640,7 +723,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                     className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
                     required
                   >
-                    <option value="">Chọn thời gian ước tính</option>
+                    <option value="">Chọn thời gian dự kiến</option>
                     {getFieldOptions(EvaluationCategory.TIME).map((option) => (
                       <option key={option.id} value={option.points}>
                         {option.points} - {option.label}
@@ -723,26 +806,22 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
               </div>
             </div>
 
-            {/* Section 5: Trạng thái & Ghi chú */}
+            {/* Section 5: Trạng thái */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-gray-100 rounded-md">
-                  <CheckCircle className="h-4 w-4 text-gray-600" />
+                <div className="p-1.5 bg-red-100 rounded-md">
+                  <CheckCircle className="h-4 w-4 text-red-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Trạng thái & Ghi chú</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Trạng thái</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Trạng thái</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
+                  <label className="text-xs font-medium text-gray-600">Trạng thái</label>
                   <select
                     value={formData.status}
                     onChange={(e) => handleInputChange('status', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    required
                   >
                     <option value="RECEIVED">Tiếp nhận</option>
                     <option value="PROCESSING">Đang xử lý</option>
@@ -752,37 +831,45 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Ghi chú</span>
-                    <span className="ml-1 w-2"></span>
-                  </label>
+                  <label className="text-xs font-medium text-gray-600">Ghi chú</label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => handleInputChange('notes', e.target.value)}
                     rows={2}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 transition-colors resize-none"
-                    placeholder="Ghi chú thêm (nếu có)..."
+                    placeholder="Ghi chú thêm..."
                   />
                 </div>
               </div>
             </div>
+
           </div>
 
-          {/* Compact Form Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+          {/* Submit Button */}
+          <div className="flex justify-end pt-4 border-t border-gray-200 mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="mr-3 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm font-medium flex items-center"
+              disabled={loading}
+              className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-red-600 to-orange-600 rounded-md hover:from-red-700 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center"
             >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Tạo Case Xử Lý Sự Cố
+              {loading ? (
+                <>
+                  <RefreshCw className="animate-spin h-4 w-4 mr-2" />
+                  Đang tạo...
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Tạo Case
+                </>
+              )}
             </button>
           </div>
         </form>

@@ -194,7 +194,9 @@ function AdminAllCasesTable() {
     caseType: '',
     handler: '',
     status: '',
-    customer: ''
+    customer: '',
+    dateFrom: '',
+    dateTo: ''
   });
   
   // Pagination states
@@ -559,6 +561,24 @@ function AdminAllCasesTable() {
       );
     }
 
+    // Date range filter
+    if (filters.dateFrom) {
+      const fromDate = new Date(filters.dateFrom);
+      filtered = filtered.filter(case_ => {
+        const caseDate = new Date(case_.startDate);
+        return caseDate >= fromDate;
+      });
+    }
+
+    if (filters.dateTo) {
+      const toDate = new Date(filters.dateTo);
+      toDate.setHours(23, 59, 59, 999); // End of day
+      filtered = filtered.filter(case_ => {
+        const caseDate = new Date(case_.startDate);
+        return caseDate <= toDate;
+      });
+    }
+
     return filtered;
   }, [activeTab, todayCases, allCases, filters]);
 
@@ -609,7 +629,9 @@ function AdminAllCasesTable() {
       caseType: '',
       handler: '',
       status: '',
-      customer: ''
+      customer: '',
+      dateFrom: '',
+      dateTo: ''
     });
   }, []);
 
@@ -746,25 +768,25 @@ function AdminAllCasesTable() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
         {[
-          { type: 'internal', label: 'Case nội bộ', icon: FileText, color: 'bg-blue-500' },
-          { type: 'delivery', label: 'Case giao hàng', icon: Truck, color: 'bg-green-500' },
-          { type: 'receiving', label: 'Case nhận hàng', icon: Package, color: 'bg-yellow-500' },
-          { type: 'maintenance', label: 'Case bảo trì', icon: Wrench, color: 'bg-purple-500' },
-          { type: 'incident', label: 'Case sự cố', icon: AlertTriangle, color: 'bg-red-500' },
-          { type: 'warranty', label: 'Case bảo hành', icon: Shield, color: 'bg-indigo-500' }
+          { type: 'internal', label: 'Nội bộ', icon: FileText, color: 'bg-blue-500' },
+          { type: 'delivery', label: 'Giao hàng', icon: Truck, color: 'bg-green-500' },
+          { type: 'receiving', label: 'Nhận hàng', icon: Package, color: 'bg-yellow-500' },
+          { type: 'maintenance', label: 'Bảo trì', icon: Wrench, color: 'bg-purple-500' },
+          { type: 'incident', label: 'Sự cố', icon: AlertTriangle, color: 'bg-red-500' },
+          { type: 'warranty', label: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' }
         ].map(({ type, label, icon: Icon, color }) => {
           const count = filteredCases.filter(c => c.type === type).length;
           return (
-            <div key={type} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div key={type} className="bg-white rounded-lg shadow-sm border border-gray-200 p-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{count}</p>
+                  <p className="text-xs font-medium text-gray-600">{label}</p>
+                  <p className="text-lg font-bold text-gray-900">{count}</p>
                 </div>
-                <div className={`p-2 rounded-lg ${color} text-white`}>
-                  <Icon className="h-5 w-5" />
+                <div className={`p-1.5 rounded-md ${color} text-white`}>
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
               </div>
             </div>
@@ -789,7 +811,7 @@ function AdminAllCasesTable() {
           </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           {/* Case Type Filter */}
           <div className="space-y-1">
             <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
@@ -859,10 +881,38 @@ function AdminAllCasesTable() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm placeholder-gray-400"
             />
           </div>
+
+          {/* Date From Filter */}
+          <div className="space-y-1">
+            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
+              <Calendar className="h-3 w-3 text-purple-600" />
+              <span>Từ ngày</span>
+            </label>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
+            />
+          </div>
+
+          {/* Date To Filter */}
+          <div className="space-y-1">
+            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
+              <Calendar className="h-3 w-3 text-purple-600" />
+              <span>Đến ngày</span>
+            </label>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
+            />
+          </div>
         </div>
 
         {/* Active Filters Display */}
-        {(filters.caseType || filters.handler || filters.status || filters.customer) && (
+        {(filters.caseType || filters.handler || filters.status || filters.customer || filters.dateFrom || filters.dateTo) && (
           <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="flex items-center space-x-2 mb-3">
               <span className="text-sm font-medium text-gray-700">Bộ lọc đang áp dụng:</span>
@@ -907,6 +957,28 @@ function AdminAllCasesTable() {
                   <button
                     onClick={() => handleFilterChange('customer', '')}
                     className="ml-2 text-orange-600 hover:text-orange-800"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {filters.dateFrom && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  Từ: {new Date(filters.dateFrom).toLocaleDateString('vi-VN')}
+                  <button
+                    onClick={() => handleFilterChange('dateFrom', '')}
+                    className="ml-2 text-purple-600 hover:text-purple-800"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              {filters.dateTo && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  Đến: {new Date(filters.dateTo).toLocaleDateString('vi-VN')}
+                  <button
+                    onClick={() => handleFilterChange('dateTo', '')}
+                    className="ml-2 text-purple-600 hover:text-purple-800"
                   >
                     ×
                   </button>
@@ -1006,69 +1078,90 @@ function AdminAllCasesTable() {
         )}
 
         {/* Pagination */}
-        {filteredCases.length > 0 && totalPages > 1 && (
-          <div className="bg-white px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center text-sm text-gray-700">
-                <span>
-                  Hiển thị {startIndex + 1} đến {Math.min(endIndex, filteredCases.length)} trong tổng số {filteredCases.length} kết quả
-                </span>
+        {totalPages > 1 && (
+          <div className="bg-white px-2 sm:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sau
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-gray-700">
+                  Hiển thị{' '}
+                  <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
+                  {' '}đến{' '}
+                  <span className="font-medium">
+                    {Math.min(currentPage * itemsPerPage, filteredCases.length)}
+                  </span>
+                  {' '}của{' '}
+                  <span className="font-medium">{filteredCases.length}</span>
+                  {' '}kết quả
+                </p>
               </div>
-              
-              <div className="flex items-center space-x-2">
-                {/* Previous Button */}
-                <button
-                  onClick={goToPreviousPage}
-                  disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  Trước
-                </button>
-                
-                {/* Page Numbers */}
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                    // Show first page, last page, current page, and pages around current page
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => goToPage(page)}
-                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    } else if (
-                      page === currentPage - 2 ||
-                      page === currentPage + 2
-                    ) {
-                      return (
-                        <span key={page} className="px-2 text-gray-500">
-                          ...
-                        </span>
-                      );
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Trước</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
                     }
-                    return null;
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => goToPage(pageNum)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          pageNum === currentPage
+                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
                   })}
-                </div>
-                
-                {/* Next Button */}
-                <button
-                  onClick={goToNextPage}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                >
-                  Sau
-                </button>
+                  
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="sr-only">Sau</span>
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </nav>
               </div>
             </div>
           </div>

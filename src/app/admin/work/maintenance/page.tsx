@@ -391,6 +391,9 @@ export default function AdminMaintenanceWorkPage() {
         setShowMaintenanceTypeModal(false);
         // Thêm trực tiếp vào state thay vì gọi lại API
         setMaintenanceTypes(prev => [...prev, result.data]);
+        
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('maintenance-types-updated'));
       } else {
         const error = await response.json();
         toast.error(error.message || 'Lỗi khi thêm loại bảo trì');
@@ -432,6 +435,9 @@ export default function AdminMaintenanceWorkPage() {
         setMaintenanceTypes(prev => prev.map(type => 
           type.id === editingMaintenanceType.id ? result.data : type
         ));
+        
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('maintenance-types-updated'));
       } else {
         const error = await response.json();
         toast.error(error.message || 'Lỗi khi cập nhật loại bảo trì');
@@ -457,6 +463,9 @@ export default function AdminMaintenanceWorkPage() {
         toast.success('Xóa loại bảo trì thành công!');
         // Xóa trực tiếp khỏi state thay vì gọi lại API
         setMaintenanceTypes(prev => prev.filter(type => type.id !== id));
+        
+        // Dispatch event to notify other components
+        window.dispatchEvent(new CustomEvent('maintenance-types-updated'));
       } else {
         const error = await response.json();
         toast.error(error.message || 'Lỗi khi xóa loại bảo trì');

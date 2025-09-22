@@ -147,7 +147,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       const response = await fetch('/api/maintenance-types', {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=300',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
         },
       });
       
@@ -215,6 +216,20 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       fetchConfigs();
     }
   }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchMaintenanceTypes, fetchConfigs]);
+
+  // Listen for maintenance types updates
+  useEffect(() => {
+    const handleMaintenanceTypesUpdate = () => {
+      console.log('Maintenance types updated, refreshing...');
+      fetchMaintenanceTypes();
+    };
+
+    window.addEventListener('maintenance-types-updated', handleMaintenanceTypesUpdate);
+    
+    return () => {
+      window.removeEventListener('maintenance-types-updated', handleMaintenanceTypesUpdate);
+    };
+  }, [fetchMaintenanceTypes]);
 
   // Debug maintenance types
   useEffect(() => {

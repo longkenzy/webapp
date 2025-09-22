@@ -456,6 +456,9 @@ export default function AdminWarrantyWorkPage() {
           // Remove from local state
           setWarrantyTypes(prev => prev.filter(t => t.id !== type.id));
           toast.success('Xóa loại bảo hành thành công');
+          
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('warranty-types-updated'));
         } else {
           const errorData = await response.json();
           toast.error(errorData.error || 'Lỗi khi xóa loại bảo hành');
@@ -467,20 +470,20 @@ export default function AdminWarrantyWorkPage() {
     }
   };
 
-  const handleSaveNewIncidentType = async () => {
+  const handleSaveNewWarrantyType = async () => {
     if (!newWarrantyTypeName.trim()) {
-      toast.error('Vui lòng nhập tên loại sự cố');
+      toast.error('Vui lòng nhập tên loại bảo hành');
       return;
     }
 
     if (warrantyTypes.some(type => type.name === newWarrantyTypeName.trim())) {
-      toast.error('Loại sự cố này đã tồn tại');
+      toast.error('Loại bảo hành này đã tồn tại');
       return;
     }
 
     setSaving(true);
     try {
-      const response = await fetch('/api/incident-types', {
+      const response = await fetch('/api/warranty-types', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -494,27 +497,27 @@ export default function AdminWarrantyWorkPage() {
       if (response.ok) {
         setNewWarrantyTypeName('');
         setIsAddingNewRow(false);
-        toast.success('Thêm loại sự cố thành công');
+        toast.success('Thêm loại bảo hành thành công');
         // Refresh the list
         await fetchWarrantyTypes();
       } else {
         const errorData = await response.json();
-        toast.error(errorData.error || 'Lỗi khi thêm loại sự cố');
+        toast.error(errorData.error || 'Lỗi khi thêm loại bảo hành');
       }
     } catch (error) {
-      console.error('Error adding incident type:', error);
+      console.error('Error adding warranty type:', error);
       toast.error('Lỗi khi thêm loại bảo hành');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleCancelNewIncidentType = () => {
+  const handleCancelNewWarrantyType = () => {
     setIsAddingNewRow(false);
     setNewWarrantyTypeName('');
   };
 
-  const handleSubmitIncidentTypeForm = async () => {
+  const handleSubmitWarrantyTypeForm = async () => {
     if (!warrantyTypeForm.name.trim()) {
       toast.error('Vui lòng nhập tên loại bảo hành');
       return;
@@ -540,6 +543,9 @@ export default function AdminWarrantyWorkPage() {
           toast.success('Cập nhật loại bảo hành thành công');
           // Refresh the list to sync with API
           await fetchWarrantyTypes();
+          
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('warranty-types-updated'));
         } else {
           const errorData = await response.json();
           toast.error(errorData.error || 'Lỗi khi cập nhật loại bảo hành');
@@ -567,6 +573,9 @@ export default function AdminWarrantyWorkPage() {
           toast.success('Thêm loại bảo hành thành công');
           // Refresh the list to sync with API
           await fetchWarrantyTypes();
+          
+          // Dispatch event to notify other components
+          window.dispatchEvent(new CustomEvent('warranty-types-updated'));
         } else {
           const errorData = await response.json();
           toast.error(errorData.error || 'Lỗi khi thêm loại bảo hành');
@@ -578,14 +587,14 @@ export default function AdminWarrantyWorkPage() {
       setEditingWarrantyType(null);
       setWarrantyTypeForm({ name: '', isActive: true });
     } catch (error) {
-      console.error('Error saving incident type:', error);
-      toast.error('Lỗi khi lưu loại sự cố');
+      console.error('Error saving warranty type:', error);
+      toast.error('Lỗi khi lưu loại bảo hành');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleCloseIncidentTypeModal = () => {
+  const handleCloseWarrantyTypeModal = () => {
     setShowWarrantyTypeModal(false);
     setEditingWarrantyType(null);
     setWarrantyTypeForm({ name: '', isActive: true });
@@ -1343,7 +1352,7 @@ export default function AdminWarrantyWorkPage() {
                       </tr>
                     ) : (
                       <>
-                        {/* Existing incident types */}
+                        {/* Existing warranty types */}
                         {warrantyTypes.map((warrantyType, index) => (
                           <tr key={`warranty-type-${warrantyType.id}`} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -1376,14 +1385,14 @@ export default function AdminWarrantyWorkPage() {
                                 type="text"
                                 value={newWarrantyTypeName}
                                 onChange={(e) => setNewWarrantyTypeName(e.target.value)}
-                                placeholder="Nhập tên loại sự cố..."
+                                placeholder="Nhập tên loại bảo hành..."
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 autoFocus
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
-                                    handleSaveNewIncidentType();
+                                    handleSaveNewWarrantyType();
                                   } else if (e.key === 'Escape') {
-                                    handleCancelNewIncidentType();
+                                    handleCancelNewWarrantyType();
                                   }
                                 }}
                               />
@@ -1391,14 +1400,14 @@ export default function AdminWarrantyWorkPage() {
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex items-center space-x-2">
                                 <button
-                                  onClick={handleSaveNewIncidentType}
+                                  onClick={handleSaveNewWarrantyType}
                                   disabled={saving}
                                   className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
                                   {saving ? 'Đang lưu...' : 'Lưu'}
                                 </button>
                                 <button
-                                  onClick={handleCancelNewIncidentType}
+                                  onClick={handleCancelNewWarrantyType}
                                   disabled={saving}
                                   className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                 >
@@ -1416,14 +1425,14 @@ export default function AdminWarrantyWorkPage() {
                               <div className="text-gray-400 mb-4">
                                 <FileText className="h-16 w-16 mx-auto" />
                               </div>
-                              <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có loại sự cố nào</h3>
-                              <p className="text-gray-500 mb-4">Thêm loại sự cố đầu tiên để bắt đầu quản lý</p>
+                              <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có loại bảo hành nào</h3>
+                              <p className="text-gray-500 mb-4">Thêm loại bảo hành đầu tiên để bắt đầu quản lý</p>
                               <button
                                 onClick={handleAddWarrantyType}
                                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
-                                Thêm loại sự cố
+                                Thêm loại bảo hành
                               </button>
                             </td>
                           </tr>
@@ -1682,14 +1691,14 @@ export default function AdminWarrantyWorkPage() {
               </div>
               <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
                 <button
-                  onClick={handleCloseIncidentTypeModal}
+                  onClick={handleCloseWarrantyTypeModal}
                   disabled={saving}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Hủy
                 </button>
                 <button
-                  onClick={handleSubmitIncidentTypeForm}
+                  onClick={handleSubmitWarrantyTypeForm}
                   disabled={saving}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
                 >

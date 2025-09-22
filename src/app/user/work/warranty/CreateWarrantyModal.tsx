@@ -110,7 +110,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       const response = await fetch('/api/warranty-types', {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=300',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
         },
       });
       if (response.ok) {
@@ -186,6 +187,20 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       fetchConfigs();
     }
   }, [isOpen, fetchEmployees, fetchPartners, fetchWarrantyTypes]);
+
+  // Listen for warranty types updates
+  useEffect(() => {
+    const handleWarrantyTypesUpdate = () => {
+      console.log('Maintenance types updated, refreshing...');
+      fetchWarrantyTypes();
+    };
+
+    window.addEventListener('warranty-types-updated', handleWarrantyTypesUpdate);
+    
+    return () => {
+      window.removeEventListener('warranty-types-updated', handleWarrantyTypesUpdate);
+    };
+  }, [fetchWarrantyTypes]);
 
   // Auto-fill handler with current user when employees are loaded
   useEffect(() => {

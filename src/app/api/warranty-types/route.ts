@@ -18,8 +18,10 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.json({ data: warrantyTypes });
     
-    // Add caching headers for better performance
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    // Disable caching to ensure real-time updates
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     return response;
 
   } catch (error) {

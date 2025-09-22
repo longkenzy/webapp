@@ -25,6 +25,7 @@ export default function CasesPieChart() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'current' | 'total'>('current');
   
   const { registerRefreshStats } = useDashboardRefresh();
 
@@ -53,15 +54,41 @@ export default function CasesPieChart() {
         warrantyRes.json()
       ]);
 
-      // Process case type statistics
-      const caseTypeCounts = {
-        internal: internalData.data?.length || 0,
-        delivery: deliveryData.deliveryCases?.length || 0,
-        receiving: receivingData.receivingCases?.length || 0,
-        maintenance: maintenanceData.data?.length || 0,
-        incident: incidentData.data?.length || 0,
-        warranty: warrantyData.data?.length || 0
+      // Get current month filter
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      
+      // Filter function for current month
+      const isCurrentMonth = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
       };
+
+      // Process case type statistics
+      let caseTypeCounts;
+      
+      if (activeTab === 'current') {
+        // Filter for current month only
+        caseTypeCounts = {
+          internal: internalData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
+          delivery: deliveryData.deliveryCases?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
+          receiving: receivingData.receivingCases?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
+          maintenance: maintenanceData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
+          incident: incidentData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
+          warranty: warrantyData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0
+        };
+      } else {
+        // All time data
+        caseTypeCounts = {
+          internal: internalData.data?.length || 0,
+          delivery: deliveryData.deliveryCases?.length || 0,
+          receiving: receivingData.receivingCases?.length || 0,
+          maintenance: maintenanceData.data?.length || 0,
+          incident: incidentData.data?.length || 0,
+          warranty: warrantyData.data?.length || 0
+        };
+      }
 
       const totalCases = Object.values(caseTypeCounts).reduce((sum, count) => sum + count, 0);
 
@@ -148,6 +175,13 @@ export default function CasesPieChart() {
     registerRefreshStats(() => fetchStats(false));
   }, [registerRefreshStats]);
 
+  // Refetch data when tab changes
+  useEffect(() => {
+    if (stats) {
+      fetchStats(false);
+    }
+  }, [activeTab]);
+
 
   if (loading) {
     return (
@@ -173,21 +207,21 @@ export default function CasesPieChart() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center space-x-2">
-            <div className="p-2 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg">
-              <PieChartIcon className="h-5 w-5 text-blue-600" />
+            <div className="p-1.5 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-md">
+              <PieChartIcon className="h-4 w-4 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Thống kê loại Case</h3>
-              <p className="text-sm text-gray-600">Phân bố các loại case trong hệ thống</p>
+              <h3 className="text-sm font-semibold text-gray-900">Thống kê loại Case</h3>
+              <p className="text-xs text-gray-600">Phân bố các loại case trong hệ thống</p>
             </div>
           </div>
           {lastUpdate && (
-            <p className="text-xs text-gray-500 flex items-center space-x-1 mt-2">
+            <p className="text-xs text-gray-500 flex items-center space-x-1 mt-1">
               <span>Cập nhật lần cuối: {lastUpdate.toLocaleTimeString('vi-VN')}</span>
               {isAutoRefreshing && (
                 <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
@@ -198,28 +232,61 @@ export default function CasesPieChart() {
         <button
           onClick={refreshStats}
           disabled={refreshing}
-          className="flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 shadow-sm"
+          className="flex items-center space-x-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 shadow-sm"
         >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="text-sm font-medium">Làm mới</span>
+          <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
+          <span className="text-xs font-medium">Làm mới</span>
         </button>
       </div>
 
-      {/* Pie Chart */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-lg border border-gray-100 shadow-sm">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-4 px-4" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('current')}
+              className={`py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200 ${
+                activeTab === 'current'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-1">
+                <Clock className="h-3 w-3" />
+                <span>Tháng hiện tại</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('total')}
+              className={`py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200 ${
+                activeTab === 'total'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center space-x-1">
+                <TrendingUp className="h-3 w-3" />
+                <span>Tổng</span>
+              </div>
+            </button>
+          </nav>
+        </div>
+
+        {/* Pie Chart */}
+        <div className="p-4">
         {stats && stats.caseTypes.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
             {/* Chart */}
             <div className="relative">
-              <div className="h-80">
+              <div className="h-60">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={stats.caseTypes}
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={120}
+                      innerRadius={40}
+                      outerRadius={80}
                       paddingAngle={2}
                       dataKey="value"
                       label={({value, name}) => {
@@ -228,7 +295,7 @@ export default function CasesPieChart() {
                         const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
                         const shortName = name.replace('Case ', '').replace(/^\w/, c => c.toUpperCase());
                         const caseText = value === 1 ? 'case' : 'cases';
-                        return percentage >= 3 ? `${shortName}\n(${value} ${caseText})\n${percentage}%` : ''; // Show name, count in parentheses, and percentage
+                        return percentage >= 5 ? `${shortName}\n(${value} ${caseText})\n${percentage}%` : ''; // Show name, count in parentheses, and percentage
                       }}
                       labelLine={false}
                     >
@@ -256,15 +323,17 @@ export default function CasesPieChart() {
               {/* Center label */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-gray-900">{stats.totalCases}</div>
-                  <div className="text-sm text-gray-600 font-medium">Tổng case</div>
+                  <div className="text-lg font-bold text-gray-900">{stats.totalCases}</div>
+                  <div className="text-xs text-gray-600 font-medium">
+                    {activeTab === 'current' ? 'Tháng hiện tại' : 'Tổng case'}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Legend */}
-            <div className="space-y-3">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Chi tiết</h4>
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-gray-900 mb-3">Chi tiết</h4>
               {stats.caseTypes
                 .sort((a, b) => b.value - a.value)
                 .map((item, index) => {
@@ -272,19 +341,19 @@ export default function CasesPieChart() {
                   const percentage = stats.totalCases > 0 ? Math.round((item.value / stats.totalCases) * 100) : 0;
                   
                   return (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
-                      <div className="flex items-center space-x-3">
+                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors duration-200">
+                      <div className="flex items-center space-x-2">
                         <div 
-                          className="p-2 rounded-lg shadow-sm"
+                          className="p-1.5 rounded-md shadow-sm"
                           style={{ backgroundColor: `${item.color}20`, color: item.color }}
                         >
-                          <Icon className="h-4 w-4" />
+                          <Icon className="h-3 w-3" />
                         </div>
-                        <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                        <span className="text-xs font-medium text-gray-900">{item.label}</span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-bold text-gray-900">{item.value}</span>
-                        <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full shadow-sm">
+                      <div className="flex items-center space-x-1">
+                        <span className="text-sm font-bold text-gray-900">{item.value}</span>
+                        <span className="text-xs text-gray-500 bg-white px-1.5 py-0.5 rounded-full shadow-sm">
                           {percentage}%
                         </span>
                       </div>
@@ -299,9 +368,15 @@ export default function CasesPieChart() {
               <PieChartIcon className="h-10 w-10 text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có dữ liệu</h3>
-            <p className="text-gray-500">Chưa có case nào được tạo trong hệ thống</p>
+            <p className="text-gray-500">
+              {activeTab === 'current' 
+                ? 'Chưa có case nào được tạo trong tháng này' 
+                : 'Chưa có case nào được tạo trong hệ thống'
+              }
+            </p>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

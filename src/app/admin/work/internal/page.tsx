@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Settings, Wrench, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download } from 'lucide-react';
+import { Plus, Settings, Wrench, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X, User } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import EditInternalCaseModal from './EditInternalCaseModal';
 
 interface CaseType {
   id: string;
@@ -71,6 +72,7 @@ export default function AdminInternalWorkPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCase, setSelectedCase] = useState<InternalCase | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deletedCases, setDeletedCases] = useState<Set<string>>(new Set());
@@ -106,9 +108,15 @@ export default function AdminInternalWorkPage() {
   
   // Filter states
   const [selectedHandler, setSelectedHandler] = useState<string>('');
+  const [selectedRequester, setSelectedRequester] = useState<string>('');
+  const [selectedCaseType, setSelectedCaseType] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10);
   
   // States for evaluation form
   const [evaluationForm, setEvaluationForm] = useState({
@@ -118,6 +126,7 @@ export default function AdminInternalWorkPage() {
     adminUrgencyLevel: ''
   });
   const [evaluating, setEvaluating] = useState(false);
+
 
   // Helper function to check if case is evaluated by admin
   const isCaseEvaluatedByAdmin = (case_: InternalCase) => {
@@ -479,8 +488,10 @@ export default function AdminInternalWorkPage() {
     loadData();
   }, [fetchInternalCases, fetchCaseTypes]);
 
-  // Get unique handlers and statuses for filter options
+  // Get unique handlers, requesters, case types and statuses for filter options
   const uniqueHandlers = Array.from(new Set(internalCases.map(case_ => case_.handler.fullName))).sort();
+  const uniqueRequesters = Array.from(new Set(internalCases.map(case_ => case_.requester.fullName))).sort();
+  const uniqueCaseTypes = Array.from(new Set(internalCases.map(case_ => case_.caseType))).sort();
   const uniqueStatuses = Array.from(new Set(internalCases.map(case_ => case_.status))).sort();
 
   // Filter internal cases based on search term and filters
@@ -491,6 +502,8 @@ export default function AdminInternalWorkPage() {
                          case_.caseType.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesHandler = !selectedHandler || case_.handler.fullName === selectedHandler;
+    const matchesRequester = !selectedRequester || case_.requester.fullName === selectedRequester;
+    const matchesCaseType = !selectedCaseType || case_.caseType === selectedCaseType;
     const matchesStatus = !selectedStatus || case_.status === selectedStatus;
     
     // Date range filtering
@@ -509,20 +522,51 @@ export default function AdminInternalWorkPage() {
       }
     }
     
-    return matchesSearch && matchesHandler && matchesStatus && matchesDateRange;
+    return matchesSearch && matchesHandler && matchesRequester && matchesCaseType && matchesStatus && matchesDateRange;
   }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // Pagination logic
+  const totalItems = filteredInternalCases.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCases = filteredInternalCases.slice(startIndex, endIndex);
+
+  // Pagination functions
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedHandler, selectedRequester, selectedCaseType, selectedStatus, dateFrom, dateTo]);
 
   // Clear all filters
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedHandler('');
+    setSelectedRequester('');
+    setSelectedCaseType('');
     setSelectedStatus('');
     setDateFrom('');
     setDateTo('');
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchTerm || selectedHandler || selectedStatus || dateFrom || dateTo;
+  const hasActiveFilters = searchTerm || selectedHandler || selectedRequester || selectedCaseType || selectedStatus || dateFrom || dateTo;
 
   const handleAddCaseTypeOld = () => {
     setShowAddModal(true);
@@ -605,6 +649,33 @@ export default function AdminInternalWorkPage() {
       setEvaluating(false);
     }
   };
+
+  const handleOpenEditModal = (case_: InternalCase) => {
+    setSelectedCase(case_);
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedCase(null);
+  };
+
+  const handleEditSuccess = (updatedCase: InternalCase) => {
+    // Update the case in the list
+    setInternalCases(prevCases => 
+      prevCases.map(case_ => 
+        case_.id === updatedCase.id 
+          ? updatedCase
+          : case_
+      )
+    );
+    
+    toast.success('Cập nhật case thành công!', {
+      duration: 3000,
+      position: 'top-right',
+    });
+  };
+
 
   const handleOpenDeleteModal = (case_: InternalCase) => {
     setSelectedCase(case_);
@@ -792,6 +863,29 @@ export default function AdminInternalWorkPage() {
         return `Trễ ${remainingMinutes}m`;
       }
     }
+  };
+
+  // Calculate total time from all completed cases
+  const calculateTotalTime = () => {
+    const completedCases = filteredInternalCases.filter(case_ => case_.endDate);
+    let totalMinutes = 0;
+    
+    completedCases.forEach(case_ => {
+      if (case_.endDate) {
+        const start = new Date(case_.startDate);
+        const end = new Date(case_.endDate);
+        const diffMs = end.getTime() - start.getTime();
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        if (diffMinutes > 0) {
+          totalMinutes += diffMinutes;
+        }
+      }
+    });
+    
+    const totalHours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
+    
+    return { totalHours, remainingMinutes, totalMinutes };
   };
 
   const formatCaseType = (caseType: string) => {
@@ -1134,7 +1228,7 @@ export default function AdminInternalWorkPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Bộ lọc
                     </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                       {/* Handler Filter */}
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1.5">
@@ -1152,6 +1246,50 @@ export default function AdminInternalWorkPage() {
                           {uniqueHandlers.map((handler) => (
                             <option key={handler} value={handler}>
                               {handler}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Requester Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                          <div className="flex items-center space-x-1.5">
+                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                            <span>Người yêu cầu</span>
+                          </div>
+                        </label>
+                        <select
+                          value={selectedRequester}
+                          onChange={(e) => setSelectedRequester(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                        >
+                          <option value="">Tất cả người yêu cầu</option>
+                          {uniqueRequesters.map((requester) => (
+                            <option key={requester} value={requester}>
+                              {requester}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Case Type Filter */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                          <div className="flex items-center space-x-1.5">
+                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                            <span>Loại case</span>
+                          </div>
+                        </label>
+                        <select
+                          value={selectedCaseType}
+                          onChange={(e) => setSelectedCaseType(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                        >
+                          <option value="">Tất cả loại case</option>
+                          {uniqueCaseTypes.map((caseType) => (
+                            <option key={caseType} value={caseType}>
+                              {caseType}
                             </option>
                           ))}
                         </select>
@@ -1296,10 +1434,10 @@ export default function AdminInternalWorkPage() {
                     <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Người xử lý
                     </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
                       Trạng thái
                     </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">
                       Thời gian
                     </th>
                     <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
@@ -1326,8 +1464,8 @@ export default function AdminInternalWorkPage() {
                         </div>
                       </td>
                     </tr>
-                  ) : filteredInternalCases.length > 0 ? (
-                    filteredInternalCases.map((case_, index) => {
+                  ) : paginatedCases.length > 0 ? (
+                    paginatedCases.map((case_, index) => {
                       const isExpanded = expandedRows.has(case_.id);
                       const userTotalScore = ((case_.userDifficultyLevel || 0) + (case_.userEstimatedTime || 0) + (case_.userImpactLevel || 0) + (case_.userUrgencyLevel || 0) + (case_.userFormScore || 0));
                       const adminTotalScore = ((case_.adminDifficultyLevel || 0) + (case_.adminEstimatedTime || 0) + (case_.adminImpactLevel || 0) + (case_.adminUrgencyLevel || 0));
@@ -1346,14 +1484,17 @@ export default function AdminInternalWorkPage() {
                                 onClick={() => !deletedCases.has(case_.id) && toggleRowExpansion(case_.id)}
                               >
                                 <td className="px-3 py-2 text-center">
-                          <span className="text-sm font-medium text-gray-600">
+                          <span className="text-xs font-medium text-gray-600">
                             {filteredInternalCases.length - index}
                           </span>
                         </td>
                                 <td className="px-3 py-2">
                           <div>
-                                    <div className="text-sm font-medium text-gray-900">
+                                    <div className="text-xs font-medium text-gray-900">
                               {case_.title}
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1">
+                              {case_.description}
                             </div>
                             <div className="text-xs text-gray-500">
                                       Tạo: {formatDate(case_.createdAt)}
@@ -1362,66 +1503,73 @@ export default function AdminInternalWorkPage() {
                         </td>
                             <td className="px-3 py-2 text-center">
                           <div>
-                            <div className="text-sm text-gray-900">{case_.handler.fullName}</div>
+                            <div className="text-xs text-gray-900">{case_.handler.fullName}</div>
                             <div className="text-xs text-gray-500">{case_.handler.position}</div>
                           </div>
                         </td>
-                            <td className="px-3 py-2 text-center">
+                            <td className="px-3 py-2 text-center w-32">
                               <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
                             {getStatusText(case_.status)}
                           </span>
                         </td>
-                            <td className="px-3 py-2">
-                          <div className="text-sm text-gray-700">
-                            <div>Bắt đầu: {formatDate(case_.startDate)}</div>
+                            <td className="px-3 py-2 w-40">
+                          <div className="text-xs">
+                            <div className="text-blue-600 font-medium whitespace-nowrap">
+                              Bắt đầu: {formatDate(case_.startDate)}
+                            </div>
                             {case_.endDate && (
-                              <div className="text-gray-500">Kết thúc: {formatDate(case_.endDate)}</div>
+                              <>
+                                <div className="text-red-600 font-medium whitespace-nowrap">
+                                  Kết thúc: {formatDate(case_.endDate)}
+                                </div>
+                                <div className="text-purple-600 font-semibold whitespace-nowrap mt-1">
+                                  Thời gian: {calculateDuration(case_.startDate, case_.endDate)}
+                                </div>
+                              </>
                             )}
-                                {case_.endDate && (
-                                  <div className="text-xs font-medium text-blue-600 mt-1">
-                                    Tổng: {calculateDuration(case_.startDate, case_.endDate)}
-                                    {case_.userEstimatedTime && (
-                                      <span className="ml-2">
-                                        {(() => {
-                                          const comparison = calculateTimeComparison(case_.startDate, case_.endDate, case_.userEstimatedTime);
-                                          if (comparison === 'Đúng dự kiến') {
-                                            return <span className="text-green-600">✓ {comparison}</span>;
-                                          } else {
-                                            return <span className="text-red-600">→ {comparison}</span>;
-                                          }
-                                        })()}
-                                      </span>
-                                    )}
-                                  </div>
+                            {!case_.endDate && (
+                              <div className="text-gray-500 font-medium whitespace-nowrap">
+                                Đang xử lý...
+                              </div>
                             )}
                           </div>
                         </td>
                             <td className="px-3 py-2 text-center">
-                              <span className="text-sm font-medium text-blue-600">
+                              <span className="text-xs font-medium text-blue-600">
                                 {userTotalScore}
                               </span>
                             </td>
                             <td className="px-3 py-2 text-center">
                               {isEvaluated ? (
-                                <span className="text-sm font-medium text-green-600">
+                                <span className="text-xs font-medium text-green-600">
                                   {adminTotalScore}
                                 </span>
                               ) : (
                                 <div className="flex items-center justify-center space-x-1">
-                                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                                  <span className="text-sm font-medium text-yellow-600">
+                                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                  <span className="text-xs font-medium text-yellow-600">
                                     Chưa đánh giá
                                   </span>
                                 </div>
                               )}
                             </td>
                             <td className="px-3 py-2 text-center">
-                              <span className="text-sm font-bold text-purple-600">
+                              <span className="text-xs font-bold text-purple-600">
                                 {grandTotal}
                               </span>
                             </td>
                                                             <td className="px-3 py-2 text-center">
                                   <div className="flex items-center justify-center space-x-1">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenEditModal(case_);
+                                      }}
+                                      className="p-1.5 rounded-md transition-colors duration-200 cursor-pointer text-blue-600 hover:bg-blue-50"
+                                      title="Chỉnh sửa case"
+                                    >
+                              <Edit className="h-4 w-4" />
+                            </button>
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -1467,42 +1615,27 @@ export default function AdminInternalWorkPage() {
                               <td colSpan={9} className="px-3 py-4">
                                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                   <div>
-                                    <h4 className="text-sm font-medium text-gray-900 mb-2">Mô tả chi tiết</h4>
-                                    <p className="text-sm text-gray-600">{case_.description}</p>
+                                    <h4 className="text-xs font-medium text-gray-900 mb-2">Mô tả chi tiết</h4>
+                                    <p className="text-xs text-gray-600">{case_.description}</p>
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-medium text-gray-900 mb-2">Người yêu cầu</h4>
-                                    <div className="text-sm text-gray-600">
+                                    <h4 className="text-xs font-medium text-gray-900 mb-2">Người yêu cầu</h4>
+                                    <div className="text-xs text-gray-600">
                                       <div>{case_.requester.fullName}</div>
                                       <div className="text-xs text-gray-500">{case_.requester.position} - {case_.requester.department}</div>
                                     </div>
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-medium text-gray-900 mb-2">Loại case</h4>
-                                    <div className="text-sm text-gray-600">{formatCaseType(case_.caseType)}</div>
+                                    <h4 className="text-xs font-medium text-gray-900 mb-2">Loại case</h4>
+                                    <div className="text-xs text-gray-600">{formatCaseType(case_.caseType)}</div>
                                   </div>
                                   <div>
-                                    <h4 className="text-sm font-medium text-gray-900 mb-2">Thời gian xử lý</h4>
-                                    <div className="text-sm text-gray-600">
+                                    <h4 className="text-xs font-medium text-gray-900 mb-2">Thời gian xử lý</h4>
+                                    <div className="text-xs text-gray-600">
                                       <div>Bắt đầu: {formatDate(case_.startDate)}</div>
                                       {case_.endDate && (
                                         <>
                                           <div>Kết thúc: {formatDate(case_.endDate)}</div>
-                                          <div className="text-xs font-medium text-blue-600 mt-1">
-                                            Tổng: {calculateDuration(case_.startDate, case_.endDate)}
-                                            {case_.userEstimatedTime && (
-                                              <span className="ml-2">
-                                                {(() => {
-                                                  const comparison = calculateTimeComparison(case_.startDate, case_.endDate, case_.userEstimatedTime);
-                                                  if (comparison === 'Đúng dự kiến') {
-                                                    return <span className="text-green-600">✓ {comparison}</span>;
-                                                  } else {
-                                                    return <span className="text-red-600">→ {comparison}</span>;
-                                                  }
-                                                })()}
-                                              </span>
-                                            )}
-                                          </div>
                                         </>
                                       )}
                                     </div>
@@ -1528,6 +1661,96 @@ export default function AdminInternalWorkPage() {
                 </tbody>
               </table>
             </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                <div className="flex-1 flex justify-between sm:hidden">
+                  <button
+                    onClick={goToPrevPage}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Trước
+                  </button>
+                  <button
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Sau
+                  </button>
+                </div>
+                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      Hiển thị{' '}
+                      <span className="font-medium">{startIndex + 1}</span>
+                      {' '}đến{' '}
+                      <span className="font-medium">
+                        {Math.min(endIndex, totalItems)}
+                      </span>
+                      {' '}của{' '}
+                      <span className="font-medium">{totalItems}</span>
+                      {' '}kết quả
+                    </p>
+                  </div>
+                  <div>
+                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                      <button
+                        onClick={goToPrevPage}
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="sr-only">Trước</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                      
+                      {/* Page numbers */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => goToPage(pageNum)}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                              pageNum === currentPage
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      
+                      <button
+                        onClick={goToNextPage}
+                        disabled={currentPage === totalPages}
+                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <span className="sr-only">Sau</span>
+                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </nav>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         ) : (
@@ -2047,6 +2270,14 @@ export default function AdminInternalWorkPage() {
           </div>
         </div>
       )}
+
+      {/* Edit Case Modal */}
+      <EditInternalCaseModal
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
+        onSuccess={handleEditSuccess}
+        caseData={selectedCase}
+      />
     </div>
   );
 }

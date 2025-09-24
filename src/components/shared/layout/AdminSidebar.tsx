@@ -122,13 +122,13 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
       label: "Công việc", 
       icon: Briefcase,
       subItems: [
-        { href: "/admin/work/internal", label: "Case nội bộ", icon: FileText },
         { href: "/admin/receiving-cases", label: "Case nhận hàng", icon: Truck },
         { href: "/admin/delivery-cases", label: "Case giao hàng", icon: Truck },
-        { href: "/admin/work/incident", label: "Case xử lý sự cố", icon: AlertTriangle },
-        { href: "/admin/work/maintenance", label: "Case bảo trì", icon: Wrench },
-        { href: "/admin/work/warranty", label: "Case bảo hành", icon: Shield },
         { href: "/admin/work/deployment", label: "Case triển khai", icon: Rocket },
+        { href: "/admin/work/warranty", label: "Case bảo hành", icon: Shield },
+        { href: "/admin/work/maintenance", label: "Case bảo trì", icon: Wrench },
+        { href: "/admin/work/incident", label: "Case xử lý sự cố", icon: AlertTriangle },
+        { href: "/admin/work/internal", label: "Case nội bộ", icon: FileText },
       ]
     },
     { 

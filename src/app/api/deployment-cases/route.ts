@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
+import { sendCaseCreatedTelegram } from "@/lib/telegram";
 
 export async function POST(request: NextRequest) {
   try {
@@ -185,6 +186,24 @@ export async function POST(request: NextRequest) {
     } catch (notificationError) {
       console.error('Error creating notifications:', notificationError);
       // Don't fail the case creation if notifications fail
+    }
+
+    // Send Telegram notification to admin
+    try {
+      await sendCaseCreatedTelegram({
+        caseId: deploymentCase.id,
+        caseType: 'Case triển khai',
+        caseTitle: deploymentCase.title,
+        caseDescription: deploymentCase.description,
+        requesterName: reporter.fullName,
+        requesterEmail: reporter.companyEmail,
+        handlerName: deploymentCase.handler.fullName,
+        createdAt: new Date().toLocaleString('vi-VN')
+      });
+      console.log('✅ Telegram notification sent successfully');
+    } catch (telegramError) {
+      console.error('❌ Error sending Telegram notification:', telegramError);
+      // Don't fail the case creation if Telegram fails
     }
 
     return NextResponse.json({

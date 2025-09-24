@@ -46,6 +46,10 @@ export default function PersonnelListPage() {
   const [genderFilter, setGenderFilter] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
+  
+  // Sort states
+  const [sortBy, setSortBy] = useState<'startDate' | 'name' | 'department' | 'position'>('startDate');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     fetchEmployees();
@@ -54,7 +58,7 @@ export default function PersonnelListPage() {
   // Filter employees when filters change
   useEffect(() => {
     applyFilters();
-  }, [employees, searchTerm, genderFilter, departmentFilter, positionFilter]);
+  }, [employees, searchTerm, genderFilter, departmentFilter, positionFilter, sortBy, sortDirection]);
 
   const fetchEmployees = async () => {
     try {
@@ -101,6 +105,32 @@ export default function PersonnelListPage() {
       );
     }
 
+    // Sort employees
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'startDate':
+          comparison = new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+          break;
+        case 'name':
+          comparison = a.fullName.localeCompare(b.fullName);
+          break;
+        case 'department':
+          const deptA = a.department || '';
+          const deptB = b.department || '';
+          comparison = deptA.localeCompare(deptB);
+          break;
+        case 'position':
+          const posA = a.position || '';
+          const posB = b.position || '';
+          comparison = posA.localeCompare(posB);
+          break;
+      }
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+
     setFilteredEmployees(filtered);
   };
 
@@ -109,6 +139,8 @@ export default function PersonnelListPage() {
     setGenderFilter('');
     setDepartmentFilter('');
     setPositionFilter('');
+    setSortBy('startDate');
+    setSortDirection('asc');
   };
 
   const getUniqueDepartments = () => {
@@ -328,6 +360,50 @@ export default function PersonnelListPage() {
                 </div>
               </div>
 
+              {/* Sort Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sắp xếp
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <span>Sắp xếp theo</span>
+                      </div>
+                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'startDate' | 'name' | 'department' | 'position')}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    >
+                      <option value="startDate">Ngày vào làm</option>
+                      <option value="name">Tên nhân sự</option>
+                      <option value="department">Phòng ban</option>
+                      <option value="position">Chức vụ</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                      <div className="flex items-center space-x-1.5">
+                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                        <span>Thứ tự</span>
+                      </div>
+                    </label>
+                    <select
+                      value={sortDirection}
+                      onChange={(e) => setSortDirection(e.target.value as 'asc' | 'desc')}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    >
+                      <option value="asc">Cũ nhất trước</option>
+                      <option value="desc">Mới nhất trước</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {/* Filters Section */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -396,7 +472,7 @@ export default function PersonnelListPage() {
               </div>
 
               {/* Active Filters & Actions */}
-              {(searchTerm || genderFilter || departmentFilter || positionFilter) && (
+              {(searchTerm || genderFilter || departmentFilter || positionFilter || sortBy !== 'startDate' || sortDirection !== 'asc') && (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md p-3 border border-blue-100">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex-1">
@@ -429,6 +505,15 @@ export default function PersonnelListPage() {
                             {positionFilter}
                           </span>
                         )}
+                        {(sortBy !== 'startDate' || sortDirection !== 'asc') && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1.5"></div>
+                            {sortBy === 'startDate' ? 'Ngày vào làm' : 
+                             sortBy === 'name' ? 'Tên nhân sự' :
+                             sortBy === 'department' ? 'Phòng ban' : 'Chức vụ'} 
+                            {sortDirection === 'desc' ? ' (Mới nhất)' : ' (Cũ nhất)'}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -446,7 +531,8 @@ export default function PersonnelListPage() {
                       >
                         <span className="text-xs font-medium">Xóa bộ lọc</span>
                         <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
-                          {[searchTerm, genderFilter, departmentFilter, positionFilter].filter(Boolean).length}
+                          {[searchTerm, genderFilter, departmentFilter, positionFilter].filter(Boolean).length + 
+                           ((sortBy !== 'startDate' || sortDirection !== 'asc') ? 1 : 0)}
                         </span>
                       </button>
                     </div>

@@ -44,13 +44,13 @@ export default function UserNavbar() {
   ];
 
   const workMenuItems = [
-    { name: 'Case nội bộ', href: '/user/work/internal', icon: Building2 },
     { name: 'Case nhận hàng', href: '/user/work/receiving', icon: Package },
     { name: 'Case giao hàng', href: '/user/work/delivery', icon: Truck },
     { name: 'Case triển khai', href: '/user/work/deployment', icon: Rocket },
-    { name: 'Case xử lý sự cố', href: '/user/work/incident', icon: AlertTriangle },
-    { name: 'Case bảo trì', href: '/user/work/maintenance', icon: Wrench },
     { name: 'Case bảo hành', href: '/user/work/warranty', icon: Shield },
+    { name: 'Case bảo trì', href: '/user/work/maintenance', icon: Wrench },
+    { name: 'Case xử lý sự cố', href: '/user/work/incident', icon: AlertTriangle },
+    { name: 'Case nội bộ', href: '/user/work/internal', icon: Building2 },
   ];
 
   const isActive = (href: string) => pathname === href;

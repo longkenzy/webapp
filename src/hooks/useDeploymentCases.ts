@@ -56,6 +56,7 @@ interface UseDeploymentCasesReturn {
   updateCase: (id: string, caseData: Partial<DeploymentCase>) => Promise<DeploymentCase | null>;
   deleteCase: (id: string) => Promise<boolean>;
   refreshCases: () => Promise<void>;
+  clearCache: () => void;
 }
 
 export function useDeploymentCases(): UseDeploymentCasesReturn {
@@ -71,7 +72,9 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
       const response = await fetch('/api/deployment-cases?page=1&limit=100', {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=60',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       });
       
@@ -185,8 +188,33 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
   }, []);
 
   const refreshCases = useCallback(async () => {
+    // Clear any cached data first
+    setDeploymentCases([]);
+    // Clear browser cache
+    if (typeof window !== 'undefined') {
+      // Clear localStorage and sessionStorage
+      localStorage.removeItem('deployment-cases-cache');
+      sessionStorage.removeItem('deployment-cases-cache');
+    }
     await fetchCases();
   }, [fetchCases]);
+
+  const clearCache = useCallback(() => {
+    setDeploymentCases([]);
+    if (typeof window !== 'undefined') {
+      // Clear all possible cache
+      localStorage.clear();
+      sessionStorage.clear();
+      // Clear service worker cache if exists
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => {
+            caches.delete(name);
+          });
+        });
+      }
+    }
+  }, []);
 
   // Fetch cases on mount
   useEffect(() => {
@@ -202,5 +230,6 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
     updateCase,
     deleteCase,
     refreshCases,
+    clearCache,
   };
 }

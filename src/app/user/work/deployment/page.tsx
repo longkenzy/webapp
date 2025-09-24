@@ -58,7 +58,7 @@ interface DeploymentCase {
 
 export default function DeploymentCasePage() {
   const { data: session, status } = useSession();
-  const { deploymentCases: hookCases, loading, error, refreshCases } = useDeploymentCases();
+  const { deploymentCases: hookCases, loading, error, refreshCases, clearCache } = useDeploymentCases();
   const [deploymentCases, setDeploymentCases] = useState<DeploymentCase[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -99,6 +99,7 @@ export default function DeploymentCasePage() {
   // Refresh cases
   const handleRefresh = async () => {
     setRefreshing(true);
+    clearCache(); // Clear all cache first
     await refreshCases(); // Force refresh when user clicks refresh button
     setRefreshing(false);
   };
@@ -358,6 +359,7 @@ export default function DeploymentCasePage() {
   const hasActiveFilters = () => {
     return Object.values(filters).some(value => value !== '');
   };
+
 
   // Validate date range
   const isDateRangeValid = () => {

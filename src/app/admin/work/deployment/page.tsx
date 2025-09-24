@@ -460,8 +460,13 @@ export default function AdminDeploymentWorkPage() {
           // Dispatch event to notify other components
           window.dispatchEvent(new CustomEvent('deployment-types-updated'));
         } else {
-          const errorData = await response.json();
-          toast.error(errorData.error || 'Lỗi khi xóa loại bảo hành');
+          try {
+            const errorData = await response.json();
+            toast.error(errorData.error || 'Lỗi khi xóa loại bảo hành');
+          } catch (jsonError) {
+            console.error('Failed to parse error response:', jsonError);
+            toast.error(`Lỗi khi xóa loại bảo hành (${response.status}: ${response.statusText})`);
+          }
         }
       } catch (error) {
         console.error('Error deleting incident type:', error);

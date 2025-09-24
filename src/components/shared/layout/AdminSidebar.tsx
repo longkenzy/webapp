@@ -17,7 +17,8 @@ import {
   Settings, 
   ChevronDown,
   BarChart3,
-  Building2
+  Building2,
+  Rocket
 } from "lucide-react";
 
 interface NavLinkProps {
@@ -127,6 +128,7 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
         { href: "/admin/work/incident", label: "Case xử lý sự cố", icon: AlertTriangle },
         { href: "/admin/work/maintenance", label: "Case bảo trì", icon: Wrench },
         { href: "/admin/work/warranty", label: "Case bảo hành", icon: Shield },
+        { href: "/admin/work/deployment", label: "Case triển khai", icon: Rocket },
       ]
     },
     { 

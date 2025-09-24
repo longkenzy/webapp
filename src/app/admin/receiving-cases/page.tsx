@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Search, Filter, Download, Trash2, RefreshCw } from 'lucide-react';
+import { Package, Search, Filter, Download, Trash2, RefreshCw, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReceivingCaseTable from '@/components/admin/ReceivingCaseTable';
 import * as XLSX from 'xlsx';
@@ -78,6 +78,7 @@ export default function ReceivingCasesPage() {
   const [suppliers, setSuppliers] = useState<Array<{id: string, shortName: string}>>([]);
   const [allCases, setAllCases] = useState<ReceivingCase[]>([]);
   
+  
   // Delete modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -125,6 +126,7 @@ export default function ReceivingCasesPage() {
       console.error('Error fetching data:', error);
     }
   }, []);
+
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -447,21 +449,32 @@ export default function ReceivingCasesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-full mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-6">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Package className="h-5 w-5 text-blue-600" />
-              Quản lý Case Nhận Hàng
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Quản lý và theo dõi các case nhận hàng từ nhà cung cấp
-            </p>
+        <div className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-full mx-auto px-4 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Package className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Quản lý case nhận hàng</h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Quản lý và theo dõi các case nhận hàng từ nhà cung cấp
+                  </p>
+                </div>
+              </div>
+            </div>
+            
           </div>
         </div>
 
-        {/* Search and Filter Bar */}
+        {/* Main Content */}
+        <div className="max-w-full mx-auto px-4 py-8">
+
+        {/* Main Content */}
+        <div className="space-y-6">
+            {/* Search and Filter Bar */}
         <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
@@ -755,7 +768,8 @@ export default function ReceivingCasesPage() {
           allCases={allCases}
           deletedCases={deletedCases}
         />
-      </div>
+          </div>
+        </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedCase && (

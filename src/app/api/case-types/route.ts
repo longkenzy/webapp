@@ -19,9 +19,15 @@ export async function GET(request: NextRequest) {
       data: caseTypes
     });
 
-    // Add caching headers for case types (they don't change often)
-    response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
-    response.headers.set('ETag', `"${Date.now()}"`);
+    // Check if client requests no-cache
+    const clientCacheControl = request.headers.get('cache-control');
+    if (clientCacheControl?.includes('no-cache')) {
+      response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else {
+      // Add caching headers for case types (they don't change often)
+      response.headers.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+      response.headers.set('ETag', `"${Date.now()}"`);
+    }
     
     return response;
 

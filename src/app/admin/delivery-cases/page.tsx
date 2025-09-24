@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Search, Filter, Download, RefreshCw } from 'lucide-react';
+import { Package, Search, Filter, Download, RefreshCw, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
 import * as XLSX from 'xlsx';
@@ -78,6 +78,7 @@ export default function DeliveryCasesPage() {
   const [customers, setCustomers] = useState<Array<{id: string, shortName: string}>>([]);
   const [allCases, setAllCases] = useState<DeliveryCase[]>([]);
 
+
   // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -120,6 +121,7 @@ export default function DeliveryCasesPage() {
       console.error('Error fetching data:', error);
     }
   }, []);
+
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -390,19 +392,31 @@ export default function DeliveryCasesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-full mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-6">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Package className="h-5 w-5 text-green-600" />
-              Quản lý Case Giao Hàng
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Quản lý và theo dõi các case giao hàng đến khách hàng
-            </p>
+        <div className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-full mx-auto px-4 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Package className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Quản lý case giao hàng</h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Quản lý và theo dõi các case giao hàng đến khách hàng
+                  </p>
+                </div>
+              </div>
+            </div>
+            
           </div>
         </div>
+
+        {/* Main Content */}
+        <div className="max-w-full mx-auto px-4 py-8">
+
+        {/* Main Content */}
+        <div className="space-y-6">
 
         {/* Search and Filter Bar */}
         <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -697,7 +711,8 @@ export default function DeliveryCasesPage() {
           endDate={endDate}
           allCases={allCases}
         />
-      </div>
+          </div>
+        </div>
     </div>
   );
 }

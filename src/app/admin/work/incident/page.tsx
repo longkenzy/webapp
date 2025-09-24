@@ -7,6 +7,7 @@ import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import ConfigurationTab from '@/components/shared/ConfigurationTab';
 
 interface Employee {
   id: string;
@@ -714,6 +715,9 @@ export default function AdminIncidentWorkPage() {
                   <div className="flex items-center space-x-2">
                     <Settings className="h-4 w-4" />
                     <span>Cấu hình</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600">
+                      {incidentTypes.length}
+                    </span>
                   </div>
                 </button>
               </nav>
@@ -1260,145 +1264,41 @@ export default function AdminIncidentWorkPage() {
           </div>
         ) : (
           /* Configuration Tab Content */
-          <div className="space-y-6">
-            {/* Incident Types Management */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 bg-blue-100 rounded-md">
-                      <FileText className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Quản lý loại sự cố</h3>
-                  </div>
-                  <button
-                    onClick={handleAddIncidentType}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Thêm loại sự cố</span>
-                  </button>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  Quản lý các loại sự cố hệ thống
-                </p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Loại sự cố
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Thao tác
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {incidentTypesLoading ? (
-                      <tr key="loading-state">
-                        <td colSpan={2} className="px-6 py-8 text-center">
-                          <div className="flex items-center justify-center space-x-2">
-                            <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
-                            <span className="text-gray-600">Đang tải danh sách loại sự cố...</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      <>
-                        {/* Existing incident types */}
-                        {incidentTypes.map((incidentType, index) => (
-                          <tr key={`incident-type-${incidentType.id}`} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{incidentType.name}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => handleEditIncidentType(incidentType)}
-                                  className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors cursor-pointer"
-                                >
-                                  Sửa
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteIncidentType(incidentType)}
-                                  className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors cursor-pointer"
-                                >
-                                  Xóa
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                        
-                        {/* Inline editing row */}
-                        {isAddingNewRow && (
-                          <tr key="inline-editing-row" className="bg-blue-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input
-                                type="text"
-                                value={newIncidentTypeName}
-                                onChange={(e) => setNewIncidentTypeName(e.target.value)}
-                                placeholder="Nhập tên loại sự cố..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleSaveNewIncidentType();
-                                  } else if (e.key === 'Escape') {
-                                    handleCancelNewIncidentType();
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={handleSaveNewIncidentType}
-                                  disabled={saving}
-                                  className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  {saving ? 'Đang lưu...' : 'Lưu'}
-                                </button>
-                                <button
-                                  onClick={handleCancelNewIncidentType}
-                                  disabled={saving}
-                                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  Hủy
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                        
-                        {/* Empty state */}
-                        {incidentTypes.length === 0 && !isAddingNewRow && (
-                          <tr>
-                            <td colSpan={2} className="px-6 py-8 text-center">
-                              <div className="text-gray-400 mb-4">
-                                <FileText className="h-16 w-16 mx-auto" />
-                              </div>
-                              <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có loại sự cố nào</h3>
-                              <p className="text-gray-500 mb-4">Thêm loại sự cố đầu tiên để bắt đầu quản lý</p>
-                              <button
-                                onClick={handleAddIncidentType}
-                                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Thêm loại sự cố
-                              </button>
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <ConfigurationTab
+            title="Quản lý loại sự cố"
+            items={incidentTypes.map(type => ({
+              id: type.id,
+              name: type.name,
+              description: type.description
+            }))}
+            onAdd={async (name) => {
+              const response = await fetch('/api/incident-types', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              if (!response.ok) throw new Error('Failed to add incident type');
+              await fetchIncidentTypes();
+            }}
+            onEdit={async (id, name) => {
+              const response = await fetch(`/api/incident-types/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              if (!response.ok) throw new Error('Failed to update incident type');
+              await fetchIncidentTypes();
+            }}
+            onDelete={async (id) => {
+              const response = await fetch(`/api/incident-types/${id}`, {
+                method: 'DELETE'
+              });
+              if (!response.ok) throw new Error('Failed to delete incident type');
+              await fetchIncidentTypes();
+            }}
+            iconColor="red"
+            placeholder="Nhập tên loại sự cố..."
+          />
         )}
       </div>
 

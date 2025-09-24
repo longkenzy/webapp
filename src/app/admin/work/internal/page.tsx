@@ -8,10 +8,12 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import EditInternalCaseModal from './EditInternalCaseModal';
+import ConfigurationTab from '@/components/shared/ConfigurationTab';
 
 interface CaseType {
   id: string;
   name: string;
+  description?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -141,13 +143,16 @@ export default function AdminInternalWorkPage() {
   };
 
   // Fetch case types from API with caching
-  const fetchCaseTypes = useCallback(async () => {
+  const fetchCaseTypes = useCallback(async (bypassCache = false) => {
     try {
       setCaseTypesLoading(true);
-      const response = await fetch('/api/case-types', {
+      const url = bypassCache 
+        ? `/api/case-types?_t=${Date.now()}` 
+        : '/api/case-types';
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=300',
+          'Cache-Control': bypassCache ? 'no-cache' : 'max-age=300',
         },
       });
       if (response.ok) {
@@ -1085,11 +1090,14 @@ export default function AdminInternalWorkPage() {
           <div className="py-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Wrench className="h-6 w-6 text-blue-600" />
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Wrench className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Case Nội Bộ</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">Quản lý case nội bộ</h1>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Quản lý và theo dõi các case nội bộ của công ty
+                  </p>
                   
                   {activeTab === 'cases' && (
                     <div className="mt-2 flex items-center space-x-4 text-xs">
@@ -1154,6 +1162,9 @@ export default function AdminInternalWorkPage() {
                     <div className="flex items-center space-x-2">
                       <Settings className="h-4 w-4" />
                       <span>Cấu hình</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-600">
+                        {caseTypes.length}
+                      </span>
                     </div>
                   </button>
                 </nav>
@@ -1755,190 +1766,53 @@ export default function AdminInternalWorkPage() {
         </div>
         ) : (
           /* Configuration Tab Content */
-          <div className="space-y-6">
-            {/* Case Types Management */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 bg-blue-100 rounded-md">
-                      <FileText className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Quản lý loại case</h3>
-                  </div>
-                  <button
-                    onClick={handleAddCaseType}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Thêm loại case</span>
-                  </button>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  Quản lý các loại case nội bộ
-                </p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Loại Case
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Trạng thái
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Ngày tạo
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Thao tác
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {caseTypesLoading ? (
-                      <tr key="loading-state">
-                        <td colSpan={4} className="px-6 py-8 text-center">
-                          <div className="flex items-center justify-center space-x-2">
-                            <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
-                            <span className="text-gray-600">Đang tải danh sách loại case...</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      <>
-                        {/* Existing case types */}
-                        {caseTypes.map((caseType, index) => (
-                          <tr key={generateUniqueKey(caseType, index)} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{caseType.name}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                caseType.isActive 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-red-100 text-red-800'
-                              }`}>
-                                {caseType.isActive ? 'Hoạt động' : 'Không hoạt động'}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {new Date(caseType.createdAt).toLocaleDateString('vi-VN')}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex items-center space-x-2">
-                                <button
-                                    onClick={() => toggleCaseTypeStatus(caseType)}
-                                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-                                    caseType.isActive
-                                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                      : 'bg-green-100 text-green-700 hover:bg-green-200'
-                                  }`}
-                                >
-                                  {caseType.isActive ? 'Tắt' : 'Bật'}
-                                </button>
-                                  <button
-                                    onClick={() => handleEditCaseType(caseType)}
-                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors cursor-pointer"
-                                  >
-                                  Sửa
-                                </button>
-                                  <button
-                                    onClick={() => handleDeleteCaseType(caseType)}
-                                    className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors cursor-pointer"
-                                  >
-                                    Xóa
-                                  </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                        
-                        {/* Inline editing row */}
-                        {isAddingNewRow && (
-                          <tr key="inline-editing-row" className="bg-blue-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input
-                                type="text"
-                                value={newCaseTypeName}
-                                onChange={(e) => setNewCaseTypeName(e.target.value)}
-                                placeholder="Nhập tên loại case..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleSaveNewCaseType();
-                                  } else if (e.key === 'Escape') {
-                                    handleCancelAddRow();
-                                  }
-                                }}
-                              />
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                Hoạt động
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              Mới
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={handleSaveNewCaseType}
-                                  disabled={saving}
-                                  className="px-3 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  {saving ? 'Đang lưu...' : 'Lưu'}
-                                </button>
-                                <button
-                                  onClick={handleCancelAddRow}
-                                  disabled={saving}
-                                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                                >
-                                  Hủy
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                        
-                        {/* Add new row button - positioned after existing rows */}
-                        {!isAddingNewRow && (
-                          <tr key="add-new-row-button" className="hover:bg-gray-50">
-                            <td colSpan={4} className="px-6 py-4">
-                              <button
-                                onClick={handleAddNewRow}
-                                className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 font-medium transition-colors cursor-pointer"
-                              >
-                                <Plus className="h-4 w-4" />
-                                <span>Thêm loại case mới</span>
-                              </button>
-                            </td>
-                          </tr>
-                        )}
-                        
-                        {/* Empty state */}
-                        {caseTypes.length === 0 && !isAddingNewRow && (
-                          <tr key="empty-state">
-                            <td colSpan={4} className="px-6 py-8 text-center">
-                              <div className="text-gray-400 mb-4">
-                                <FileText className="h-16 w-16 mx-auto" />
-                              </div>
-                              <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có loại case nào</h3>
-                              <p className="text-gray-500">Nhấn dấu + để thêm loại case đầu tiên</p>
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
+          <ConfigurationTab
+            title="Quản lý loại case"
+            items={caseTypes.map(type => ({
+              id: type.id,
+              name: type.name,
+              description: type.description
+            }))}
+            onAdd={async (name) => {
+              const response = await fetch('/api/case-types', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to add case type');
+              }
+              await fetchCaseTypes(true); // Bypass cache
+              toast.success('Thêm loại case thành công');
+            }}
+            onEdit={async (id, name) => {
+              const response = await fetch(`/api/case-types/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update case type');
+              }
+              await fetchCaseTypes(true); // Bypass cache
+              toast.success('Cập nhật loại case thành công');
+            }}
+            onDelete={async (id) => {
+              const response = await fetch(`/api/case-types/${id}`, {
+                method: 'DELETE'
+              });
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to delete case type');
+              }
+              await fetchCaseTypes(true); // Bypass cache
+              toast.success('Xóa loại case thành công');
+            }}
+            iconColor="purple"
+            placeholder="Nhập tên loại case..."
+          />
         )}
       </div>
 

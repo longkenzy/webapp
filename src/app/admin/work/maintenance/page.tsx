@@ -7,6 +7,7 @@ import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import ConfigurationTab from '@/components/shared/ConfigurationTab';
 
 interface Employee {
   id: string;
@@ -1282,114 +1283,43 @@ export default function AdminMaintenanceWorkPage() {
           </div>
             </div>
         ) : (
-          <div className="space-y-6">
-            {/* Maintenance Types Management */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="px-4 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 bg-orange-100 rounded-md">
-                      <Wrench className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Quản lý loại bảo trì</h3>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingMaintenanceType(null);
-                      setShowMaintenanceTypeModal(true);
-                    }}
-                    className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4" />
-                    <span>Thêm loại bảo trì</span>
-                  </button>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  Quản lý các loại bảo trì hệ thống
-                </p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Loại bảo trì
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Thao tác
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {maintenanceTypesLoading ? (
-                        <tr key="loading-state">
-                          <td colSpan={2} className="px-4 py-8 text-center">
-                            <div className="flex items-center justify-center space-x-2">
-                              <RefreshCw className="h-5 w-5 animate-spin text-orange-600" />
-                              <span className="text-gray-600">Đang tải danh sách loại bảo trì...</span>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        <>
-                          {/* Existing maintenance types */}
-                          {maintenanceTypes.map((type) => (
-                            <tr key={`maintenance-type-${type.id}`} className="hover:bg-gray-50">
-                              <td className="px-4 py-4 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">{type.name}</div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <div className="flex items-center space-x-2">
-                                  <button
-                                    onClick={() => {
-                                      setEditingMaintenanceType(type);
-                                      setShowMaintenanceTypeModal(true);
-                                    }}
-                                    className="px-3 py-1 bg-orange-100 text-orange-700 rounded-md text-xs font-medium hover:bg-orange-200 transition-colors cursor-pointer"
-                                  >
-                                    Sửa
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteMaintenanceType(type.id)}
-                                    className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors cursor-pointer"
-                                  >
-                                    Xóa
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                          
-                          {/* Empty state */}
-                          {maintenanceTypes.length === 0 && (
-                            <tr>
-                              <td colSpan={2} className="px-4 py-8 text-center">
-                                <div className="text-gray-400 mb-4">
-                                  <Wrench className="h-16 w-16 mx-auto" />
-                                </div>
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có loại bảo trì nào</h3>
-                                <p className="text-gray-500 mb-4">Thêm loại bảo trì đầu tiên để bắt đầu quản lý</p>
-                                <button
-                                  onClick={() => {
-                                    setEditingMaintenanceType(null);
-                                    setShowMaintenanceTypeModal(true);
-                                  }}
-                                  className="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors cursor-pointer"
-                                >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Thêm loại bảo trì
-                                </button>
-                              </td>
-                            </tr>
-                          )}
-                        </>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+          /* Configuration Tab Content */
+          <ConfigurationTab
+            title="Quản lý loại bảo trì"
+            items={maintenanceTypes.map(type => ({
+              id: type.id,
+              name: type.name,
+              description: type.description
+            }))}
+            onAdd={async (name) => {
+              const response = await fetch('/api/maintenance-types', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              if (!response.ok) throw new Error('Failed to add maintenance type');
+              await fetchMaintenanceTypes();
+            }}
+            onEdit={async (id, name) => {
+              const response = await fetch(`/api/maintenance-types/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+              });
+              if (!response.ok) throw new Error('Failed to update maintenance type');
+              await fetchMaintenanceTypes();
+            }}
+            onDelete={async (id) => {
+              const response = await fetch(`/api/maintenance-types/${id}`, {
+                method: 'DELETE'
+              });
+              if (!response.ok) throw new Error('Failed to delete maintenance type');
+              await fetchMaintenanceTypes();
+            }}
+            iconColor="orange"
+            placeholder="Nhập tên loại bảo trì..."
+          />
+        )}
         </div>
       </div>
 

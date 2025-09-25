@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
-import { Role } from "@prisma/client";
+import { Role, InternalCaseStatus, ReceivingCaseStatus, DeliveryCaseStatus } from "@prisma/client";
 import { atLeast } from "@/lib/auth/rbac";
 
 export async function GET() {
@@ -11,16 +11,16 @@ export async function GET() {
 
   // Count open cases (RECEIVED, IN_PROGRESS) across all case types
   const [internalOpen, receivingOpen, deliveryOpen] = await Promise.all([
-    db.internalCase.count({ where: { status: { in: ["RECEIVED", "IN_PROGRESS"] } } }),
-    db.receivingCase.count({ where: { status: { in: ["RECEIVED", "IN_PROGRESS"] } } }),
-    db.deliveryCase.count({ where: { status: { in: ["RECEIVED", "IN_PROGRESS"] } } })
+    db.internalCase.count({ where: { status: { in: [InternalCaseStatus.RECEIVED, InternalCaseStatus.IN_PROGRESS] } } }),
+    db.receivingCase.count({ where: { status: { in: [ReceivingCaseStatus.RECEIVED, ReceivingCaseStatus.IN_PROGRESS] } } }),
+    db.deliveryCase.count({ where: { status: { in: [DeliveryCaseStatus.RECEIVED, DeliveryCaseStatus.IN_PROGRESS] } } })
   ]);
   
   // Count resolved cases (COMPLETED) across all case types
   const [internalResolved, receivingResolved, deliveryResolved] = await Promise.all([
-    db.internalCase.count({ where: { status: "COMPLETED" } }),
-    db.receivingCase.count({ where: { status: "COMPLETED" } }),
-    db.deliveryCase.count({ where: { status: "COMPLETED" } })
+    db.internalCase.count({ where: { status: InternalCaseStatus.COMPLETED } }),
+    db.receivingCase.count({ where: { status: ReceivingCaseStatus.COMPLETED } }),
+    db.deliveryCase.count({ where: { status: DeliveryCaseStatus.COMPLETED } })
   ]);
   
   const open = internalOpen + receivingOpen + deliveryOpen;

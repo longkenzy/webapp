@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { DeploymentCaseStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
 import { sendCaseCreatedTelegram } from "@/lib/telegram";
 
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
         customerId: customerId || null,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
-        status: status || "RECEIVED",
+        status: status || DeploymentCaseStatus.RECEIVED,
         notes: notes || null,
         // User assessment fields
         userDifficultyLevel: userDifficultyLevel !== undefined && userDifficultyLevel !== null ? parseInt(userDifficultyLevel) : null,

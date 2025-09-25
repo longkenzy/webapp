@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { InternalCaseStatus } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
           // Cases that are not "RECEIVED" or "IN_PROGRESS"
           {
             status: {
-              notIn: ['RECEIVED', 'IN_PROGRESS']
+              notIn: [InternalCaseStatus.RECEIVED, InternalCaseStatus.IN_PROGRESS]
             }
           }
         ]

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { db } from '@/lib/db';
-import { ReceivingCaseStatus } from '@prisma/client';
+import { DeliveryCaseStatus } from '@prisma/client';
 import { createCaseCreatedNotification, getAdminUsers } from '@/lib/notifications';
 import { sendCaseCreatedTelegram } from '@/lib/telegram';
 
@@ -201,7 +201,7 @@ export async function POST(request: NextRequest) {
         form: 'Giao hàng',
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
-        status: status || ReceivingCaseStatus.RECEIVED,
+        status: status || DeliveryCaseStatus.RECEIVED,
         notes,
         requesterId,
         handlerId,

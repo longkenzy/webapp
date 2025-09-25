@@ -1,7 +1,7 @@
-# Switch to Production Database
-$env:DATABASE_URL = "postgresql://neondb_owner:npg_jzQACkco0T8S@ep-broad-truth-a1v49nhu-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# Switch to Production Database - Local PostgreSQL
+$env:DATABASE_URL = "postgresql://smartservices:Longkenzy%407525@113.161.61.162:5432/smartservices"
 $env:NODE_ENV = "production"
-Write-Host "Switched to PRODUCTION database" -ForegroundColor Red
+Write-Host "Switched to PRODUCTION database (Local PostgreSQL)" -ForegroundColor Red
 
 
 

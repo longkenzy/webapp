@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { MaintenanceCaseStatus } from '@prisma/client';
 import { createCaseCreatedNotification, getAdminUsers } from '@/lib/notifications';
 import { sendCaseCreatedTelegram } from '@/lib/telegram';
 
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         notes: notes || '',
-        status: status || 'RECEIVED',
+        status: status || MaintenanceCaseStatus.RECEIVED,
         // User evaluation data - convert strings to integers
         userDifficultyLevel: userDifficultyLevel ? parseInt(userDifficultyLevel) : null,
         userEstimatedTime: userEstimatedTime ? parseInt(userEstimatedTime) : null,

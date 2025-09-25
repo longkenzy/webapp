@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { InternalCaseStatus } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,10 +39,10 @@ export async function GET(request: NextRequest) {
 
     // Count monthly cases by status
     const monthlyStatusCounts = {
-      RECEIVED: 0,
-      IN_PROGRESS: 0,
-      COMPLETED: 0,
-      CANCELLED: 0
+      [InternalCaseStatus.RECEIVED]: 0,
+      [InternalCaseStatus.IN_PROGRESS]: 0,
+      [InternalCaseStatus.COMPLETED]: 0,
+      [InternalCaseStatus.CANCELLED]: 0
     };
 
     monthlyCases.forEach(case_ => {
@@ -52,10 +53,10 @@ export async function GET(request: NextRequest) {
 
     // Count all cases by status
     const totalStatusCounts = {
-      RECEIVED: 0,
-      IN_PROGRESS: 0,
-      COMPLETED: 0,
-      CANCELLED: 0
+      [InternalCaseStatus.RECEIVED]: 0,
+      [InternalCaseStatus.IN_PROGRESS]: 0,
+      [InternalCaseStatus.COMPLETED]: 0,
+      [InternalCaseStatus.CANCELLED]: 0
     };
 
     allCases.forEach(case_ => {
@@ -66,11 +67,11 @@ export async function GET(request: NextRequest) {
 
     // Calculate completion rates
     const monthlyTotalCases = monthlyCases.length;
-    const monthlyCompletedCases = monthlyStatusCounts.COMPLETED;
+    const monthlyCompletedCases = monthlyStatusCounts[InternalCaseStatus.COMPLETED];
     const monthlyCompletionRate = monthlyTotalCases > 0 ? (monthlyCompletedCases / monthlyTotalCases) * 100 : 0;
 
     const totalCases = allCases.length;
-    const totalCompletedCases = totalStatusCounts.COMPLETED;
+    const totalCompletedCases = totalStatusCounts[InternalCaseStatus.COMPLETED];
     const totalCompletionRate = totalCases > 0 ? (totalCompletedCases / totalCases) * 100 : 0;
 
     // Prepare data for monthly pie chart
@@ -83,21 +84,21 @@ export async function GET(request: NextRequest) {
       },
       {
         label: 'Đang xử lý',
-        value: monthlyStatusCounts.IN_PROGRESS,
+        value: monthlyStatusCounts[InternalCaseStatus.IN_PROGRESS],
         color: '#F59E0B', // yellow-500
-        percentage: monthlyTotalCases > 0 ? ((monthlyStatusCounts.IN_PROGRESS / monthlyTotalCases) * 100).toFixed(1) : '0'
+        percentage: monthlyTotalCases > 0 ? ((monthlyStatusCounts[InternalCaseStatus.IN_PROGRESS] / monthlyTotalCases) * 100).toFixed(1) : '0'
       },
       {
         label: 'Tiếp nhận',
-        value: monthlyStatusCounts.RECEIVED,
+        value: monthlyStatusCounts[InternalCaseStatus.RECEIVED],
         color: '#3B82F6', // blue-500
-        percentage: monthlyTotalCases > 0 ? ((monthlyStatusCounts.RECEIVED / monthlyTotalCases) * 100).toFixed(1) : '0'
+        percentage: monthlyTotalCases > 0 ? ((monthlyStatusCounts[InternalCaseStatus.RECEIVED] / monthlyTotalCases) * 100).toFixed(1) : '0'
       },
       {
         label: 'Hủy',
-        value: monthlyStatusCounts.CANCELLED,
+        value: monthlyStatusCounts[InternalCaseStatus.CANCELLED],
         color: '#EF4444', // red-500
-        percentage: monthlyTotalCases > 0 ? ((monthlyStatusCounts.CANCELLED / monthlyTotalCases) * 100).toFixed(1) : '0'
+        percentage: monthlyTotalCases > 0 ? ((monthlyStatusCounts[InternalCaseStatus.CANCELLED] / monthlyTotalCases) * 100).toFixed(1) : '0'
       }
     ].filter(item => item.value > 0); // Only show categories with data
 
@@ -111,21 +112,21 @@ export async function GET(request: NextRequest) {
       },
       {
         label: 'Đang xử lý',
-        value: totalStatusCounts.IN_PROGRESS,
+        value: totalStatusCounts[InternalCaseStatus.IN_PROGRESS],
         color: '#F59E0B', // yellow-500
-        percentage: totalCases > 0 ? ((totalStatusCounts.IN_PROGRESS / totalCases) * 100).toFixed(1) : '0'
+        percentage: totalCases > 0 ? ((totalStatusCounts[InternalCaseStatus.IN_PROGRESS] / totalCases) * 100).toFixed(1) : '0'
       },
       {
         label: 'Tiếp nhận',
-        value: totalStatusCounts.RECEIVED,
+        value: totalStatusCounts[InternalCaseStatus.RECEIVED],
         color: '#3B82F6', // blue-500
-        percentage: totalCases > 0 ? ((totalStatusCounts.RECEIVED / totalCases) * 100).toFixed(1) : '0'
+        percentage: totalCases > 0 ? ((totalStatusCounts[InternalCaseStatus.RECEIVED] / totalCases) * 100).toFixed(1) : '0'
       },
       {
         label: 'Hủy',
-        value: totalStatusCounts.CANCELLED,
+        value: totalStatusCounts[InternalCaseStatus.CANCELLED],
         color: '#EF4444', // red-500
-        percentage: totalCases > 0 ? ((totalStatusCounts.CANCELLED / totalCases) * 100).toFixed(1) : '0'
+        percentage: totalCases > 0 ? ((totalStatusCounts[InternalCaseStatus.CANCELLED] / totalCases) * 100).toFixed(1) : '0'
       }
     ].filter(item => item.value > 0); // Only show categories with data
 

@@ -24,6 +24,7 @@ export async function PUT(
     const {
       endDate,
       status,
+      notes, // Thêm trường Ghi chú
       crmReferenceCode // Thêm trường Mã CRM
     } = body;
 
@@ -70,12 +71,13 @@ export async function PUT(
     console.log("Found existing warranty:", existingWarranty.id);
 
     // Update the warranty in database
-    console.log("Updating warranty with data:", { endDate, status, crmReferenceCode });
+    console.log("Updating warranty with data:", { endDate, status, notes, crmReferenceCode });
     const updatedWarranty = await db.warranty.update({
       where: { id },
       data: {
         endDate: endDate ? new Date(endDate) : null,
         status: status || existingWarranty.status,
+        notes: notes || null, // Thêm Ghi chú
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
         updatedAt: new Date()
       },

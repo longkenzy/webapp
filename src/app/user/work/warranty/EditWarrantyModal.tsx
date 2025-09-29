@@ -66,6 +66,7 @@ export default function EditWarrantyModal({
   const [formData, setFormData] = useState({
     endDate: '',
     status: 'RECEIVED',
+    notes: '', // Thêm trường Ghi chú
     crmReferenceCode: '' // Thêm trường Mã CRM
   });
 
@@ -75,6 +76,7 @@ export default function EditWarrantyModal({
       setFormData({
         endDate: warrantyData.endDate ? new Date(warrantyData.endDate).toISOString().slice(0, 16) : '',
         status: warrantyData.status,
+        notes: warrantyData.notes || '', // Khởi tạo Ghi chú
         crmReferenceCode: warrantyData.crmReferenceCode || '' // Khởi tạo Mã CRM
       });
     }
@@ -169,6 +171,7 @@ export default function EditWarrantyModal({
       const updateData = {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
+        notes: formData.notes || null, // Thêm Ghi chú
         crmReferenceCode: formData.crmReferenceCode || null // Thêm Mã CRM
       };
 
@@ -274,6 +277,26 @@ export default function EditWarrantyModal({
 
           {/* Editable Fields */}
           <div className="space-y-4">
+            {/* Notes Field */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <span className="inline-flex items-center">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                  Ghi chú
+                </span>
+              </label>
+              <textarea
+                value={formData.notes || ''}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Nhập ghi chú về case bảo hành (tùy chọn)"
+                rows={3}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Ghi chú bổ sung về quá trình xử lý bảo hành
+              </p>
+            </div>
+
             {/* End Date, Status and CRM Code Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* End Date */}

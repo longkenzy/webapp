@@ -40,6 +40,7 @@ interface DeploymentCase {
   createdAt: string;
   updatedAt: string;
   notes?: string;
+  crmReferenceCode?: string; // Thêm trường Mã CRM
   // User assessment fields
   userDifficultyLevel?: number;
   userEstimatedTime?: number;
@@ -732,6 +733,12 @@ export default function DeploymentCasePage() {
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-80">
                     Thông tin Triển khai
                   </th>
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
+                    Ghi chú
+                  </th>
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
+                    Mã CRM
+                  </th>
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Trạng thái
                   </th>
@@ -802,6 +809,36 @@ export default function DeploymentCasePage() {
                           </div>
                         </div>
                       </td>
+                      
+                      {/* Ghi chú */}
+                      <td className="px-2 py-1 w-32">
+                        <div className="text-xs text-slate-600 max-w-32">
+                          {case_.notes ? (
+                            <div className="bg-green-50 border border-green-200 rounded-md p-2">
+                              <div className="text-xs font-medium text-green-800 mb-1">Ghi chú:</div>
+                              <div className="text-xs text-green-700 line-clamp-3 break-words">
+                                {case_.notes}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Chưa có ghi chú</span>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Mã CRM */}
+                      <td className="px-2 py-1 w-24">
+                        <div className="text-sm text-slate-900">
+                          {case_.crmReferenceCode ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              {case_.crmReferenceCode}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Chưa có</span>
+                          )}
+                        </div>
+                      </td>
+                      
                       <td className="px-2 py-1">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
                           {getStatusText(case_.status)}
@@ -853,7 +890,7 @@ export default function DeploymentCasePage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center">
+                    <td colSpan={10} className="px-3 py-8 text-center">
                       <div className="text-slate-400 mb-4">
                         <Rocket className="h-16 w-16 mx-auto" />
                       </div>

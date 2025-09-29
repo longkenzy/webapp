@@ -801,6 +801,9 @@ export default function IncidentPage() {
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-80">
                     Thông tin Sự cố
                   </th>
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-32">
+                    Ghi chú
+                  </th>
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Mã CRM
                   </th>
@@ -886,6 +889,22 @@ export default function IncidentPage() {
                         </div>
                       </td>
                       
+                      {/* Ghi chú */}
+                      <td className="px-2 py-1 w-32">
+                        <div className="text-xs text-slate-600 max-w-32">
+                          {incident.notes ? (
+                            <div className="bg-green-50 border border-green-200 rounded-md p-2">
+                              <div className="text-xs font-medium text-green-800 mb-1">Ghi chú:</div>
+                              <div className="text-xs text-green-700 line-clamp-3 break-words">
+                                {incident.notes}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Chưa có ghi chú</span>
+                          )}
+                        </div>
+                      </td>
+                      
                       {/* Mã CRM */}
                       <td className="px-2 py-1 w-24">
                         <div className="text-sm text-slate-900">
@@ -955,7 +974,7 @@ export default function IncidentPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className="px-2 py-4 text-center">
+                    <td colSpan={10} className="px-2 py-4 text-center">
                       <div className="text-slate-400 mb-4">
                         <AlertTriangle className="h-16 w-16 mx-auto" />
                       </div>

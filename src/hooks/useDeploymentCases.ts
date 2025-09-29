@@ -110,8 +110,8 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
         const result = await response.json();
         const newCase = result.data;
         
-        // Add the new case to the list
-        setDeploymentCases(prev => [newCase, ...prev]);
+        // Refresh the entire list to get complete data
+        await fetchCases();
         
         return newCase;
       } else {
@@ -125,7 +125,7 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
       console.error('Error creating case:', err);
       return null;
     }
-  }, []);
+  }, [fetchCases]);
 
   const updateCase = useCallback(async (id: string, caseData: Partial<DeploymentCase>): Promise<DeploymentCase | null> => {
     try {
@@ -143,7 +143,7 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
         const result = await response.json();
         const updatedCase = result.data;
         
-        // Update the case in the list
+        // Update the case in the list with complete data
         setDeploymentCases(prev => 
           prev.map(caseItem => caseItem.id === id ? updatedCase : caseItem)
         );

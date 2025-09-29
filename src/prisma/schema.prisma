@@ -9,108 +9,108 @@ datasource db {
 }
 
 model User {
-  id                    String                 @id @default(cuid())
-  email                 String                 @unique
-  name                  String?
-  phone                 String?
-  department            String?
-  status                String?                @default("active")
-  role                  Role                   @default(USER)
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  employeeId            String?                @unique
-  password              String
-  username              String                 @unique
-  deliveryCaseComments  DeliveryCaseComment[]
-  deliveryCaseWorklogs  DeliveryCaseWorklog[]
-  internalCaseComments  InternalCaseComment[]
-  internalCaseWorklogs  InternalCaseWorklog[]
-  receivingCaseComments ReceivingCaseComment[]
-  receivingCaseWorklogs ReceivingCaseWorklog[]
-  incidentComments      IncidentComment[]
-  incidentWorklogs      IncidentWorklog[]
-  maintenanceCaseComments MaintenanceCaseComment[]
-  maintenanceCaseWorklogs MaintenanceCaseWorklog[]
-  warrantyComments        WarrantyComment[]
-  warrantyWorklogs        WarrantyWorklog[]
+  id                      String                   @id @default(cuid())
+  email                   String                   @unique
+  name                    String?
+  phone                   String?
+  department              String?
+  status                  String?                  @default("active")
+  role                    Role                     @default(USER)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  employeeId              String?                  @unique
+  password                String
+  username                String                   @unique
+  deliveryCaseComments    DeliveryCaseComment[]
+  deliveryCaseWorklogs    DeliveryCaseWorklog[]
   deploymentCaseComments  DeploymentCaseComment[]
   deploymentCaseWorklogs  DeploymentCaseWorklog[]
-  schedules             Schedule[]
-  notifications         Notification[]
-  employee              Employee?              @relation(fields: [employeeId], references: [id])
+  incidentComments        IncidentComment[]
+  incidentWorklogs        IncidentWorklog[]
+  internalCaseComments    InternalCaseComment[]
+  internalCaseWorklogs    InternalCaseWorklog[]
+  maintenanceCaseComments MaintenanceCaseComment[]
+  maintenanceCaseWorklogs MaintenanceCaseWorklog[]
+  notifications           Notification[]
+  receivingCaseComments   ReceivingCaseComment[]
+  receivingCaseWorklogs   ReceivingCaseWorklog[]
+  schedules               Schedule[]
+  employee                Employee?                @relation(fields: [employeeId], references: [id])
+  warrantyComments        WarrantyComment[]
+  warrantyWorklogs        WarrantyWorklog[]
 }
 
 model Employee {
-  id                      String          @id @default(cuid())
-  fullName                String
-  dateOfBirth             DateTime
-  gender                  String
-  hometown                String
-  religion                String
-  ethnicity               String
-  startDate               DateTime
-  primaryPhone            String
-  secondaryPhone          String?
-  personalEmail           String
-  companyEmail            String          @unique
-  placeOfBirth            String
-  permanentAddress        String
-  temporaryAddress        String?
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
-  avatar                  String?
-  contractType            String?
-  department              String?
-  position                String?
-  status                  String          @default("active")
-  deliveryCasesHandler    DeliveryCase[]  @relation("HandlerDeliveryCases")
-  deliveryCasesRequester  DeliveryCase[]  @relation("RequesterDeliveryCases")
-  internalCasesHandler    InternalCase[]  @relation("HandlerInternalCases")
-  internalCasesRequester  InternalCase[]  @relation("RequesterInternalCases")
-  receivingCasesHandler   ReceivingCase[] @relation("HandlerReceivingCases")
-  receivingCasesRequester ReceivingCase[] @relation("RequesterReceivingCases")
-  incidentsReporter       Incident[]      @relation("ReporterIncidents")
-  incidentsHandler        Incident[]      @relation("HandlerIncidents")
-  maintenanceCasesReporter MaintenanceCase[] @relation("ReporterMaintenanceCases")
-  maintenanceCasesHandler  MaintenanceCase[] @relation("HandlerMaintenanceCases")
-  warrantiesReporter       Warranty[]        @relation("ReporterWarranties")
-  warrantiesHandler        Warranty[]        @relation("HandlerWarranties")
-  deploymentCasesReporter  DeploymentCase[]  @relation("ReporterDeploymentCases")
+  id                       String            @id @default(cuid())
+  fullName                 String
+  dateOfBirth              DateTime
+  gender                   String
+  hometown                 String
+  religion                 String
+  ethnicity                String
+  startDate                DateTime
+  primaryPhone             String
+  secondaryPhone           String?
+  personalEmail            String
+  companyEmail             String            @unique
+  placeOfBirth             String
+  permanentAddress         String
+  temporaryAddress         String?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  avatar                   String?
+  contractType             String?
+  department               String?
+  position                 String?
+  status                   String            @default("active")
+  deliveryCasesHandler     DeliveryCase[]    @relation("HandlerDeliveryCases")
+  deliveryCasesRequester   DeliveryCase[]    @relation("RequesterDeliveryCases")
   deploymentCasesHandler   DeploymentCase[]  @relation("HandlerDeploymentCases")
-  user                    User?
+  deploymentCasesReporter  DeploymentCase[]  @relation("ReporterDeploymentCases")
+  incidentsHandler         Incident[]        @relation("HandlerIncidents")
+  incidentsReporter        Incident[]        @relation("ReporterIncidents")
+  internalCasesHandler     InternalCase[]    @relation("HandlerInternalCases")
+  internalCasesRequester   InternalCase[]    @relation("RequesterInternalCases")
+  maintenanceCasesHandler  MaintenanceCase[] @relation("HandlerMaintenanceCases")
+  maintenanceCasesReporter MaintenanceCase[] @relation("ReporterMaintenanceCases")
+  receivingCasesHandler    ReceivingCase[]   @relation("HandlerReceivingCases")
+  receivingCasesRequester  ReceivingCase[]   @relation("RequesterReceivingCases")
+  user                     User?
+  warrantiesHandler        Warranty[]        @relation("HandlerWarranties")
+  warrantiesReporter       Warranty[]        @relation("ReporterWarranties")
 }
 
 model Schedule {
-  id          String        @id @default(cuid())
+  id          String   @id @default(cuid())
   userId      String
   title       String
   description String?
   startAt     DateTime
   endAt       DateTime
-  allDay      Boolean       @default(false)
-  color       String?       @default("#3b82f6")
+  allDay      Boolean  @default(false)
+  color       String?  @default("#3b82f6")
   location    String?
-  isPublic    Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  user        User          @relation(fields: [userId], references: [id])
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Partner {
-  id              String          @id @default(cuid())
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  address         String
-  contactPerson   String?
-  contactPhone    String?
-  fullCompanyName String
-  shortName       String          @unique
-  deliveryCases   DeliveryCase[]
-  receivingCases  ReceivingCase[]
-  incidents       Incident[]
+  id               String            @id @default(cuid())
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  address          String
+  contactPerson    String?
+  contactPhone     String?
+  fullCompanyName  String
+  shortName        String            @unique
+  deliveryCases    DeliveryCase[]
+  deploymentCases  DeploymentCase[]
+  incidents        Incident[]
   maintenanceCases MaintenanceCase[]
-  warranties      Warranty[]
-  deploymentCases DeploymentCase[]
+  receivingCases   ReceivingCase[]
+  warranties       Warranty[]
 }
 
 model CaseType {
@@ -153,6 +153,7 @@ model InternalCase {
   userImpactLevel      Int?
   userUrgencyLevel     Int?
   userFormScore        Int?
+  crmReferenceCode     String?
   handler              Employee              @relation("HandlerInternalCases", fields: [handlerId], references: [id])
   requester            Employee              @relation("RequesterInternalCases", fields: [requesterId], references: [id])
   comments             InternalCaseComment[]
@@ -206,6 +207,7 @@ model ReceivingCase {
   adminAssessmentNotes String?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
+  crmReferenceCode     String?
   handler              Employee               @relation("HandlerReceivingCases", fields: [handlerId], references: [id])
   requester            Employee               @relation("RequesterReceivingCases", fields: [requesterId], references: [id])
   supplier             Partner                @relation(fields: [supplierId], references: [id])
@@ -273,6 +275,7 @@ model DeliveryCase {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   status               DeliveryCaseStatus    @default(RECEIVED)
+  crmReferenceCode     String?
   customer             Partner               @relation(fields: [customerId], references: [id])
   handler              Employee              @relation("HandlerDeliveryCases", fields: [handlerId], references: [id])
   requester            Employee              @relation("RequesterDeliveryCases", fields: [requesterId], references: [id])
@@ -367,7 +370,7 @@ model DeploymentType {
 }
 
 model Incident {
-  id                   String           @id @default(cuid())
+  id                   String            @id @default(cuid())
   title                String
   description          String
   customerName         String
@@ -377,10 +380,10 @@ model Incident {
   customerId           String?
   startDate            DateTime
   endDate              DateTime?
-  status               IncidentStatus   @default(RECEIVED)
+  status               IncidentStatus    @default(RECEIVED)
   notes                String?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
   adminAssessmentDate  DateTime?
   adminAssessmentNotes String?
   adminDifficultyLevel Int?
@@ -393,10 +396,11 @@ model Incident {
   userImpactLevel      Int?
   userUrgencyLevel     Int?
   userFormScore        Int?
-  reporter             Employee?        @relation("ReporterIncidents", fields: [reporterId], references: [id])
-  handler              Employee         @relation("HandlerIncidents", fields: [handlerId], references: [id])
-  customer             Partner?         @relation(fields: [customerId], references: [id])
-  incidentType         IncidentType     @relation(fields: [incidentTypeId], references: [id])
+  crmReferenceCode     String?
+  customer             Partner?          @relation(fields: [customerId], references: [id])
+  handler              Employee          @relation("HandlerIncidents", fields: [handlerId], references: [id])
+  incidentType         IncidentType      @relation(fields: [incidentTypeId], references: [id])
+  reporter             Employee?         @relation("ReporterIncidents", fields: [reporterId], references: [id])
   comments             IncidentComment[]
   worklogs             IncidentWorklog[]
 }
@@ -412,33 +416,33 @@ model IncidentComment {
 }
 
 model IncidentWorklog {
-  id         String   @id @default(cuid())
-  incidentId String
-  userId     String
-  duration   Int
+  id          String   @id @default(cuid())
+  incidentId  String
+  userId      String
+  duration    Int
   description String
-  createdAt  DateTime @default(now())
-  incident   Incident @relation(fields: [incidentId], references: [id])
-  user       User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  incident    Incident @relation(fields: [incidentId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Equipment {
-  id              String            @id @default(cuid())
-  name            String
-  model           String?
-  serialNumber    String?
-  location        String?
-  status          String            @default("active")
-  purchaseDate    DateTime?
-  warrantyExpiry  DateTime?
-  notes           String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
+  id               String            @id @default(cuid())
+  name             String
+  model            String?
+  serialNumber     String?
+  location         String?
+  status           String            @default("active")
+  purchaseDate     DateTime?
+  warrantyExpiry   DateTime?
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   maintenanceCases MaintenanceCase[]
 }
 
 model MaintenanceCase {
-  id                   String                 @id @default(cuid())
+  id                   String                   @id @default(cuid())
   title                String
   description          String
   reporterId           String
@@ -450,7 +454,7 @@ model MaintenanceCase {
   maintenanceTypeId    String?
   startDate            DateTime
   endDate              DateTime?
-  status               MaintenanceCaseStatus  @default(RECEIVED)
+  status               MaintenanceCaseStatus    @default(RECEIVED)
   notes                String?
   userDifficultyLevel  Int?
   userEstimatedTime    Int?
@@ -464,36 +468,175 @@ model MaintenanceCase {
   adminUrgencyLevel    Int?
   adminAssessmentDate  DateTime?
   adminAssessmentNotes String?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  reporter             Employee               @relation("ReporterMaintenanceCases", fields: [reporterId], references: [id])
-  handler              Employee               @relation("HandlerMaintenanceCases", fields: [handlerId], references: [id])
-  equipment            Equipment?             @relation(fields: [equipmentId], references: [id])
-  customer             Partner?               @relation(fields: [customerId], references: [id])
-  maintenanceCaseType  MaintenanceCaseType?   @relation(fields: [maintenanceTypeId], references: [id])
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  crmReferenceCode     String?
+  customer             Partner?                 @relation(fields: [customerId], references: [id])
+  equipment            Equipment?               @relation(fields: [equipmentId], references: [id])
+  handler              Employee                 @relation("HandlerMaintenanceCases", fields: [handlerId], references: [id])
+  maintenanceCaseType  MaintenanceCaseType?     @relation(fields: [maintenanceTypeId], references: [id])
+  reporter             Employee                 @relation("ReporterMaintenanceCases", fields: [reporterId], references: [id])
   comments             MaintenanceCaseComment[]
   worklogs             MaintenanceCaseWorklog[]
 }
 
 model MaintenanceCaseComment {
-  id                String           @id @default(cuid())
+  id                String          @id @default(cuid())
   maintenanceCaseId String
   userId            String
   content           String
-  createdAt         DateTime         @default(now())
-  maintenanceCase   MaintenanceCase  @relation(fields: [maintenanceCaseId], references: [id])
-  user              User             @relation(fields: [userId], references: [id])
+  createdAt         DateTime        @default(now())
+  maintenanceCase   MaintenanceCase @relation(fields: [maintenanceCaseId], references: [id])
+  user              User            @relation(fields: [userId], references: [id])
 }
 
 model MaintenanceCaseWorklog {
-  id                String           @id @default(cuid())
+  id                String          @id @default(cuid())
   maintenanceCaseId String
   userId            String
   duration          Int
   description       String
-  createdAt         DateTime         @default(now())
-  maintenanceCase   MaintenanceCase  @relation(fields: [maintenanceCaseId], references: [id])
-  user              User             @relation(fields: [userId], references: [id])
+  createdAt         DateTime        @default(now())
+  maintenanceCase   MaintenanceCase @relation(fields: [maintenanceCaseId], references: [id])
+  user              User            @relation(fields: [userId], references: [id])
+}
+
+model WarrantyType {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  warranties  Warranty[]
+}
+
+model Warranty {
+  id                   String            @id @default(cuid())
+  title                String
+  description          String
+  reporterId           String
+  handlerId            String
+  warrantyTypeId       String
+  customerId           String?
+  customerName         String
+  startDate            DateTime
+  endDate              DateTime?
+  status               WarrantyStatus    @default(RECEIVED)
+  notes                String?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  userAssessmentDate   DateTime?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  crmReferenceCode     String?
+  customer             Partner?          @relation(fields: [customerId], references: [id])
+  handler              Employee          @relation("HandlerWarranties", fields: [handlerId], references: [id])
+  reporter             Employee          @relation("ReporterWarranties", fields: [reporterId], references: [id])
+  warrantyType         WarrantyType      @relation(fields: [warrantyTypeId], references: [id])
+  comments             WarrantyComment[]
+  worklogs             WarrantyWorklog[]
+}
+
+model WarrantyComment {
+  id         String   @id @default(cuid())
+  warrantyId String
+  userId     String
+  content    String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id])
+  warranty   Warranty @relation(fields: [warrantyId], references: [id])
+}
+
+model WarrantyWorklog {
+  id          String   @id @default(cuid())
+  warrantyId  String
+  userId      String
+  duration    Int
+  description String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+  warranty    Warranty @relation(fields: [warrantyId], references: [id])
+}
+
+model DeploymentCase {
+  id                   String                  @id @default(cuid())
+  title                String
+  description          String
+  reporterId           String
+  handlerId            String
+  deploymentTypeId     String
+  customerId           String?
+  customerName         String
+  startDate            DateTime
+  endDate              DateTime?
+  status               DeploymentCaseStatus    @default(RECEIVED)
+  notes                String?
+  userDifficultyLevel  Int?
+  userEstimatedTime    Int?
+  userImpactLevel      Int?
+  userUrgencyLevel     Int?
+  userFormScore        Int?
+  userAssessmentDate   DateTime?
+  adminDifficultyLevel Int?
+  adminEstimatedTime   Int?
+  adminImpactLevel     Int?
+  adminUrgencyLevel    Int?
+  adminAssessmentDate  DateTime?
+  adminAssessmentNotes String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  crmReferenceCode     String?
+  customer             Partner?                @relation(fields: [customerId], references: [id])
+  deploymentType       DeploymentType          @relation(fields: [deploymentTypeId], references: [id])
+  handler              Employee                @relation("HandlerDeploymentCases", fields: [handlerId], references: [id])
+  reporter             Employee                @relation("ReporterDeploymentCases", fields: [reporterId], references: [id])
+  comments             DeploymentCaseComment[]
+  worklogs             DeploymentCaseWorklog[]
+}
+
+model DeploymentCaseComment {
+  id               String         @id @default(cuid())
+  deploymentCaseId String
+  userId           String
+  content          String
+  createdAt        DateTime       @default(now())
+  deploymentCase   DeploymentCase @relation(fields: [deploymentCaseId], references: [id])
+  user             User           @relation(fields: [userId], references: [id])
+}
+
+model DeploymentCaseWorklog {
+  id               String         @id @default(cuid())
+  deploymentCaseId String
+  userId           String
+  duration         Int
+  description      String
+  createdAt        DateTime       @default(now())
+  deploymentCase   DeploymentCase @relation(fields: [deploymentCaseId], references: [id])
+  user             User           @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  userId    String
+  caseId    String?
+  caseType  String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id])
 }
 
 enum Role {
@@ -560,128 +703,6 @@ enum MaintenanceType {
   INSPECTION
 }
 
-model WarrantyType {
-  id          String     @id @default(cuid())
-  name        String     @unique
-  description String?
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  warranties  Warranty[]
-}
-
-model Warranty {
-  id                   String           @id @default(cuid())
-  title                String
-  description          String
-  reporterId           String
-  handlerId            String
-  warrantyTypeId       String
-  customerId           String?
-  customerName         String
-  startDate            DateTime
-  endDate              DateTime?
-  status               WarrantyStatus   @default(RECEIVED)
-  notes                String?
-  userDifficultyLevel  Int?
-  userEstimatedTime    Int?
-  userImpactLevel      Int?
-  userUrgencyLevel     Int?
-  userFormScore        Int?
-  userAssessmentDate   DateTime?
-  adminDifficultyLevel Int?
-  adminEstimatedTime   Int?
-  adminImpactLevel     Int?
-  adminUrgencyLevel    Int?
-  adminAssessmentDate  DateTime?
-  adminAssessmentNotes String?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  reporter             Employee         @relation("ReporterWarranties", fields: [reporterId], references: [id])
-  handler              Employee         @relation("HandlerWarranties", fields: [handlerId], references: [id])
-  warrantyType         WarrantyType     @relation(fields: [warrantyTypeId], references: [id])
-  customer             Partner?         @relation(fields: [customerId], references: [id])
-  comments             WarrantyComment[]
-  worklogs             WarrantyWorklog[]
-}
-
-model WarrantyComment {
-  id         String   @id @default(cuid())
-  warrantyId String
-  userId     String
-  content    String
-  createdAt  DateTime @default(now())
-  warranty   Warranty @relation(fields: [warrantyId], references: [id])
-  user       User     @relation(fields: [userId], references: [id])
-}
-
-model WarrantyWorklog {
-  id         String   @id @default(cuid())
-  warrantyId String
-  userId     String
-  duration   Int
-  description String
-  createdAt  DateTime @default(now())
-  warranty   Warranty @relation(fields: [warrantyId], references: [id])
-  user       User     @relation(fields: [userId], references: [id])
-}
-
-model DeploymentCase {
-  id                   String                 @id @default(cuid())
-  title                String
-  description          String
-  reporterId           String
-  handlerId            String
-  deploymentTypeId     String
-  customerId           String?
-  customerName         String
-  startDate            DateTime
-  endDate              DateTime?
-  status               DeploymentCaseStatus   @default(RECEIVED)
-  notes                String?
-  userDifficultyLevel  Int?
-  userEstimatedTime    Int?
-  userImpactLevel      Int?
-  userUrgencyLevel     Int?
-  userFormScore        Int?
-  userAssessmentDate   DateTime?
-  adminDifficultyLevel Int?
-  adminEstimatedTime   Int?
-  adminImpactLevel     Int?
-  adminUrgencyLevel    Int?
-  adminAssessmentDate  DateTime?
-  adminAssessmentNotes String?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  reporter             Employee               @relation("ReporterDeploymentCases", fields: [reporterId], references: [id])
-  handler              Employee               @relation("HandlerDeploymentCases", fields: [handlerId], references: [id])
-  deploymentType       DeploymentType         @relation(fields: [deploymentTypeId], references: [id])
-  customer             Partner?               @relation(fields: [customerId], references: [id])
-  comments             DeploymentCaseComment[]
-  worklogs             DeploymentCaseWorklog[]
-}
-
-model DeploymentCaseComment {
-  id              String         @id @default(cuid())
-  deploymentCaseId String
-  userId          String
-  content         String
-  createdAt       DateTime       @default(now())
-  deploymentCase  DeploymentCase @relation(fields: [deploymentCaseId], references: [id])
-  user            User           @relation(fields: [userId], references: [id])
-}
-
-model DeploymentCaseWorklog {
-  id              String         @id @default(cuid())
-  deploymentCaseId String
-  userId          String
-  duration        Int
-  description     String
-  createdAt       DateTime       @default(now())
-  deploymentCase  DeploymentCase @relation(fields: [deploymentCaseId], references: [id])
-  user            User           @relation(fields: [userId], references: [id])
-}
-
 enum WarrantyStatus {
   RECEIVED
   PROCESSING
@@ -696,20 +717,6 @@ enum DeploymentCaseStatus {
   CANCELLED
 }
 
-model Notification {
-  id          String             @id @default(cuid())
-  title       String
-  message     String
-  type        NotificationType
-  isRead      Boolean            @default(false)
-  userId      String
-  caseId      String?
-  caseType    String?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  user        User               @relation(fields: [userId], references: [id])
-}
-
 enum NotificationType {
   CASE_CREATED
   CASE_UPDATED
@@ -717,4 +724,3 @@ enum NotificationType {
   CASE_ASSIGNED
   SYSTEM_ALERT
 }
-

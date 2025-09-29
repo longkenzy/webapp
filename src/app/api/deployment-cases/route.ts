@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       endDate,
       status,
       notes,
+      crmReferenceCode, // Thêm trường Mã CRM
       // User assessment fields
       userDifficultyLevel,
       userEstimatedTime,
@@ -131,6 +132,7 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         status: status || DeploymentCaseStatus.RECEIVED,
         notes: notes || null,
+        crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
         // User assessment fields
         userDifficultyLevel: userDifficultyLevel !== undefined && userDifficultyLevel !== null ? parseInt(userDifficultyLevel) : null,
         userEstimatedTime: userEstimatedTime !== undefined && userEstimatedTime !== null ? parseInt(userEstimatedTime) : null,

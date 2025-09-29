@@ -102,6 +102,7 @@ export async function PUT(
       endDate,
       status,
       notes,
+      crmReferenceCode, // Thêm trường Mã CRM
       // Admin assessment fields
       adminDifficultyLevel,
       adminEstimatedTime,
@@ -163,6 +164,7 @@ export async function PUT(
     }
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
+    if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
     
     // Admin assessment fields
     if (adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = adminDifficultyLevel ? parseInt(adminDifficultyLevel) : null;
@@ -197,6 +199,20 @@ export async function PUT(
             fullName: true,
             position: true,
             department: true
+          }
+        },
+        deploymentType: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        customer: {
+          select: {
+            id: true,
+            shortName: true,
+            fullCompanyName: true,
+            contactPerson: true
           }
         }
       }

@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/options';
+import { getSession } from '@/lib/auth/session';
 import { db } from '@/lib/db';
 import { DeliveryCaseStatus } from '@prisma/client';
 import { createCaseCreatedNotification, getAdminUsers } from '@/lib/notifications';
 import { sendCaseCreatedTelegram } from '@/lib/telegram';
 
+interface Product {
+  name: string;
+  code?: string;
+  quantity: number;
+  serialNumber?: string;
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -87,13 +93,6 @@ export async function GET(request: NextRequest) {
             quantity: true,
             serialNumber: true
           }
-        },
-        _count: {
-          select: {
-            comments: true,
-            worklogs: true,
-            products: true
-          }
         }
       },
       orderBy: {
@@ -106,8 +105,7 @@ export async function GET(request: NextRequest) {
     // Get total count for pagination
     const total = await db.deliveryCase.count({
       where: {
-        ...where,
-        form: 'Giao hàng'
+        ...where
       }
     });
 
@@ -138,8 +136,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -153,6 +151,7 @@ export async function POST(request: NextRequest) {
       endDate,
       status,
       notes,
+      crmReferenceCode,
       requesterId,
       handlerId,
       customerId,
@@ -203,6 +202,7 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         status: status || DeliveryCaseStatus.RECEIVED,
         notes,
+        crmReferenceCode: crmReferenceCode || null,
         requesterId,
         handlerId,
         customerId: customerId,
@@ -212,14 +212,14 @@ export async function POST(request: NextRequest) {
         userUrgencyLevel: userUrgencyLevel ? parseInt(userUrgencyLevel) : null,
         userFormScore: userFormScore ? parseInt(userFormScore) : null,
         userAssessmentDate: userAssessmentDate ? new Date(userAssessmentDate) : null,
-        products: {
-          create: products?.map((product: any) => ({
+        products: products && products.length > 0 ? {
+          create: products.map((product: Product) => ({
             name: product.name,
-            code: product.code,
-            quantity: typeof product.quantity === 'string' ? parseInt(product.quantity) : product.quantity,
-            serialNumber: product.serialNumber
-          })) || []
-        }
+            code: product.code || null,
+            quantity: product.quantity,
+            serialNumber: product.serialNumber || null
+          }))
+        } : undefined
       },
       include: {
         requester: {
@@ -254,13 +254,6 @@ export async function POST(request: NextRequest) {
             code: true,
             quantity: true,
             serialNumber: true
-          }
-        },
-        _count: {
-          select: {
-            comments: true,
-            worklogs: true,
-            products: true
           }
         }
       }

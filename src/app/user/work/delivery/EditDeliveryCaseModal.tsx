@@ -44,6 +44,7 @@ interface DeliveryCase {
   endDate: string | null;
   status: string;
   notes: string | null;
+  crmReferenceCode: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
   userImpactLevel: number | null;
@@ -79,7 +80,8 @@ interface EditDeliveryCaseModalProps {
 export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, caseData }: EditDeliveryCaseModalProps) {
   const [formData, setFormData] = useState({
     status: '',
-    endDate: ''
+    endDate: '',
+    crmReferenceCode: ''
   });
 
   const [products, setProducts] = useState<ProductItem[]>([]);
@@ -91,7 +93,8 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
     if (caseData && isOpen) {
       setFormData({
         status: caseData.status || '',
-        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : ''
+        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
+        crmReferenceCode: caseData.crmReferenceCode || ''
       });
 
       // Load products from case data
@@ -201,6 +204,7 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
       const updateData = {
         status: formData.status,
         endDate: formData.endDate || null,
+        crmReferenceCode: formData.crmReferenceCode || null,
         description: JSON.stringify(productData),
         products: productData
       };
@@ -316,8 +320,8 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
             </div>
           </div>
 
-          {/* End Date and Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* End Date, Status and CRM Code */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* End Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -353,6 +357,27 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
                 <option value="COMPLETED">Hoàn thành</option>
                 <option value="CANCELLED">Hủy</option>
               </select>
+            </div>
+
+            {/* CRM Reference Code */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <span className="inline-flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                  Mã CRM
+                </span>
+              </label>
+              <input
+                type="text"
+                name="crmReferenceCode"
+                value={formData.crmReferenceCode || ''}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Nhập mã CRM (tùy chọn)"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Mã tham chiếu từ hệ thống CRM
+              </p>
             </div>
           </div>
 

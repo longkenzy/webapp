@@ -32,6 +32,7 @@ interface Warranty {
   warrantyType: string | { id: string; name: string; description?: string };
   startDate: string;
   notes?: string;
+  crmReferenceCode?: string; // Thêm trường Mã CRM
   userDifficultyLevel?: number;
   userEstimatedTime?: number;
   userImpactLevel?: number;
@@ -64,7 +65,8 @@ export default function EditWarrantyModal({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     endDate: '',
-    status: 'RECEIVED'
+    status: 'RECEIVED',
+    crmReferenceCode: '' // Thêm trường Mã CRM
   });
 
   // Initialize form data when modal opens
@@ -72,7 +74,8 @@ export default function EditWarrantyModal({
     if (isOpen && warrantyData) {
       setFormData({
         endDate: warrantyData.endDate ? new Date(warrantyData.endDate).toISOString().slice(0, 16) : '',
-        status: warrantyData.status
+        status: warrantyData.status,
+        crmReferenceCode: warrantyData.crmReferenceCode || '' // Khởi tạo Mã CRM
       });
     }
   }, [isOpen, warrantyData]);
@@ -165,7 +168,8 @@ export default function EditWarrantyModal({
       // Prepare data for API
       const updateData = {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        status: formData.status
+        status: formData.status,
+        crmReferenceCode: formData.crmReferenceCode || null // Thêm Mã CRM
       };
 
       console.log('=== Updating Warranty ===');
@@ -270,8 +274,8 @@ export default function EditWarrantyModal({
 
           {/* Editable Fields */}
           <div className="space-y-4">
-            {/* End Date and Status Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* End Date, Status and CRM Code Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* End Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -306,6 +310,26 @@ export default function EditWarrantyModal({
                   <option value="COMPLETED">Hoàn thành</option>
                   <option value="CANCELLED">Hủy</option>
                 </select>
+              </div>
+
+              {/* CRM Reference Code */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <span className="inline-flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                    Mã CRM
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.crmReferenceCode || ''}
+                  onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Nhập mã CRM (tùy chọn)"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Mã tham chiếu từ hệ thống CRM
+                </p>
               </div>
             </div>
 

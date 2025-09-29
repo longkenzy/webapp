@@ -48,6 +48,7 @@ interface MaintenanceCase {
   createdAt: string;
   updatedAt: string;
   notes?: string;
+  crmReferenceCode?: string; // Thêm trường Mã CRM
   // User assessment fields
   userDifficultyLevel?: number;
   userEstimatedTime?: number;
@@ -147,6 +148,7 @@ export default function MaintenancePage() {
   };
 
   const handleEditSuccess = (updatedMaintenance: MaintenanceCase) => {
+    // Cập nhật case trong danh sách với dữ liệu đầy đủ từ API
     setMaintenanceCases(prevMaintenance => 
       prevMaintenance.map(maintenance => 
         maintenance.id === updatedMaintenance.id ? updatedMaintenance : maintenance
@@ -721,6 +723,9 @@ export default function MaintenancePage() {
                     Thông tin Case
                   </th>
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
+                    Mã CRM
+                  </th>
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Trạng thái
                   </th>
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-36">
@@ -734,7 +739,7 @@ export default function MaintenancePage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-2 py-4 text-center">
+                    <td colSpan={9} className="px-2 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-orange-600" />
                         <span className="text-slate-600">Đang tải danh sách case bảo trì...</span>
@@ -761,14 +766,21 @@ export default function MaintenancePage() {
                       
                       {/* Khách hàng */}
                       <td className="px-2 py-1 w-48">
-                        <div className="text-sm text-slate-700">
+                        <div>
                           {maintenance.customer ? (
-                            <div>
-                              <div className="font-medium text-slate-900">{maintenance.customer.shortName}</div>
-                              <div className="text-xs text-slate-500">{maintenance.customer.fullCompanyName}</div>
-                            </div>
+                            <>
+                              <div className="text-sm font-bold text-slate-900">
+                                {maintenance.customer.shortName}
+                              </div>
+                              <div className="text-xs text-slate-600">
+                                {maintenance.customer.fullCompanyName}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Liên hệ: {maintenance.customerName || '-'}
+                              </div>
+                            </>
                           ) : (
-                            maintenance.customerName || '-'
+                            <div className="text-sm text-slate-700">{maintenance.customerName || '-'}</div>
                           )}
                         </div>
                       </td>
@@ -790,6 +802,19 @@ export default function MaintenancePage() {
                           <div className="text-xs text-slate-500">
                             Tạo: {formatDate(maintenance.createdAt)}
                           </div>
+                        </div>
+                      </td>
+                      
+                      {/* Mã CRM */}
+                      <td className="px-2 py-1 w-24">
+                        <div className="text-sm text-slate-900">
+                          {maintenance.crmReferenceCode ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              {maintenance.crmReferenceCode}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Chưa có</span>
+                          )}
                         </div>
                       </td>
                       
@@ -849,7 +874,7 @@ export default function MaintenancePage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-2 py-4 text-center">
+                    <td colSpan={9} className="px-2 py-4 text-center">
                       <div className="text-slate-400 mb-4">
                         <Wrench className="h-16 w-16 mx-auto" />
                       </div>

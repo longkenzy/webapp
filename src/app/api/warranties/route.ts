@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       endDate,
       status,
       notes,
+      crmReferenceCode, // Thêm trường Mã CRM
       // User assessment fields
       userDifficultyLevel,
       userEstimatedTime,
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         status: status || WarrantyStatus.RECEIVED,
         notes: notes || null,
+        crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
         // User assessment fields
         userDifficultyLevel: userDifficultyLevel ? parseInt(userDifficultyLevel) : null,
         userEstimatedTime: userEstimatedTime ? parseInt(userEstimatedTime) : null,
@@ -165,46 +167,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get all warranties from database (client-side pagination)
-    const warranties = await db.warranty.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        reporter: { 
-          select: { 
-            id: true, 
-            fullName: true, 
-            position: true,
-            department: true
-          } 
-        },
-        handler: { 
-          select: { 
-            id: true, 
-            fullName: true, 
-            position: true,
-            department: true
-          } 
-        },
-        warrantyType: { 
-          select: { 
-            id: true, 
-            name: true 
-          } 
-        },
-        customer: { 
-          select: { 
-            id: true, 
-            fullCompanyName: true, 
-            shortName: true,
-            contactPerson: true,
-            contactPhone: true
-          } 
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const skip = (page - 1) * limit;
+
+    // Get warranties with pagination
+    const [warranties, total] = await Promise.all([
+      db.warranty.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          reporter: { 
+            select: { 
+              id: true, 
+              fullName: true, 
+              position: true,
+              department: true
+            } 
+          },
+          handler: { 
+            select: { 
+              id: true, 
+              fullName: true, 
+              position: true,
+              department: true
+            } 
+          },
+          warrantyType: { 
+            select: { 
+              id: true, 
+              name: true 
+            } 
+          },
+          customer: { 
+            select: { 
+              id: true, 
+              fullCompanyName: true, 
+              shortName: true,
+              contactPerson: true,
+              contactPhone: true
+            } 
+          }
         }
-      }
-    });
+      }),
+      db.warranty.count()
+    ]);
     
     const response = NextResponse.json({
-      data: warranties
+      data: warranties,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
     });
 
     // Add caching headers for better performance

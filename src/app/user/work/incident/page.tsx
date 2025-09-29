@@ -22,6 +22,7 @@ interface Incident {
   reporter?: Employee;
   handler: Employee;
   incidentType: string;
+  customerName?: string; // Thêm trường customerName
   customer?: {
     id: string;
     fullCompanyName: string;
@@ -35,6 +36,7 @@ interface Incident {
   createdAt: string;
   updatedAt: string;
   notes?: string;
+  crmReferenceCode?: string; // Thêm trường Mã CRM
   // User assessment fields
   userDifficultyLevel?: number;
   userEstimatedTime?: number;
@@ -800,6 +802,9 @@ export default function IncidentPage() {
                     Thông tin Sự cố
                   </th>
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
+                    Mã CRM
+                  </th>
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Trạng thái
                   </th>
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-36">
@@ -813,7 +818,7 @@ export default function IncidentPage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-2 py-4 text-center">
+                    <td colSpan={9} className="px-2 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-red-600" />
                         <span className="text-slate-600">Đang tải danh sách sự cố...</span>
@@ -840,14 +845,23 @@ export default function IncidentPage() {
                       
                       {/* Khách hàng */}
                       <td className="px-2 py-1 w-48">
-                        <div className="text-sm text-slate-700">
+                        <div>
                           {incident.customer ? (
-                            <div>
-                              <div className="font-medium">{incident.customer.shortName}</div>
-                              <div className="text-xs text-slate-500">{incident.customer.fullCompanyName}</div>
-                            </div>
+                            <>
+                              <div className="text-sm font-bold text-slate-900">
+                                {incident.customer.shortName}
+                              </div>
+                              <div className="text-xs text-slate-600">
+                                {incident.customer.fullCompanyName}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                Liên hệ: {incident.customer.contactPerson || incident.customerName || '-'}
+                              </div>
+                            </>
                           ) : (
-                            <span className="text-slate-400">-</span>
+                            <div className="text-sm text-slate-700">
+                              {incident.customerName || '-'}
+                            </div>
                           )}
                         </div>
                       </td>
@@ -869,6 +883,19 @@ export default function IncidentPage() {
                           <div className="text-xs text-slate-500">
                             Tạo: {formatDate(incident.createdAt)}
                           </div>
+                        </div>
+                      </td>
+                      
+                      {/* Mã CRM */}
+                      <td className="px-2 py-1 w-24">
+                        <div className="text-sm text-slate-900">
+                          {incident.crmReferenceCode ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              {incident.crmReferenceCode}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Chưa có</span>
+                          )}
                         </div>
                       </td>
                       
@@ -928,7 +955,7 @@ export default function IncidentPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-2 py-4 text-center">
+                    <td colSpan={9} className="px-2 py-4 text-center">
                       <div className="text-slate-400 mb-4">
                         <AlertTriangle className="h-16 w-16 mx-auto" />
                       </div>
@@ -1034,7 +1061,7 @@ export default function IncidentPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(newIncident: any) => {
-          setIncidents(prevIncidents => [...prevIncidents, newIncident as Incident]);
+          setIncidents(prevIncidents => [newIncident as Incident, ...prevIncidents]);
         }}
       />
 

@@ -95,6 +95,7 @@ export async function PUT(
       status,
       endDate,
       description,
+      crmReferenceCode,
       products
     } = body;
 
@@ -116,6 +117,7 @@ export async function PUT(
         status,
         endDate: endDate ? new Date(endDate) : null,
         description,
+        crmReferenceCode: crmReferenceCode || null,
         updatedAt: new Date()
       },
       include: {

@@ -48,6 +48,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
     completionDateTime: '',
     status: 'RECEIVED',
     form: '',
+    crmReferenceCode: '', // Thêm trường Mã CRM
     // User self-assessment fields
     difficultyLevel: '',
     estimatedTime: '',
@@ -125,6 +126,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
       completionDateTime: '',
       status: 'RECEIVED',
       form: '',
+      crmReferenceCode: '', // Reset Mã CRM
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
@@ -400,6 +402,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         endDate: formData.completionDateTime || null,
         status: formData.status as ReceivingCaseStatus,
         notes: null,
+        crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
         userDifficultyLevel: formData.difficultyLevel,
         userEstimatedTime: formData.estimatedTime,
         userImpactLevel: formData.impactLevel,
@@ -417,6 +420,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
       console.log('Form data:', formData);
       console.log('Current employee:', currentEmployee);
       console.log('Employee ID to use:', employeeId);
+      console.log('Products data:', products);
       console.log('Case data to send:', caseData);
 
       // Send to API
@@ -789,15 +793,15 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
               )}
             </div>
 
-            {/* Section 4: Thời gian */}
+            {/* Section 4: Thời gian & Mã CRM */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-blue-100 rounded-md">
                   <Calendar className="h-4 w-4 text-blue-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thời gian</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Thời gian & Mã CRM</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
                     <span className="w-32">Ngày giờ giao</span>
@@ -830,6 +834,22 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center">
+                    <span className="w-32">Mã CRM</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="crmReferenceCode"
+                    value={formData.crmReferenceCode || ''}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Nhập mã CRM (tùy chọn)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Mã tham chiếu từ hệ thống CRM
+                  </p>
                 </div>
               </div>
             </div>

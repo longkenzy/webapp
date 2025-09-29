@@ -15,7 +15,6 @@ import {
   Settings,
   Briefcase,
   ChevronDown,
-  Bell,
   Building2,
   Package,
   Truck,
@@ -24,7 +23,6 @@ import {
   Shield,
   Rocket
 } from 'lucide-react';
-import NotificationDropdown from '@/components/shared/common/NotificationDropdown';
 
 export default function UserNavbar() {
   const { data: session } = useSession();
@@ -91,12 +89,26 @@ export default function UserNavbar() {
   // Fetch user avatar
   useEffect(() => {
     const fetchUserAvatar = async () => {
+      console.log('Session in UserNavbar:', session);
       if (session?.user?.id) {
         try {
-          const response = await fetch('/api/user/profile');
+          const response = await fetch('/api/user/profile', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include', // Include cookies for authentication
+          });
+          
+          console.log('Profile fetch response:', response.status, response.statusText);
+          
           if (response.ok) {
             const data = await response.json();
             setUserAvatar(data.avatarUrl);
+          } else if (response.status === 401) {
+            console.warn('User not authenticated for profile fetch');
+          } else {
+            console.error('Failed to fetch user profile:', response.status, response.statusText);
           }
         } catch (error) {
           console.error('Error fetching user avatar:', error);
@@ -235,13 +247,8 @@ export default function UserNavbar() {
             </div>
           </div>
 
-          {/* Right side - Notifications, Profile */}
+          {/* Right side - Profile */}
           <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <div className="relative">
-              <NotificationDropdown />
-            </div>
-
             {/* Profile Dropdown */}
             <div 
               className="relative profile-dropdown"

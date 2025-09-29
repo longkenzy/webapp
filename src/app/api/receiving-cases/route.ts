@@ -5,6 +5,13 @@ import { ReceivingCaseStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
 import { sendCaseCreatedTelegram } from "@/lib/telegram";
 
+interface Product {
+  name: string;
+  code?: string;
+  quantity: number;
+  serialNumber?: string;
+}
+
 export async function GET(request: NextRequest) {
   console.log('=== API Receiving Case GET START ===');
   
@@ -86,22 +93,7 @@ export async function GET(request: NextRequest) {
               contactPhone: true
             }
           },
-          products: {
-            select: {
-              id: true,
-              name: true,
-              code: true,
-              quantity: true,
-              serialNumber: true
-            }
-          },
-          _count: {
-            select: {
-              comments: true,
-              worklogs: true,
-              products: true
-            }
-          }
+          products: true
         },
         orderBy: { createdAt: 'desc' },
         skip,
@@ -181,6 +173,7 @@ export async function POST(request: NextRequest) {
       endDate,
       status,
       notes,
+      crmReferenceCode,
       userDifficultyLevel,
       userEstimatedTime,
       userImpactLevel,
@@ -276,6 +269,7 @@ export async function POST(request: NextRequest) {
       endDate: endDate ? new Date(endDate) : null,
       status: (status as ReceivingCaseStatus) || ReceivingCaseStatus.RECEIVED,
       notes: notes || null,
+      crmReferenceCode: crmReferenceCode || null,
       userDifficultyLevel: parseInt(userDifficultyLevel),
       userEstimatedTime: parseInt(userEstimatedTime),
       userImpactLevel: parseInt(userImpactLevel),
@@ -300,15 +294,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create the receiving case with products
+    // Create the receiving case
     const receivingCase = await db.receivingCase.create({
       data: {
         ...caseData,
         products: {
-          create: productsData.map((product: any) => ({
-            name: product.name || '',
+          create: productsData.map((product: Product) => ({
+            name: product.name,
             code: product.code || null,
-            quantity: parseInt(product.quantity) || 1,
+            quantity: product.quantity || 1,
             serialNumber: product.serialNumber || null
           }))
         }
@@ -337,15 +331,7 @@ export async function POST(request: NextRequest) {
             fullCompanyName: true
           }
         },
-        products: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            quantity: true,
-            serialNumber: true
-          }
-        }
+        products: true
       }
     });
 

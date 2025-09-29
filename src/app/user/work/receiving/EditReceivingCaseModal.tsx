@@ -44,6 +44,7 @@ interface ReceivingCase {
   endDate: string | null;
   status: string;
   notes: string | null;
+  crmReferenceCode: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
   userImpactLevel: number | null;
@@ -86,7 +87,8 @@ export default function EditReceivingCaseModal({
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [formData, setFormData] = useState({
     endDate: '',
-    status: 'RECEIVED'
+    status: 'RECEIVED',
+    crmReferenceCode: ''
   });
 
   // Initialize form data when modal opens
@@ -94,7 +96,8 @@ export default function EditReceivingCaseModal({
     if (isOpen && caseData) {
       setFormData({
         endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
-        status: caseData.status
+        status: caseData.status,
+        crmReferenceCode: caseData.crmReferenceCode || ''
       });
       
       // Initialize products from caseData
@@ -207,6 +210,7 @@ export default function EditReceivingCaseModal({
       const updateData = {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
+        crmReferenceCode: formData.crmReferenceCode || null,
         products: products.map(product => ({
           id: product.id,
           name: product.name,
@@ -282,7 +286,8 @@ export default function EditReceivingCaseModal({
   const handleClose = () => {
     setFormData({
       endDate: '',
-      status: 'RECEIVED'
+      status: 'RECEIVED',
+      crmReferenceCode: ''
     });
     setProducts([]);
     onClose();
@@ -331,8 +336,8 @@ export default function EditReceivingCaseModal({
             </div>
           </div>
 
-          {/* End Date and Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* End Date, Status and CRM Code */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* End Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -366,6 +371,26 @@ export default function EditReceivingCaseModal({
                 <option value="COMPLETED">Hoàn thành</option>
                 <option value="CANCELLED">Hủy</option>
               </select>
+            </div>
+
+            {/* CRM Reference Code */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <span className="inline-flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                  Mã CRM
+                </span>
+              </label>
+              <input
+                type="text"
+                value={formData.crmReferenceCode}
+                onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Nhập mã CRM (tùy chọn)"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Mã tham chiếu từ hệ thống CRM
+              </p>
             </div>
           </div>
 

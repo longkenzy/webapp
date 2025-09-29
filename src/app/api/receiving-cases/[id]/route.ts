@@ -109,6 +109,7 @@ export async function PUT(
       endDate,
       status,
       notes,
+      crmReferenceCode,
       adminDifficultyLevel,
       adminEstimatedTime,
       adminImpactLevel,
@@ -137,6 +138,7 @@ export async function PUT(
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
+    if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
 
     // Admin assessment fields
     if (adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = parseInt(adminDifficultyLevel);

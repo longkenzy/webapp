@@ -33,15 +33,6 @@ export async function GET(request: NextRequest) {
             name: true
           }
         },
-        equipment: {
-          select: {
-            id: true,
-            name: true,
-            model: true,
-            serialNumber: true,
-            location: true
-          }
-        },
         customer: {
           select: {
             id: true,
@@ -103,6 +94,7 @@ export async function POST(request: NextRequest) {
       endDate, 
       status, 
       notes,
+      crmReferenceCode, // Thêm trường Mã CRM
       userDifficultyLevel,
       userEstimatedTime,
       userImpactLevel,
@@ -141,6 +133,7 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         notes: notes || '',
         status: status || MaintenanceCaseStatus.RECEIVED,
+        crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
         // User evaluation data - convert strings to integers
         userDifficultyLevel: userDifficultyLevel ? parseInt(userDifficultyLevel) : null,
         userEstimatedTime: userEstimatedTime ? parseInt(userEstimatedTime) : null,
@@ -169,15 +162,6 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             name: true
-          }
-        },
-        equipment: {
-          select: {
-            id: true,
-            name: true,
-            model: true,
-            serialNumber: true,
-            location: true
           }
         }
       }

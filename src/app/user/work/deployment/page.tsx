@@ -778,7 +778,7 @@ export default function DeploymentCasePage() {
                                 {case_.customer.fullCompanyName}
                               </div>
                               <div className="text-xs text-slate-500">
-                                {case_.customerName}
+                                Liên hệ: {case_.customerName}
                               </div>
                             </>
                           ) : (
@@ -958,8 +958,8 @@ export default function DeploymentCasePage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={async (newCase: any) => {
-          // Optimistic update - add the new case to the current list
-          setDeploymentCases(prevCases => [newCase, ...prevCases]);
+          // Refresh the entire list to get complete data
+          await fetchCases();
         }}
       />
 

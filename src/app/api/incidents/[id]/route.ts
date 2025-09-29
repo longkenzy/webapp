@@ -25,6 +25,7 @@ export async function PUT(
     const {
       endDate,
       status,
+      crmReferenceCode, // Thêm trường Mã CRM
       // Admin assessment fields
       adminDifficultyLevel,
       adminEstimatedTime,
@@ -67,6 +68,9 @@ export async function PUT(
     }
     if (status !== undefined) {
       updateData.status = status;
+    }
+    if (crmReferenceCode !== undefined) {
+      updateData.crmReferenceCode = crmReferenceCode; // Thêm Mã CRM
     }
 
     // Admin assessment fields

@@ -48,6 +48,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
     deliveryDateTime: '',
     completionDateTime: '',
     status: 'RECEIVED',
+    crmReferenceCode: '', // Thêm trường Mã CRM
     // User self-assessment fields
     difficultyLevel: '',
     estimatedTime: '',
@@ -266,6 +267,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         endDate: formData.completionDateTime || null,
         status: ReceivingCaseStatus.RECEIVED,
         notes: null,
+        crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
         userDifficultyLevel: formData.difficultyLevel,
         userEstimatedTime: formData.estimatedTime,
         userImpactLevel: formData.impactLevel,
@@ -356,6 +358,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
       deliveryDateTime: '',
       completionDateTime: '',
       status: 'RECEIVED',
+      crmReferenceCode: '', // Reset Mã CRM
       // User self-assessment fields
       difficultyLevel: '',
       estimatedTime: '',
@@ -663,15 +666,15 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
               )}
             </div>
 
-            {/* Section 4: Thời gian */}
+            {/* Section 4: Thời gian & Mã CRM */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-blue-100 rounded-md">
                   <Calendar className="h-4 w-4 text-blue-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thời gian</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Thời gian & Mã CRM</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
                     <span className="w-32">Ngày giờ giao</span>
@@ -702,6 +705,19 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                     value={formData.completionDateTime}
                     onChange={(e) => handleInputChange('completionDateTime', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600 flex items-center">
+                    <span className="w-32">Mã CRM</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.crmReferenceCode}
+                    onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    placeholder="Nhập mã CRM (tùy chọn)"
                   />
                 </div>
               </div>

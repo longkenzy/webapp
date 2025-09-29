@@ -39,6 +39,7 @@ interface DeliveryCase {
   endDate: string | null;
   status: string;
   notes: string | null;
+  crmReferenceCode: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
   userImpactLevel: number | null;
@@ -797,6 +798,9 @@ export default function DeliveryCasePage() {
                     Quy trình xử lý
                   </th>
                   <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
+                    Mã CRM
+                  </th>
+                  <th className="px-2 py-1 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">
                     Trạng thái
                   </th>
                   <th className="px-2 py-1 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">
@@ -807,7 +811,7 @@ export default function DeliveryCasePage() {
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-2 py-4 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
                         <RefreshCw className="h-5 w-5 animate-spin text-green-600" />
                         <span className="text-slate-600">Đang tải danh sách case...</span>
@@ -816,7 +820,7 @@ export default function DeliveryCasePage() {
                   </tr>
                 ) : error ? (
                   <tr>
-                    <td colSpan={7} className="px-2 py-4 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <div className="text-red-600 text-sm font-medium">
                           Lỗi tải dữ liệu: {error}
@@ -906,6 +910,19 @@ export default function DeliveryCasePage() {
                         {getProcessFlow(case_)}
                       </td>
 
+                      {/* Mã CRM */}
+                      <td className="px-2 py-1 w-24">
+                        <div className="text-sm text-slate-900">
+                          {case_.crmReferenceCode ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              {case_.crmReferenceCode}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">Chưa có</span>
+                          )}
+                        </div>
+                      </td>
+
                       {/* Trạng thái */}
                       <td className="px-2 py-1 w-24">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
@@ -957,7 +974,7 @@ export default function DeliveryCasePage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-2 py-4 text-center">
+                    <td colSpan={8} className="px-2 py-4 text-center">
                       <div className="text-slate-400 mb-4">
                         <Search className="h-16 w-16 mx-auto" />
                       </div>

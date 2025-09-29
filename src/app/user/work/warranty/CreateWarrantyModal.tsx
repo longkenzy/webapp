@@ -54,6 +54,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
     endDate: '',
     status: 'RECEIVED',
     notes: '',
+    crmReferenceCode: '', // Thêm trường Mã CRM
     // User self-assessment fields
     difficultyLevel: '',
     estimatedTime: '',
@@ -144,6 +145,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       endDate: '',
       status: 'RECEIVED',
       notes: '',
+      crmReferenceCode: '', // Reset Mã CRM
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
@@ -340,6 +342,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
         notes: formData.notes,
+        crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
         // User assessment fields
         userDifficultyLevel: formData.difficultyLevel ? parseInt(formData.difficultyLevel) : null,
         userEstimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : null,
@@ -582,19 +585,37 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
               </div>
               
               <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Tiêu đề bảo hành</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Nhập tiêu đề bảo hành"
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center">
+                      <span className="w-24">Tiêu đề bảo hành</span>
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Nhập tiêu đề bảo hành"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center">
+                      <span className="w-24">Mã CRM</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.crmReferenceCode || ''}
+                      onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Nhập mã CRM (tùy chọn)"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Mã tham chiếu từ hệ thống CRM
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-1">

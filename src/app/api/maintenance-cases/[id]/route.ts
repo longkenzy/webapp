@@ -111,6 +111,7 @@ export async function PUT(
     if (body.endDate !== undefined) updateData.endDate = body.endDate ? new Date(body.endDate) : null;
     if (body.status !== undefined) updateData.status = body.status;
     if (body.notes !== undefined) updateData.notes = body.notes;
+    if (body.crmReferenceCode !== undefined) updateData.crmReferenceCode = body.crmReferenceCode; // Thêm Mã CRM
 
     // Admin evaluation fields
     if (body.adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = parseInt(body.adminDifficultyLevel);
@@ -177,6 +178,15 @@ export async function PUT(
             model: true,
             serialNumber: true,
             location: true
+          }
+        },
+        customer: {
+          select: {
+            id: true,
+            fullCompanyName: true,
+            shortName: true,
+            contactPerson: true,
+            contactPhone: true
           }
         }
       }

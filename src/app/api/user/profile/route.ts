@@ -8,8 +8,11 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
+      console.log('No session found for user profile request');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    
+    console.log('Session found for user:', session.user.id);
     const user = await db.user.findUnique({
       where: { id: session.user.id },
       select: {

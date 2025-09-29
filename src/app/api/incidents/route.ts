@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       endDate,
       status,
       notes,
+      crmReferenceCode, // Thêm trường Mã CRM
       // User assessment fields
       userDifficultyLevel,
       userEstimatedTime,
@@ -132,6 +133,7 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         status: status || IncidentStatus.RECEIVED,
         notes: notes || null,
+        crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
         // User assessment fields
         userDifficultyLevel: userDifficultyLevel !== undefined && userDifficultyLevel !== null ? parseInt(userDifficultyLevel) : null,
         userEstimatedTime: userEstimatedTime !== undefined && userEstimatedTime !== null ? parseInt(userEstimatedTime) : null,
@@ -260,21 +262,10 @@ export async function GET(request: NextRequest) {
     console.log("=== GET Incidents API Called ===");
     console.log("Request headers:", Object.fromEntries(request.headers.entries()));
     
-    // Temporarily disable authentication for testing in production
-    // const session = await getSession();
-    // console.log("Session found:", session ? "Yes" : "No");
-    // console.log("Session details:", session);
-    
-    // if (!session) {
-    //   console.log("No session found, returning 401");
-    //   return NextResponse.json({ 
-    //     error: "Unauthorized",
-    //     debug: "No session found. Please ensure you are logged in."
-    //   }, { status: 401 });
-    // }
-    
-    // console.log("User role:", session.user?.role);
-    // console.log("User ID:", session.user?.id);
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");

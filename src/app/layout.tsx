@@ -4,6 +4,7 @@ import "./globals.css";
 import Topbar from "@/components/shared/layout/Topbar";
 import Providers from "@/components/shared/layout/Providers";
 import { Toaster } from "react-hot-toast";
+import GlobalErrorHandler from "@/components/shared/common/GlobalErrorHandler";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <GlobalErrorHandler />
           {children}
           <Toaster position="top-right" />
         </Providers>

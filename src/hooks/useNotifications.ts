@@ -167,18 +167,24 @@ export function useNotifications(): UseNotificationsReturn {
     
     // Handle visibility change
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        // Only refresh if we've been away for more than 30 seconds
-        const now = Date.now();
-        const timeSinceLastFetch = now - (window as any).lastNotificationFetch || 0;
-        if (timeSinceLastFetch > 30000) {
-          console.log('Refreshing notifications due to visibility change');
-          fetchNotifications();
-          (window as any).lastNotificationFetch = now;
+      try {
+        if (document.hidden) {
+          stopPolling();
+        } else {
+          // Only refresh if we've been away for more than 30 seconds
+          const now = Date.now();
+          const timeSinceLastFetch = now - (window as any).lastNotificationFetch || 0;
+          if (timeSinceLastFetch > 30000) {
+            console.log('Refreshing notifications due to visibility change');
+            fetchNotifications().catch(error => {
+              console.error('Error refreshing notifications on visibility change:', error);
+            });
+            (window as any).lastNotificationFetch = now;
+          }
+          startPolling();
         }
-        startPolling();
+      } catch (error) {
+        console.error('Error in visibility change handler:', error);
       }
     };
     
@@ -203,7 +209,9 @@ export function useNotifications(): UseNotificationsReturn {
     
     // Set a new timeout to debounce rapid calls
     debounceTimeoutRef.current = setTimeout(() => {
-      fetchNotifications();
+      fetchNotifications().catch(error => {
+        console.error('Error in force refresh:', error);
+      });
     }, 500); // 500ms debounce
   }, [fetchNotifications]);
 

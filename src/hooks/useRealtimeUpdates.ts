@@ -80,10 +80,14 @@ export function useRealtimeUpdates({
   // Pause polling when tab is not visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden) {
-        stopPolling();
-      } else if (enabled) {
-        startPolling();
+      try {
+        if (document.hidden) {
+          stopPolling();
+        } else if (enabled) {
+          startPolling();
+        }
+      } catch (error) {
+        console.error('Error in visibility change handler:', error);
       }
     };
 

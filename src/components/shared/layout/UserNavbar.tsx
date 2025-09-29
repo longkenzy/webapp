@@ -88,9 +88,11 @@ export default function UserNavbar() {
 
   // Fetch user avatar
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchUserAvatar = async () => {
       console.log('Session in UserNavbar:', session);
-      if (session?.user?.id) {
+      if (session?.user?.id && isMounted) {
         try {
           const response = await fetch('/api/user/profile', {
             method: 'GET',
@@ -102,7 +104,7 @@ export default function UserNavbar() {
           
           console.log('Profile fetch response:', response.status, response.statusText);
           
-          if (response.ok) {
+          if (response.ok && isMounted) {
             const data = await response.json();
             setUserAvatar(data.avatarUrl);
           } else if (response.status === 401) {
@@ -116,7 +118,13 @@ export default function UserNavbar() {
       }
     };
 
-    fetchUserAvatar();
+    fetchUserAvatar().catch(error => {
+      console.error('Unhandled error in fetchUserAvatar:', error);
+    });
+
+    return () => {
+      isMounted = false;
+    };
   }, [session?.user?.id]);
 
   // Close dropdowns when clicking outside

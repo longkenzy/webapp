@@ -8,6 +8,7 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
+import EditIncidentModal from './EditIncidentModal';
 
 interface Employee {
   id: string;
@@ -65,6 +66,7 @@ export default function AdminIncidentWorkPage() {
   const { fetchConfigs } = useEvaluation();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -252,6 +254,24 @@ export default function AdminIncidentWorkPage() {
       }
       return newSet;
     });
+  }, []);
+
+  // Handle edit modal
+  const handleOpenEditModal = useCallback((incident: Incident) => {
+    setSelectedIncident(incident);
+    setShowEditModal(true);
+  }, []);
+
+  const handleCloseEditModal = useCallback(() => {
+    setShowEditModal(false);
+    setSelectedIncident(null);
+  }, []);
+
+  const handleEditSuccess = useCallback((updatedIncident: Incident) => {
+    setIncidents(prev => prev.map(incident => 
+      incident.id === updatedIncident.id ? updatedIncident : incident
+    ));
+    toast.success('Cập nhật sự cố thành công');
   }, []);
 
   // Check if any filters are active
@@ -1186,6 +1206,16 @@ export default function AdminIncidentWorkPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleOpenEditModal(incident);
+                                }}
+                                className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors duration-200"
+                                title="Chỉnh sửa sự cố"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedIncident(incident);
                                   setShowEvaluationModal(true);
                                   setEvaluationForm({
@@ -1519,6 +1549,14 @@ export default function AdminIncidentWorkPage() {
             </div>
           </div>
         )}
+
+        {/* Edit Incident Modal */}
+        <EditIncidentModal
+          isOpen={showEditModal}
+          onClose={handleCloseEditModal}
+          onSuccess={handleEditSuccess}
+          incidentData={selectedIncident}
+        />
 
         {/* Incident Type Modal */}
         {showIncidentTypeModal && (

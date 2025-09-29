@@ -53,6 +53,7 @@ interface ReceivingCase {
   endDate: string | null;
   status: ReceivingCaseStatus;
   notes: string | null;
+  crmReferenceCode: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
   userImpactLevel: number | null;
@@ -774,6 +775,23 @@ export default function ReceivingCaseTable({
                  {/* Hành động */}
                  <td className="px-2 py-1 whitespace-nowrap text-xs font-medium text-center">
                    <div className="flex items-center justify-center gap-2">
+                     {/* Nút chỉnh sửa case */}
+                     {onEdit && (
+                       <button
+                         onClick={() => !deletedCases.has(caseItem.id) && onEdit(caseItem)}
+                         disabled={deletedCases.has(caseItem.id)}
+                         className={`p-1 rounded transition-colors ${
+                           deletedCases.has(caseItem.id)
+                             ? 'text-gray-400 cursor-not-allowed'
+                             : 'text-blue-600 hover:text-blue-900 hover:bg-blue-50 cursor-pointer'
+                         }`}
+                         title={deletedCases.has(caseItem.id) ? "Đang xóa..." : "Chỉnh sửa case"}
+                       >
+                         <Edit className="h-4 w-4" />
+                       </button>
+                     )}
+                     
+                     {/* Nút đánh giá */}
                      <button
                        onClick={() => handleOpenEvaluationModal(caseItem)}
                        disabled={deletedCases.has(caseItem.id)}
@@ -786,8 +804,10 @@ export default function ReceivingCaseTable({
                        }`}
                        title={deletedCases.has(caseItem.id) ? "Đang xóa..." : (isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá")}
                      >
-                       {isEvaluated ? <Edit className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                       {isEvaluated ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
                      </button>
+                     
+                     {/* Nút xóa */}
                      {onDelete && (
                        <button
                          onClick={() => !deletedCases.has(caseItem.id) && onDelete(caseItem)}

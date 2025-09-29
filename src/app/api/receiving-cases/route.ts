@@ -8,7 +8,7 @@ import { sendCaseCreatedTelegram } from "@/lib/telegram";
 interface Product {
   name: string;
   code?: string;
-  quantity: number;
+  quantity: number | string; // Allow both number and string
   serialNumber?: string;
 }
 
@@ -284,15 +284,20 @@ export async function POST(request: NextRequest) {
     let productsData = [];
     if (products && Array.isArray(products)) {
       productsData = products;
+      console.log('Products from request body:', productsData);
     } else if (description && typeof description === 'string') {
       try {
         // Try to parse as JSON (legacy format)
         productsData = JSON.parse(description);
+        console.log('Products parsed from description:', productsData);
       } catch (e) {
         // If not JSON, treat as plain text
         productsData = [];
+        console.log('Description is not JSON, using empty products array');
       }
     }
+
+    console.log('Final products data:', productsData);
 
     // Create the receiving case
     const receivingCase = await db.receivingCase.create({
@@ -302,7 +307,7 @@ export async function POST(request: NextRequest) {
           create: productsData.map((product: Product) => ({
             name: product.name,
             code: product.code || null,
-            quantity: product.quantity || 1,
+            quantity: Math.max(1, parseInt(String(product.quantity)) || 1), // Convert to integer, minimum 1
             serialNumber: product.serialNumber || null
           }))
         }

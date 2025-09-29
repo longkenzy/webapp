@@ -10,6 +10,7 @@ interface Warranty {
   description: string;
   endDate?: string;
   status: string;
+  customerName?: string; // Thêm trường customerName từ database
   customer?: {
     id: string;
     fullCompanyName: string;
@@ -81,6 +82,25 @@ export default function EditWarrantyModal({
       });
     }
   }, [isOpen, warrantyData]);
+
+  // Body scroll lock when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -225,108 +245,153 @@ export default function EditWarrantyModal({
   if (!isOpen || !warrantyData) return null;
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm bg-white/10 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/50 flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-md">
-              <Shield className="h-5 w-5 text-blue-600" />
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+          <div className="flex items-center space-x-2">
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <Shield className="h-4 w-4 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Chỉnh sửa Case Bảo Hành</h2>
-              <p className="text-sm text-gray-600">Cập nhật thông tin case bảo hành</p>
+              <h2 className="text-lg font-semibold text-gray-900">Chỉnh sửa Case Bảo Hành</h2>
+              <p className="text-xs text-gray-600">Cập nhật thông tin case bảo hành</p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="px-4 py-3 space-y-4">
           {/* Warranty Info (Read-only) */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Thông tin Case Bảo Hành</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <span className="text-sm font-medium text-gray-600">Tiêu đề:</span>
-                <p className="text-sm text-gray-900 mt-1">{warrantyData.title}</p>
+          <div className="bg-gray-50 rounded-lg px-3 py-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Thông tin Case Bảo Hành</h3>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tiêu đề</label>
+                  <p className="text-sm text-gray-900 mt-1 font-medium">{warrantyData.title}</p>
+                </div>
               </div>
-              <div>
-                <span className="text-sm font-medium text-gray-600">Loại bảo hành:</span>
-                <p className="text-sm text-gray-900 mt-1">{formatWarrantyType(warrantyData.warrantyType)}</p>
+              <div className="space-y-1">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Loại bảo hành</label>
+                  <p className="text-sm text-gray-900 mt-1">{formatWarrantyType(warrantyData.warrantyType)}</p>
+                </div>
               </div>
-              <div>
-                <span className="text-sm font-medium text-gray-600">Người báo cáo:</span>
-                <p className="text-sm text-gray-900 mt-1">{warrantyData.reporter.fullName}</p>
+              <div className="space-y-1">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mã CRM</label>
+                  <p className="text-sm text-gray-900 mt-1 font-mono">
+                    {warrantyData.crmReferenceCode || 'Chưa có'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <span className="text-sm font-medium text-gray-600">Người xử lý:</span>
-                <p className="text-sm text-gray-900 mt-1">{warrantyData.handler.fullName}</p>
+              <div className="space-y-1">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Người xử lý</label>
+                  <p className="text-sm text-gray-900 mt-1">{warrantyData.handler.fullName}</p>
+                </div>
               </div>
-              <div className="md:col-span-2">
-                <span className="text-sm font-medium text-gray-600">Mô tả:</span>
-                <p className="text-sm text-gray-900 mt-1">{warrantyData.description}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-3 mt-2">
+              <div className="space-y-1">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ngày bắt đầu</label>
+                  <p className="text-sm text-gray-900 mt-1">
+                    {new Date(warrantyData.startDate).toLocaleDateString('vi-VN')}
+                  </p>
+                </div>
               </div>
+              <div className="space-y-1">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Liên hệ</label>
+                  <p className="text-sm text-gray-900 mt-1 font-medium">
+                    {(() => {
+                      const customerName = warrantyData.customerName;
+                      if (!customerName) return 'Chưa có';
+                      
+                      // Nếu đã có "Anh" hoặc "Chị" thì giữ nguyên
+                      if (customerName.toLowerCase().includes('anh') || customerName.toLowerCase().includes('chị')) {
+                        return customerName;
+                      }
+                      
+                      // Nếu chưa có thì thêm "Anh/Chị"
+                      return `Anh/Chị ${customerName}`;
+                    })()}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tên công ty</label>
+                  <div className="text-sm text-gray-900 mt-1">
+                    {warrantyData.customer?.shortName && warrantyData.customer?.fullCompanyName ? (
+                      <div>
+                        <div className="font-medium">{warrantyData.customer.shortName}</div>
+                        <div className="text-gray-600 text-xs">{warrantyData.customer.fullCompanyName}</div>
+                      </div>
+                    ) : warrantyData.customer?.fullCompanyName ? (
+                      <div>{warrantyData.customer.fullCompanyName}</div>
+                    ) : (
+                      <div>Chưa có</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mô tả</label>
+              <p className="text-sm text-gray-900 mt-1 bg-white p-2 rounded border">{warrantyData.description}</p>
             </div>
           </div>
 
           {/* Editable Fields */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Notes Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <span className="inline-flex items-center">
-                  <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                  Ghi chú
-                </span>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Ghi chú
               </label>
               <textarea
                 value={formData.notes || ''}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Nhập ghi chú về case bảo hành (tùy chọn)"
                 rows={3}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Ghi chú bổ sung về quá trình xử lý bảo hành
-              </p>
             </div>
 
             {/* End Date, Status and CRM Code Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               {/* End Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-2" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Thời gian kết thúc
                 </label>
                 <input
                   type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange('endDate', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Chọn thời gian kết thúc"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Để trống nếu chưa có thời gian kết thúc
-                </p>
               </div>
 
               {/* Status */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <CheckCircle className="w-4 h-4 inline mr-2" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Trạng thái
                 </label>
                 <select
                   value={formData.status}
                   onChange={(e) => handleInputChange('status', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="RECEIVED">Tiếp nhận</option>
                   <option value="PROCESSING">Đang xử lý</option>
@@ -337,29 +402,23 @@ export default function EditWarrantyModal({
 
               {/* CRM Reference Code */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <span className="inline-flex items-center">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
-                    Mã CRM
-                  </span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mã CRM
                 </label>
                 <input
                   type="text"
                   value={formData.crmReferenceCode || ''}
                   onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Nhập mã CRM (tùy chọn)"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Mã tham chiếu từ hệ thống CRM
-                </p>
               </div>
             </div>
 
           </div>
 
           {/* Action Buttons */}
-          <div className="flex space-x-3 pt-4 border-t border-gray-200">
+          <div className="flex space-x-3 pt-3 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}

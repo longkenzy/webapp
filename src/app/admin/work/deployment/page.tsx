@@ -8,12 +8,15 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
+import CreateDeploymentModal from './CreateDeploymentModal';
+import EditDeploymentModal from './EditDeploymentModal';
 
 interface Employee {
   id: string;
   fullName: string;
   position: string;
   department: string;
+  companyEmail: string;
 }
 
 interface Deployment {
@@ -21,8 +24,9 @@ interface Deployment {
   title: string;
   description: string;
   customerName: string;
+  reporter: Employee;
   handler: Employee;
-  deploymentType: string | { id: string; name: string; description?: string };
+  deploymentType: { id: string; name: string; description?: string };
   customer?: {
     id: string;
     fullCompanyName: string;
@@ -67,6 +71,13 @@ export default function AdminDeploymentWorkPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  // Create modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  
+  // Edit modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(null);
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deletedDeployments, setDeletedDeployments] = useState<Set<string>>(new Set());
@@ -214,6 +225,19 @@ export default function AdminDeploymentWorkPage() {
       setRefreshing(false);
     }
   }, []);
+
+  const handleCreateSuccess = (newCase: any) => {
+    // Refresh the deployments list
+    refreshDeployments();
+    setShowCreateModal(false);
+  };
+
+  // Handle edit success
+  const handleEditSuccess = () => {
+    refreshDeployments();
+    setShowEditModal(false);
+    setEditingDeployment(null);
+  };
 
   // Delete deployment
   const deleteDeployment = useCallback(async (deploymentId: string) => {
@@ -688,6 +712,7 @@ export default function AdminDeploymentWorkPage() {
 
 
   return (
+    <>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
@@ -728,6 +753,17 @@ export default function AdminDeploymentWorkPage() {
                 )}
               </div>
             </div>
+            
+            {/* Create Case Button */}
+            {activeTab === 'cases' && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
+              >
+                <Rocket className="h-4 w-4" />
+                <span className="font-medium">Tạo Case</span>
+              </button>
+            )}
           </div>
           
           {/* Tabs */}
@@ -1233,6 +1269,22 @@ export default function AdminDeploymentWorkPage() {
                           {/* Hành động */}
                           <td className="px-2 py-4 whitespace-nowrap text-sm font-medium w-20">
                             <div className="flex items-center space-x-1">
+                              {/* Nút chỉnh sửa case */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  console.log('Edit button clicked, deployment:', deployment);
+                                  setEditingDeployment(deployment);
+                                  setShowEditModal(true);
+                                  console.log('showEditModal should be true now');
+                                }}
+                                className="p-1.5 rounded-md transition-colors duration-200 text-blue-600 hover:text-blue-900 hover:bg-blue-50"
+                                title="Chỉnh sửa case"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                              
+                              {/* Nút đánh giá */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1252,8 +1304,10 @@ export default function AdminDeploymentWorkPage() {
                                 }`}
                                 title={isDeploymentEvaluatedByAdmin(deployment) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
                               >
-                                {isDeploymentEvaluatedByAdmin(deployment) ? <Edit className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                {isDeploymentEvaluatedByAdmin(deployment) ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
                               </button>
+                              
+                              {/* Nút xóa */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1623,6 +1677,27 @@ export default function AdminDeploymentWorkPage() {
             </div>
           </div>
         )}
+
     </div>
+    
+    {/* Create Case Modal */}
+    <CreateDeploymentModal
+      isOpen={showCreateModal}
+      onClose={() => setShowCreateModal(false)}
+      onSuccess={handleCreateSuccess}
+    />
+
+    {/* Edit Case Modal */}
+    {console.log('Rendering EditDeploymentModal with showEditModal:', showEditModal, 'editingDeployment:', editingDeployment)}
+    <EditDeploymentModal
+      isOpen={showEditModal}
+      onClose={() => {
+        setShowEditModal(false);
+        setEditingDeployment(null);
+      }}
+      onSuccess={handleEditSuccess}
+      caseData={editingDeployment}
+    />
+    </>
   );
 }

@@ -53,6 +53,7 @@ interface DeliveryCase {
   endDate: string | null;
   status: DeliveryCaseStatus;
   notes: string | null;
+  crmReferenceCode: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
   userImpactLevel: number | null;
@@ -759,16 +760,28 @@ export default function DeliveryCaseTable({
                  {/* Hành động */}
                  <td className="px-2 py-1 whitespace-nowrap text-xs font-medium text-center">
                    <div className="flex items-center justify-center gap-2">
+                     {/* Nút chỉnh sửa case */}
+                     {onEdit && (
+                       <button
+                         onClick={() => onEdit(caseItem)}
+                         className="p-1 rounded transition-colors text-blue-600 hover:text-blue-900 hover:bg-blue-50 cursor-pointer"
+                         title="Chỉnh sửa case"
+                       >
+                         <Edit className="h-4 w-4" />
+                       </button>
+                     )}
+                     
+                     {/* Nút đánh giá */}
                      <button
                        onClick={() => handleOpenEvaluationModal(caseItem)}
                        className={`p-1 rounded transition-colors ${
                          isEvaluated 
-                           ? 'text-green-600 hover:text-green-900 hover:bg-green-50' 
-                           : 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 bg-yellow-100'
+                           ? 'text-green-600 hover:text-green-900 hover:bg-green-50 cursor-pointer' 
+                           : 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 bg-yellow-100 cursor-pointer'
                        }`}
                        title={isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
                      >
-                       {isEvaluated ? <Edit className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                       {isEvaluated ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
                      </button>
                      {onDelete && (
                        <button

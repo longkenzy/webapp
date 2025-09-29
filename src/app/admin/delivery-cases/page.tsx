@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Package, Search, Filter, Download, RefreshCw, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
+import CreateDeliveryCaseModal from './CreateDeliveryCaseModal';
+import EditDeliveryCaseModal from './EditDeliveryCaseModal';
 import * as XLSX from 'xlsx';
 import { DeliveryCaseStatus } from '@prisma/client';
 
@@ -16,6 +18,7 @@ interface DeliveryCase {
   endDate: string | null;
   status: DeliveryCaseStatus;
   notes: string | null;
+  crmReferenceCode: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
   userImpactLevel: number | null;
@@ -77,6 +80,13 @@ export default function DeliveryCasesPage() {
   const [deliveryPersons, setDeliveryPersons] = useState<Array<{id: string, fullName: string}>>([]);
   const [customers, setCustomers] = useState<Array<{id: string, shortName: string}>>([]);
   const [allCases, setAllCases] = useState<DeliveryCase[]>([]);
+  
+  // Create modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  
+  // Edit modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCase, setEditingCase] = useState<DeliveryCase | null>(null);
 
 
   // Debounce search term
@@ -143,9 +153,8 @@ export default function DeliveryCasesPage() {
   };
 
   const handleEditCase = (caseItem: DeliveryCase) => {
-    setSelectedCase(caseItem);
-    // You can implement an edit modal here
-    console.log('Edit case:', caseItem);
+    setEditingCase(caseItem);
+    setShowEditModal(true);
   };
 
   const handleDeleteCase = async (caseItem: DeliveryCase) => {
@@ -181,6 +190,19 @@ export default function DeliveryCasesPage() {
         });
       }
     }
+  };
+
+  const handleCreateSuccess = (newCase: any) => {
+    // Refresh the cases list
+    fetchAllData();
+    setShowCreateModal(false);
+  };
+
+  const handleEditSuccess = (updatedCase: any) => {
+    // Refresh the cases list
+    fetchAllData();
+    setShowEditModal(false);
+    setEditingCase(null);
   };
 
   // Export to Excel function
@@ -407,6 +429,15 @@ export default function DeliveryCasesPage() {
                   </p>
                 </div>
               </div>
+              
+              {/* Create Case Button */}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-sm"
+              >
+                <Package className="h-4 w-4" />
+                <span className="font-medium">Tạo Case</span>
+              </button>
             </div>
             
           </div>
@@ -713,6 +744,24 @@ export default function DeliveryCasesPage() {
         />
           </div>
         </div>
+
+      {/* Create Case Modal */}
+      <CreateDeliveryCaseModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleCreateSuccess}
+      />
+
+      {/* Edit Case Modal */}
+      <EditDeliveryCaseModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingCase(null);
+        }}
+        onSuccess={handleEditSuccess}
+        caseData={editingCase}
+      />
     </div>
   );
 }

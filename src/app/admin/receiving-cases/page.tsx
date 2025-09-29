@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Package, Search, Filter, Download, Trash2, RefreshCw, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReceivingCaseTable from '@/components/admin/ReceivingCaseTable';
+import CreateReceivingCaseModal from './CreateReceivingCaseModal';
+import EditReceivingCaseModal from './EditReceivingCaseModal';
 import * as XLSX from 'xlsx';
 import { ReceivingCaseStatus } from '@prisma/client';
 
@@ -16,6 +18,7 @@ interface ReceivingCase {
   endDate: string | null;
   status: ReceivingCaseStatus;
   notes: string | null;
+  crmReferenceCode: string | null;
   userDifficultyLevel: number | null;
   userEstimatedTime: number | null;
   userImpactLevel: number | null;
@@ -83,6 +86,13 @@ export default function ReceivingCasesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletedCases, setDeletedCases] = useState<Set<string>>(new Set());
+  
+  // Create modal states
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  
+  // Edit modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCase, setEditingCase] = useState<ReceivingCase | null>(null);
 
   // Debounce search term
   useEffect(() => {
@@ -148,9 +158,8 @@ export default function ReceivingCasesPage() {
   };
 
   const handleEditCase = (caseItem: ReceivingCase) => {
-    setSelectedCase(caseItem);
-    // You can implement an edit modal here
-    console.log('Edit case:', caseItem);
+    setEditingCase(caseItem);
+    setShowEditModal(true);
   };
 
   const handleOpenDeleteModal = (caseItem: ReceivingCase) => {
@@ -162,6 +171,19 @@ export default function ReceivingCasesPage() {
     setShowDeleteModal(false);
     setSelectedCase(null);
     setDeleting(false);
+  };
+
+  const handleCreateSuccess = (newCase: any) => {
+    // Refresh the cases list
+    fetchAllData();
+    setShowCreateModal(false);
+  };
+
+  const handleEditSuccess = (updatedCase: any) => {
+    // Refresh the cases list
+    fetchAllData();
+    setShowEditModal(false);
+    setEditingCase(null);
   };
 
   const handleDeleteCase = async () => {
@@ -452,19 +474,26 @@ export default function ReceivingCasesPage() {
         {/* Header */}
         <div className="bg-white shadow-sm border-b border-gray-200">
           <div className="max-w-full mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Package className="h-6 w-6 text-yellow-600" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Package className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Quản lý case nhận hàng</h1>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Quản lý và theo dõi các case nhận hàng từ nhà cung cấp
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Quản lý case nhận hàng</h1>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Quản lý và theo dõi các case nhận hàng từ nhà cung cấp
-                  </p>
-                </div>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
+                >
+                  <Package className="h-4 w-4" />
+                  <span className="font-medium">Tạo Case</span>
+                </button>
               </div>
-            </div>
             
           </div>
         </div>
@@ -832,6 +861,24 @@ export default function ReceivingCasesPage() {
           </div>
         </div>
       )}
+
+      {/* Create Case Modal */}
+      <CreateReceivingCaseModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleCreateSuccess}
+      />
+
+      {/* Edit Case Modal */}
+      <EditReceivingCaseModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingCase(null);
+        }}
+        onSuccess={handleEditSuccess}
+        caseData={editingCase}
+      />
     </div>
   );
 }

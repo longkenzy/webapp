@@ -85,20 +85,26 @@ export default function EditDeploymentModal({
     }
   }, [isOpen, caseData]);
 
-  // Body scroll lock when modal is open
+  // Lock body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
+      // Save current scroll position
       const scrollY = window.scrollY;
+      
+      // Lock body scroll
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
       
       return () => {
+        // Restore body scroll
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
         document.body.style.overflow = '';
+        
+        // Restore scroll position
         window.scrollTo(0, scrollY);
       };
     }
@@ -237,157 +243,158 @@ export default function EditDeploymentModal({
   };
 
   if (!isOpen || !caseData) return null;
-
+  
   return (
-    <div className="fixed inset-0 backdrop-blur-sm bg-black/50 flex items-center justify-center z-[9999] p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
           <div className="flex items-center space-x-2">
-            <div className="p-1.5 bg-blue-100 rounded-md">
-              <Rocket className="h-4 w-4 text-blue-600" />
+            <div className="p-1.5 bg-white/20 rounded-md">
+              <Rocket className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Chỉnh sửa Case Triển Khai</h2>
-              <p className="text-xs text-gray-600">Cập nhật thông tin case triển khai</p>
+              <h2 className="text-lg font-bold">Chỉnh sửa Case Triển Khai</h2>
+              <p className="text-blue-100 text-xs">Cập nhật thông tin case</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 hover:bg-white/20 rounded-md transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="px-4 py-3 space-y-4">
-          {/* Deployment Info (Read-only) */}
-          <div className="bg-gray-50 rounded-lg px-3 py-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Thông tin Case Triển Khai</h3>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tiêu đề</label>
-                  <p className="text-sm text-gray-900 mt-1 font-medium">{caseData.title}</p>
+        {/* Form Content */}
+        <div className="flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-3 space-y-3">
+            {/* Deployment Info (Read-only) */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-2 border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-800 mb-2 flex items-center">
+                <Calendar className="h-3 w-3 mr-1 text-blue-600" />
+                Thông tin Case Triển Khai
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                <div className="space-y-1.5">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tiêu đề</label>
+                    <p className="text-sm text-gray-900 mt-1 font-medium">{caseData.title}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Loại triển khai</label>
+                    <p className="text-sm text-gray-900 mt-1">{formatDeploymentType(caseData.deploymentType?.name)}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Loại triển khai</label>
-                  <p className="text-sm text-gray-900 mt-1">{formatDeploymentType(caseData.deploymentType?.name)}</p>
+                <div className="space-y-1.5">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mã CRM</label>
+                    <p className="text-sm text-gray-900 mt-1 font-mono bg-blue-50 px-2 py-1 rounded">
+                      {caseData.crmReferenceCode || 'Chưa có'}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Người xử lý</label>
+                    <p className="text-sm text-gray-900 mt-1">
+                      {caseData.handler ? caseData.handler.fullName : 'Chưa xác định'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mã CRM</label>
-                  <p className="text-sm text-gray-900 mt-1 font-mono">
-                    {caseData.crmReferenceCode || 'Chưa có'}
-                  </p>
+                <div className="space-y-1.5">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tên công ty</label>
+                    <div className="text-sm text-gray-900 mt-1">
+                      {caseData.customer?.shortName && caseData.customer?.fullCompanyName ? (
+                        <div>
+                          <div className="font-medium">{caseData.customer.shortName}</div>
+                          <div className="text-gray-600">{caseData.customer.fullCompanyName}</div>
+                        </div>
+                      ) : caseData.customer?.fullCompanyName ? (
+                        <div>{caseData.customer.fullCompanyName}</div>
+                      ) : (
+                        <div>Chưa có</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Người xử lý</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {caseData.handler ? caseData.handler.fullName : 'Chưa xác định'}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3 mt-2">
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ngày bắt đầu</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {new Date(caseData.startDate).toLocaleDateString('vi-VN')}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Liên hệ</label>
-                  <p className="text-sm text-gray-900 mt-1 font-medium">
-                    {(() => {
-                      const customerName = caseData.customerName;
-                      if (!customerName) return 'Chưa có';
-                      
-                      // Nếu đã có "Anh" hoặc "Chị" thì giữ nguyên
-                      if (customerName.toLowerCase().includes('anh') || customerName.toLowerCase().includes('chị')) {
-                        return customerName;
-                      }
-                      
-                      // Nếu chưa có thì thêm "Anh/Chị"
-                      return `Anh/Chị ${customerName}`;
-                    })()}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tên công ty</label>
-                  <div className="text-sm text-gray-900 mt-1">
-                    {caseData.customer?.shortName && caseData.customer?.fullCompanyName ? (
-                      <div>
-                        <div className="font-medium">{caseData.customer.shortName}</div>
-                        <div className="text-gray-600 text-xs">{caseData.customer.fullCompanyName}</div>
-                      </div>
-                    ) : caseData.customer?.fullCompanyName ? (
-                      <div>{caseData.customer.fullCompanyName}</div>
-                    ) : (
-                      <div>Chưa có</div>
-                    )}
+                <div className="space-y-1.5">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ngày bắt đầu</label>
+                    <p className="text-sm text-gray-900 mt-1">
+                      {new Date(caseData.startDate).toLocaleDateString('vi-VN')}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Liên hệ</label>
+                    <p className="text-sm text-gray-900 mt-1 font-medium">
+                      {caseData.customerName || 'Chưa có'}
+                    </p>
                   </div>
                 </div>
               </div>
+              <div className="mt-2">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mô tả</label>
+                <p className="text-sm text-gray-900 mt-1 bg-white p-2 rounded border">{caseData.description}</p>
+              </div>
             </div>
-            <div className="mt-2">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mô tả</label>
-              <p className="text-sm text-gray-900 mt-1 bg-white p-2 rounded border">{caseData.description}</p>
-            </div>
-          </div>
 
-          {/* Editable Fields */}
-          <div className="space-y-3">
-            {/* Notes Field */}
+            {/* Editable Fields */}
+            <div className="bg-white rounded-lg border border-gray-200 p-3 space-y-3">
+              <h3 className="text-base font-semibold text-gray-800 flex items-center">
+                <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                Cập nhật thông tin
+              </h3>
+              
+              {/* Notes Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ghi chú
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                <span className="inline-flex items-center">
+                  <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                  Ghi chú
+                </span>
               </label>
               <textarea
                 value={formData.notes || ''}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none transition-all"
                 placeholder="Nhập ghi chú về case triển khai (tùy chọn)"
                 rows={3}
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Ghi chú bổ sung về quá trình triển khai
+              </p>
             </div>
 
-            {/* End Date, Status and CRM Code Row */}
-            <div className="grid grid-cols-3 gap-3">
+              {/* Form Fields Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* End Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-2" />
                   Thời gian hoàn thành
                 </label>
                 <input
                   type="datetime-local"
                   value={formData.endDate}
                   onChange={(e) => handleInputChange('endDate', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Chọn thời gian hoàn thành"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Để trống nếu chưa có thời gian hoàn thành
+                </p>
               </div>
 
               {/* Status */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <CheckCircle className="w-4 h-4 inline mr-2" />
                   Trạng thái
                 </label>
                 <select
                   value={formData.status}
                   onChange={(e) => handleInputChange('status', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 >
                   <option value="RECEIVED">Tiếp nhận</option>
                   <option value="PROCESSING">Đang xử lý</option>
@@ -398,49 +405,56 @@ export default function EditDeploymentModal({
 
               {/* CRM Reference Code */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mã CRM
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <span className="inline-flex items-center">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                    Mã CRM
+                  </span>
                 </label>
                 <input
                   type="text"
                   value={formData.crmReferenceCode || ''}
                   onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Nhập mã CRM (tùy chọn)"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Mã tham chiếu từ hệ thống CRM
+                </p>
               </div>
             </div>
 
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex space-x-3 pt-3 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Đang cập nhật...
-                </>
-              ) : (
-                <>
-                  <Rocket className="h-4 w-4 mr-2" />
-                  Cập nhật
-                </>
-              )}
-            </button>
-          </div>
-        </form>
+            {/* Action Buttons */}
+            <div className="flex space-x-3 pt-3 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 border border-transparent rounded-md hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Đang cập nhật...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="h-4 w-4 mr-2" />
+                    Cập nhật Case
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

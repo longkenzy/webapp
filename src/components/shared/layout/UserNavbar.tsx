@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   Wrench,
   Shield,
-  Rocket
+  Rocket,
+  Printer
 } from 'lucide-react';
 
 export default function UserNavbar() {
@@ -39,6 +40,7 @@ export default function UserNavbar() {
   const navigation = [
     { name: 'Dashboard', href: '/user/dashboard', icon: Home },
     { name: 'Lịch làm việc', href: '/user/schedule', icon: Calendar },
+    { name: 'In phiếu', href: '/user/print', icon: Printer },
   ];
 
   const workMenuItems = [
@@ -51,7 +53,13 @@ export default function UserNavbar() {
     { name: 'Case nội bộ', href: '/user/work/internal', icon: Building2 },
   ];
 
-  const isActive = (href: string) => pathname === href;
+  const isActive = (href: string) => {
+    if (href === '/user/print') {
+      // Special case for print pages - active if on any print subpage
+      return pathname.startsWith('/user/print');
+    }
+    return pathname === href;
+  };
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/login' });

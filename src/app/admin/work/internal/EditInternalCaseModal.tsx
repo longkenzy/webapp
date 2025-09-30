@@ -179,6 +179,26 @@ export default function EditInternalCaseModal({
   // Initialize form data when modal opens
   useEffect(() => {
     if (isOpen && caseData) {
+      // Convert datetime to local timezone for datetime-local input
+      const startDateObj = new Date(caseData.startDate);
+      const startYear = startDateObj.getFullYear();
+      const startMonth = String(startDateObj.getMonth() + 1).padStart(2, '0');
+      const startDay = String(startDateObj.getDate()).padStart(2, '0');
+      const startHours = String(startDateObj.getHours()).padStart(2, '0');
+      const startMinutes = String(startDateObj.getMinutes()).padStart(2, '0');
+      const startDateLocal = `${startYear}-${startMonth}-${startDay}T${startHours}:${startMinutes}`;
+
+      let endDateLocal = '';
+      if (caseData.endDate) {
+        const endDateObj = new Date(caseData.endDate);
+        const endYear = endDateObj.getFullYear();
+        const endMonth = String(endDateObj.getMonth() + 1).padStart(2, '0');
+        const endDay = String(endDateObj.getDate()).padStart(2, '0');
+        const endHours = String(endDateObj.getHours()).padStart(2, '0');
+        const endMinutes = String(endDateObj.getMinutes()).padStart(2, '0');
+        endDateLocal = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
+      }
+
       setFormData({
         requester: caseData.requester.id,
         position: caseData.requester.position || '',
@@ -187,8 +207,8 @@ export default function EditInternalCaseModal({
         form: caseData.form,
         title: caseData.title,
         description: caseData.description,
-        startDate: new Date(caseData.startDate).toISOString().slice(0, 16),
-        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
+        startDate: startDateLocal,
+        endDate: endDateLocal,
         status: caseData.status,
         notes: caseData.notes || '',
         // User self-assessment fields

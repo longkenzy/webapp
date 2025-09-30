@@ -323,17 +323,9 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate start date is required
-    if (!formData.startDate) {
-      toast.error('Vui lòng chọn thời gian bắt đầu!', {
-        duration: 3000,
-        position: 'top-right',
-      });
-      return;
-    }
-
-    // Validate end date
-    if (formData.endDate) {
+    // ONLY validate: if both dates exist, endDate must be > startDate
+    // NO validation against current time - allow any past/future dates
+    if (formData.startDate && formData.endDate) {
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
       

@@ -20,9 +20,10 @@ interface CreateIncidentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (newIncident: any) => void;
+  editingIncident?: any; // Incident data for editing
 }
 
-export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: CreateIncidentModalProps) {
+export default function CreateIncidentModal({ isOpen, onClose, onSuccess, editingIncident }: CreateIncidentModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
@@ -211,7 +212,61 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
       // Refresh evaluation configs to get latest options
       fetchConfigs();
     }
-  }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchIncidentTypes]);
+  }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchIncidentTypes, fetchConfigs]);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isOpen && editingIncident) {
+      // Populate form with editing incident data
+      const customerName = editingIncident.customerName || '';
+      const title = customerName.split(' ').slice(1).join(' '); // Remove title prefix
+      const customerTitle = customerName.startsWith('Chị') ? 'Chị' : 'Anh';
+      
+      // Handle incident type - it could be a string or object
+      let incidentTypeId = '';
+      if (editingIncident.incidentType) {
+        if (typeof editingIncident.incidentType === 'string') {
+          // If it's a string (name), find the ID from incidentTypes
+          const foundType = incidentTypes.find(t => t.name === editingIncident.incidentType);
+          incidentTypeId = foundType ? foundType.id : '';
+        } else if (editingIncident.incidentType.id) {
+          incidentTypeId = editingIncident.incidentType.id;
+        }
+      }
+
+      console.log('Editing incident:', editingIncident);
+      console.log('Resolved incidentTypeId:', incidentTypeId);
+
+      setFormData({
+        customerTitle,
+        customerName: title,
+        handler: editingIncident.handler?.id || '',
+        incidentType: incidentTypeId,
+        customer: editingIncident.customer?.id || '',
+        title: editingIncident.title || '',
+        description: editingIncident.description || '',
+        startDate: editingIncident.startDate ? new Date(editingIncident.startDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+        endDate: editingIncident.endDate ? new Date(editingIncident.endDate).toISOString().slice(0, 16) : '',
+        status: editingIncident.status || 'RECEIVED',
+        notes: editingIncident.notes || '',
+        crmReferenceCode: editingIncident.crmReferenceCode || '',
+        difficultyLevel: editingIncident.userDifficultyLevel?.toString() || '',
+        estimatedTime: editingIncident.userEstimatedTime?.toString() || '',
+        impactLevel: editingIncident.userImpactLevel?.toString() || '',
+        urgencyLevel: editingIncident.userUrgencyLevel?.toString() || '',
+        form: 'Onsite', // Default
+        formScore: editingIncident.userFormScore?.toString() || '2'
+      });
+
+      // Set customer search if customer exists
+      if (editingIncident.customer) {
+        setCustomerSearch(`${editingIncident.customer.fullCompanyName} (${editingIncident.customer.shortName})`);
+      }
+    } else if (isOpen && !editingIncident) {
+      // Reset form for new incident
+      resetForm();
+    }
+  }, [isOpen, editingIncident, incidentTypes]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -355,8 +410,12 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
       };
 
       // Send to API
-      const response = await fetch('/api/incidents', {
-        method: 'POST',
+      const isEditing = !!editingIncident;
+      const url = isEditing ? `/api/incidents/${editingIncident.id}` : '/api/incidents';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -367,7 +426,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
         const result = await response.json();
         
         // Show success notification
-        toast.success('Tạo case xử lý sự cố thành công!', {
+        toast.success(isEditing ? 'Cập nhật case xử lý sự cố thành công!' : 'Tạo case xử lý sự cố thành công!', {
           duration: 4000,
           position: 'top-right',
           style: {
@@ -451,7 +510,9 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Tạo Case Xử Lý Sự Cố</h2>
+                <h2 className="text-lg font-semibold">
+                  {editingIncident ? 'Chỉnh sửa Case Xử Lý Sự Cố' : 'Tạo Case Xử Lý Sự Cố'}
+                </h2>
                 <p className="text-red-100 text-sm">Hệ thống quản lý sự cố</p>
               </div>
             </div>
@@ -886,7 +947,7 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess }: Crea
               ) : (
                 <>
                   <AlertTriangle className="h-4 w-4 mr-2" />
-                  Tạo Case
+                  {editingIncident ? 'Cập nhật Case' : 'Tạo Case'}
                 </>
               )}
             </button>

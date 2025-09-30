@@ -100,16 +100,28 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
+    
+    console.log('=== PUT /api/receiving-cases/[id] ===');
+    console.log('ID:', id);
+    console.log('Body:', body);
+    console.log('Session user:', session.user?.email);
     const {
       title,
       description,
+      requesterId,
       handlerId,
+      supplierId,
       form,
       startDate,
       endDate,
       status,
       notes,
       crmReferenceCode,
+      userDifficultyLevel,
+      userEstimatedTime,
+      userImpactLevel,
+      userUrgencyLevel,
+      userFormScore,
       adminDifficultyLevel,
       adminEstimatedTime,
       adminImpactLevel,
@@ -124,7 +136,43 @@ export async function PUT(
     });
 
     if (!existingCase) {
+      console.log('Receiving case not found for ID:', id);
       return NextResponse.json({ error: "Receiving case not found" }, { status: 404 });
+    }
+
+    console.log('Existing case found:', existingCase.id);
+
+    // Validate requesterId if provided
+    if (requesterId && requesterId !== existingCase.requesterId) {
+      const employee = await db.employee.findUnique({
+        where: { id: requesterId }
+      });
+      if (!employee) {
+        console.log('Requester not found:', requesterId);
+        return NextResponse.json({ error: "Requester not found" }, { status: 400 });
+      }
+    }
+
+    // Validate handlerId if provided
+    if (handlerId && handlerId !== existingCase.handlerId) {
+      const employee = await db.employee.findUnique({
+        where: { id: handlerId }
+      });
+      if (!employee) {
+        console.log('Handler not found:', handlerId);
+        return NextResponse.json({ error: "Handler not found" }, { status: 400 });
+      }
+    }
+
+    // Validate supplierId if provided
+    if (supplierId && supplierId !== existingCase.supplierId) {
+      const supplier = await db.partner.findUnique({
+        where: { id: supplierId }
+      });
+      if (!supplier) {
+        console.log('Supplier not found:', supplierId);
+        return NextResponse.json({ error: "Supplier not found" }, { status: 400 });
+      }
     }
 
     // Prepare update data
@@ -132,7 +180,9 @@ export async function PUT(
     
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
+    if (requesterId !== undefined) updateData.requesterId = requesterId;
     if (handlerId !== undefined) updateData.handlerId = handlerId;
+    if (supplierId !== undefined) updateData.supplierId = supplierId;
     if (form !== undefined) updateData.form = form;
     if (startDate !== undefined) updateData.startDate = new Date(startDate);
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
@@ -140,12 +190,25 @@ export async function PUT(
     if (notes !== undefined) updateData.notes = notes;
     if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
 
+    // User assessment fields
+    if (userDifficultyLevel !== undefined) updateData.userDifficultyLevel = parseInt(userDifficultyLevel);
+    if (userEstimatedTime !== undefined) updateData.userEstimatedTime = parseInt(userEstimatedTime);
+    if (userImpactLevel !== undefined) updateData.userImpactLevel = parseInt(userImpactLevel);
+    if (userUrgencyLevel !== undefined) updateData.userUrgencyLevel = parseInt(userUrgencyLevel);
+    if (userFormScore !== undefined) updateData.userFormScore = parseInt(userFormScore);
+
     // Admin assessment fields
     if (adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = parseInt(adminDifficultyLevel);
     if (adminEstimatedTime !== undefined) updateData.adminEstimatedTime = parseInt(adminEstimatedTime);
     if (adminImpactLevel !== undefined) updateData.adminImpactLevel = parseInt(adminImpactLevel);
     if (adminUrgencyLevel !== undefined) updateData.adminUrgencyLevel = parseInt(adminUrgencyLevel);
     if (adminAssessmentNotes !== undefined) updateData.adminAssessmentNotes = adminAssessmentNotes;
+
+    // Set user assessment date if any user field is updated
+    if (userDifficultyLevel !== undefined || userEstimatedTime !== undefined || 
+        userImpactLevel !== undefined || userUrgencyLevel !== undefined || userFormScore !== undefined) {
+      updateData.userAssessmentDate = new Date();
+    }
 
     // Set admin assessment date if any admin field is updated
     if (adminDifficultyLevel !== undefined || adminEstimatedTime !== undefined || 
@@ -155,6 +218,8 @@ export async function PUT(
 
     // Handle products update
     if (products !== undefined) {
+      console.log('Updating products:', products);
+      
       // Delete existing products
       await db.receivingCaseProduct.deleteMany({
         where: { receivingCaseId: id }
@@ -166,53 +231,65 @@ export async function PUT(
           create: products.map((product: any) => ({
             name: product.name,
             code: product.code || null,
-            quantity: product.quantity,
+            quantity: Math.max(1, parseInt(String(product.quantity)) || 1), // Convert to integer, minimum 1
             serialNumber: product.serialNumber || null
           }))
         };
+        console.log('Products to create:', updateData.products);
       }
     }
 
-    const updatedCase = await db.receivingCase.update({
-      where: { id },
-      data: updateData,
-      include: {
-        requester: {
-          select: {
-            id: true,
-            fullName: true,
-            position: true,
-            department: true
-          }
-        },
-        handler: {
-          select: {
-            id: true,
-            fullName: true,
-            position: true,
-            department: true
-          }
-        },
-        supplier: {
-          select: {
-            id: true,
-            shortName: true,
-            fullCompanyName: true
-          }
-        },
-        products: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            quantity: true,
-            serialNumber: true
+    console.log('Update data:', updateData);
+
+    try {
+      const updatedCase = await db.receivingCase.update({
+        where: { id },
+        data: updateData,
+        include: {
+          requester: {
+            select: {
+              id: true,
+              fullName: true,
+              position: true,
+              department: true
+            }
+          },
+          handler: {
+            select: {
+              id: true,
+              fullName: true,
+              position: true,
+              department: true
+            }
+          },
+          supplier: {
+            select: {
+              id: true,
+              shortName: true,
+              fullCompanyName: true
+            }
+          },
+          products: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              quantity: true,
+              serialNumber: true
+            }
           }
         }
-      }
-    });
+      });
 
-    return NextResponse.json(updatedCase);
+      console.log('Updated case successfully:', updatedCase.id);
+      return NextResponse.json(updatedCase);
+    } catch (dbError) {
+      console.error('Database update error:', dbError);
+      return NextResponse.json({ 
+        error: "Database update failed", 
+        details: dbError instanceof Error ? dbError.message : 'Unknown database error' 
+      }, { status: 500 });
+    }
   } catch (error) {
     console.error("Error updating receiving case:", error);
     return NextResponse.json(

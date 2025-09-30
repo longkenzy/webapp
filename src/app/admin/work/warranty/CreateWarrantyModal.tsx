@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, User, Rocket, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
+import { X, User, Shield, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
@@ -16,54 +16,27 @@ interface Employee {
   companyEmail: string;
 }
 
-interface DeploymentCase {
-  id: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string | null;
-  status: string;
-  notes: string | null;
-  crmReferenceCode: string | null;
-  userDifficultyLevel: number | null;
-  userEstimatedTime: number | null;
-  userImpactLevel: number | null;
-  userUrgencyLevel: number | null;
-  userFormScore: number | null;
-  userAssessmentDate: string | null;
-  customerName: string;
-  customer?: {
-    id: string;
-    shortName: string;
-    fullCompanyName: string;
-  } | null;
-  deploymentType: {
-    id: string;
-    name: string;
-    description?: string;
-  };
-  handler: {
-    id: string;
-    fullName: string;
-  };
-}
-
-interface CreateDeploymentModalProps {
+interface CreateWarrantyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newCase: any) => void;
-  editData?: DeploymentCase | null; // Thêm prop cho edit mode
+  onSuccess?: (newWarranty: unknown) => void;
+  editingWarranty?: any; // Warranty data for editing
 }
 
-export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, editData }: CreateDeploymentModalProps) {
+export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editingWarranty }: CreateWarrantyModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
-  const [deploymentTypes, setDeploymentTypes] = useState<any[]>([]);
+  const [warrantyTypes, setWarrantyTypes] = useState<Array<{ id: string; name: string; description?: string }>>([]);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
+  const [dataLoading, setDataLoading] = useState({
+    employees: true,
+    partners: true,
+    warrantyTypes: true,
+    configs: true
+  });
 
   // User evaluation categories
   const userCategories = [
@@ -76,87 +49,11 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
-
-  // Populate form data when in edit mode
-  useEffect(() => {
-    if (editData && isOpen) {
-      console.log('=== Populating form data for edit ===');
-      console.log('Edit data:', editData);
-      console.log('Customer:', editData.customer);
-      
-      // Get form options to map the correct label
-      const formOptions = getFieldOptions(EvaluationCategory.FORM);
-      console.log('Form options:', formOptions);
-      
-      const defaultFormOption = formOptions.find(option => option.points === 2) || formOptions[0];
-      const selectedFormOption = formOptions.find(option => 
-        (editData.userFormScore && option.points === editData.userFormScore)
-      );
-      
-      console.log('Default form option:', defaultFormOption);
-      console.log('Selected form option:', selectedFormOption);
-      
-      const newFormData = {
-        customerTitle: editData.customerName?.includes('Anh') ? 'Anh' : 'Chị',
-        customerName: editData.customerName || '',
-        handler: editData.handler?.id || '',
-        deploymentType: editData.deploymentType?.id || '',
-        customer: editData.customer?.id || '',
-        title: editData.title || '',
-        description: editData.description || '',
-        startDate: editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : '',
-        endDate: editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : '',
-        status: editData.status || 'RECEIVED',
-        notes: editData.notes || '',
-        crmReferenceCode: editData.crmReferenceCode || '',
-        difficultyLevel: editData.userDifficultyLevel?.toString() || '',
-        estimatedTime: editData.userEstimatedTime?.toString() || '',
-        impactLevel: editData.userImpactLevel?.toString() || '',
-        urgencyLevel: editData.userUrgencyLevel?.toString() || '',
-        form: selectedFormOption?.label || defaultFormOption?.label || 'Onsite',
-        formScore: editData.userFormScore?.toString() || '2'
-      };
-      
-      console.log('Setting form data:', newFormData);
-      setFormData(newFormData);
-      
-      // Set customer search term
-      if (editData.customer) {
-        console.log('Setting customer search to:', editData.customer.shortName);
-        setCustomerSearch(editData.customer.shortName);
-      }
-    } else if (!editData && isOpen) {
-      // Reset form when creating new case
-      console.log('Resetting form for new case');
-      setFormData({
-        customerTitle: 'Anh',
-        customerName: '',
-        handler: '',
-        deploymentType: '',
-        customer: '',
-        title: '',
-        description: '',
-        startDate: new Date().toISOString().slice(0, 16),
-        endDate: '',
-        status: 'RECEIVED',
-        notes: '',
-        crmReferenceCode: '',
-        difficultyLevel: '',
-        estimatedTime: '',
-        impactLevel: '',
-        urgencyLevel: '',
-        form: 'Onsite',
-        formScore: '2'
-      });
-      setCustomerSearch('');
-    }
-  }, [editData, isOpen, getFieldOptions]);
-
   const [formData, setFormData] = useState({
     customerTitle: 'Anh', // Default title
     customerName: '',
     handler: '',
-    deploymentType: '',
+    warrantyType: '',
     customer: '',
     title: '',
     description: '',
@@ -174,8 +71,27 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     formScore: '2' // Default for Onsite
   });
 
-  const fetchEmployees = useCallback(async () => {
+  const fetchEmployees = useCallback(async (forceRefresh = false) => {
+    // Check cache first
+    const cacheKey = 'warranty-modal-employees';
+    const cachedData = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(`${cacheKey}-time`);
+    const now = Date.now();
+    const isCacheValid = cacheTime && (now - parseInt(cacheTime)) < 5 * 60 * 1000; // 5 minutes
+
+    if (!forceRefresh && cachedData && isCacheValid) {
+      try {
+        const data = JSON.parse(cachedData);
+        setEmployees(data);
+        setDataLoading(prev => ({ ...prev, employees: false }));
+        return;
+      } catch (error) {
+        console.error('Error parsing cached employees:', error);
+      }
+    }
+
     try {
+      setDataLoading(prev => ({ ...prev, employees: true }));
       const response = await fetch('/api/employees/list', {
         method: 'GET',
         headers: {
@@ -185,6 +101,9 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
       if (response.ok) {
         const data = await response.json();
         setEmployees(data);
+        // Cache the data
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+        localStorage.setItem(`${cacheKey}-time`, now.toString());
       } else {
         console.error('Failed to fetch employees:', response.status, response.statusText);
         setEmployees([]);
@@ -192,47 +111,14 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     } catch (error) {
       console.error('Error fetching employees:', error);
       setEmployees([]);
+    } finally {
+      setDataLoading(prev => ({ ...prev, employees: false }));
     }
   }, []);
 
-  const fetchCurrentEmployee = useCallback(async () => {
-    if (!session?.user?.email) return;
-    
-    try {
-      const response = await fetch('/api/user/basic-info');
-      if (response.ok) {
-        const data = await response.json();
-        console.log('User basic info data:', data);
-        
-        // Transform the data to match Employee interface
-        if (data.employee) {
-          setCurrentEmployee({
-            id: data.employee.id,
-            fullName: data.employee.fullName,
-            position: data.employee.position,
-            department: data.employee.department,
-            companyEmail: data.employee.companyEmail || session.user.email
-          });
-        } else {
-          // Fallback to user data if no employee record
-          setCurrentEmployee({
-            id: data.id,
-            fullName: data.name || data.email,
-            position: 'Nhân viên',
-            department: data.department || 'Chưa xác định',
-            companyEmail: session.user.email
-          });
-        }
-      } else {
-        console.error('Failed to load user basic info:', response.status);
-      }
-    } catch (error) {
-      console.error('Error loading current employee:', error);
-    }
-  }, [session?.user?.email]);
-
   const fetchPartners = useCallback(async () => {
     try {
+      setDataLoading(prev => ({ ...prev, partners: true }));
       const response = await fetch('/api/partners/list', {
         method: 'GET',
         headers: {
@@ -249,29 +135,57 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     } catch (error) {
       console.error('Error fetching partners:', error);
       setPartners([]);
+    } finally {
+      setDataLoading(prev => ({ ...prev, partners: false }));
     }
   }, []);
 
-  const fetchDeploymentTypes = useCallback(async () => {
+  const fetchWarrantyTypes = useCallback(async (forceRefresh = false) => {
+    // Check cache first
+    const cacheKey = 'warranty-modal-types';
+    const cachedData = localStorage.getItem(cacheKey);
+    const cacheTime = localStorage.getItem(`${cacheKey}-time`);
+    const now = Date.now();
+    const isCacheValid = cacheTime && (now - parseInt(cacheTime)) < 2 * 60 * 1000; // 2 minutes for warranty types
+
+    if (!forceRefresh && cachedData && isCacheValid) {
+      try {
+        const data = JSON.parse(cachedData);
+        setWarrantyTypes(data);
+        setDataLoading(prev => ({ ...prev, warrantyTypes: false }));
+        return;
+      } catch (error) {
+        console.error('Error parsing cached warranty types:', error);
+      }
+    }
+
     try {
-      const response = await fetch(`/api/deployment-types?t=${Date.now()}`, {
+      setDataLoading(prev => ({ ...prev, warrantyTypes: true }));
+      const response = await fetch('/api/warranty-types', {
         method: 'GET',
         headers: {
-          'Cache-Control': 'no-cache',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
         },
       });
-      
       if (response.ok) {
         const data = await response.json();
-        // Store full objects for easier access to id and name
-        setDeploymentTypes(data.data || []);
+        console.log('Warranty types API response:', data);
+        // Keep the full objects with id, name, and description
+        const types = data.data || [];
+        setWarrantyTypes(types);
+        // Cache the data
+        localStorage.setItem(cacheKey, JSON.stringify(types));
+        localStorage.setItem(`${cacheKey}-time`, now.toString());
       } else {
-        console.error('Failed to fetch deployment types:', response.status, response.statusText);
-        setDeploymentTypes([]);
+        console.error('Failed to fetch warranty types:', response.status, response.statusText);
+        setWarrantyTypes([]);
       }
     } catch (error) {
-      console.error('Error fetching deployment types:', error);
-      setDeploymentTypes([]);
+      console.error('Error fetching warranty types:', error);
+      setWarrantyTypes([]);
+    } finally {
+      setDataLoading(prev => ({ ...prev, warrantyTypes: false }));
     }
   }, []);
 
@@ -279,8 +193,8 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     setFormData({
       customerTitle: 'Anh',
       customerName: '',
-      handler: currentEmployee?.id || '',
-      deploymentType: '',
+      handler: '',
+      warrantyType: '',
       customer: '',
       title: '',
       description: '',
@@ -289,34 +203,67 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
       status: 'RECEIVED',
       notes: '',
       crmReferenceCode: '', // Reset Mã CRM
-      // User self-assessment fields
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
       urgencyLevel: '',
       form: 'Onsite',
-      formScore: '2' // Default for Onsite
+      formScore: '2'
     });
     setCustomerSearch('');
     setShowCustomerDropdown(false);
-  }, [currentEmployee?.id]);
+  }, []);
 
-  // Reset form when modal opens
+  // Reset form when modal opens or populate when editing
   useEffect(() => {
     if (isOpen) {
-      resetForm();
-    }
-  }, [isOpen, resetForm]);
+      if (editingWarranty) {
+        // Populate form with editing warranty data immediately
+        const customerName = editingWarranty.customerName || '';
+        const title = customerName.split(' ').slice(1).join(' '); // Remove title prefix
+        const customerTitle = customerName.startsWith('Chị') ? 'Chị' : 'Anh';
+        
+        // Handle warranty type - it could be a string or object
+        let warrantyTypeId = '';
+        if (editingWarranty.warrantyType) {
+          if (typeof editingWarranty.warrantyType === 'string') {
+            warrantyTypeId = editingWarranty.warrantyType;
+          } else if (editingWarranty.warrantyType.id) {
+            warrantyTypeId = editingWarranty.warrantyType.id;
+          }
+        }
 
-  // Auto-select current employee when both currentEmployee and employees are loaded
-  useEffect(() => {
-    if (currentEmployee && employees.length > 0 && formData.handler === '') {
-      setFormData(prev => ({
-        ...prev,
-        handler: currentEmployee.id
-      }));
+        // Set form data immediately for instant display
+        setFormData({
+          customerTitle,
+          customerName: title,
+          handler: editingWarranty.handler?.id || '',
+          warrantyType: warrantyTypeId,
+          customer: editingWarranty.customer?.id || '',
+          title: editingWarranty.title || '',
+          description: editingWarranty.description || '',
+          startDate: editingWarranty.startDate ? new Date(editingWarranty.startDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+          endDate: editingWarranty.endDate ? new Date(editingWarranty.endDate).toISOString().slice(0, 16) : '',
+          status: editingWarranty.status || 'RECEIVED',
+          notes: editingWarranty.notes || '',
+          crmReferenceCode: editingWarranty.crmReferenceCode || '',
+          difficultyLevel: editingWarranty.userDifficultyLevel?.toString() || '',
+          estimatedTime: editingWarranty.userEstimatedTime?.toString() || '',
+          impactLevel: editingWarranty.userImpactLevel?.toString() || '',
+          urgencyLevel: editingWarranty.userUrgencyLevel?.toString() || '',
+          form: 'Onsite', // Default
+          formScore: editingWarranty.userFormScore?.toString() || '2'
+        });
+        
+        // Set customer search if customer exists
+        if (editingWarranty.customer) {
+          setCustomerSearch(`${editingWarranty.customer.fullCompanyName} (${editingWarranty.customer.shortName})`);
+        }
+      } else {
+        resetForm();
+      }
     }
-  }, [currentEmployee, employees, formData.handler]);
+  }, [isOpen, editingWarranty, resetForm]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -333,17 +280,59 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     }
   }, [showCustomerDropdown]);
 
-  // Fetch data when modal opens
+  // Preload data when component mounts for faster modal opening
+  useEffect(() => {
+    fetchEmployees();
+    fetchPartners();
+    fetchWarrantyTypes();
+    fetchConfigs();
+  }, [fetchEmployees, fetchPartners, fetchWarrantyTypes, fetchConfigs]);
+
+  // Refresh data when modal opens to ensure latest data
   useEffect(() => {
     if (isOpen) {
-      fetchCurrentEmployee();
-      fetchEmployees();
-      fetchPartners();
-      fetchDeploymentTypes();
-      // Refresh evaluation configs to get latest options
-      fetchConfigs();
+      // Only refresh if data is stale (older than 5 minutes)
+      const now = Date.now();
+      const lastFetch = localStorage.getItem('warranty-modal-last-fetch');
+      const shouldRefresh = !lastFetch || (now - parseInt(lastFetch)) > 5 * 60 * 1000;
+      
+      if (shouldRefresh) {
+        fetchEmployees(true); // Force refresh
+        fetchPartners();
+        fetchWarrantyTypes(true); // Force refresh
+        fetchConfigs();
+        localStorage.setItem('warranty-modal-last-fetch', now.toString());
+      }
     }
-  }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchDeploymentTypes]);
+  }, [isOpen, fetchEmployees, fetchPartners, fetchWarrantyTypes, fetchConfigs]);
+
+  // Listen for warranty types updates
+  useEffect(() => {
+    const handleWarrantyTypesUpdate = () => {
+      console.log('Warranty types updated, refreshing...');
+      fetchWarrantyTypes(true); // Force refresh when types are updated
+    };
+
+    window.addEventListener('warranty-types-updated', handleWarrantyTypesUpdate);
+    
+    return () => {
+      window.removeEventListener('warranty-types-updated', handleWarrantyTypesUpdate);
+    };
+  }, [fetchWarrantyTypes]);
+
+  // Auto-fill handler with current user when employees are loaded
+  useEffect(() => {
+    if (employees.length > 0 && session?.user?.email) {
+      // Find current user in employees list
+      const currentUser = employees.find(emp => emp.companyEmail === session.user.email);
+      if (currentUser) {
+        setFormData(prev => ({
+          ...prev,
+          handler: currentUser.id
+        }));
+      }
+    }
+  }, [employees, session?.user?.email]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -375,18 +364,6 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
       ...prev,
       [field]: value
     }));
-
-    // Auto-fill position when reporter is selected
-    if (field === 'reporter') {
-      const selectedEmployee = employees.find(emp => emp.id === value);
-      if (selectedEmployee) {
-        setFormData(prev => ({
-          ...prev,
-          reporter: value,
-          position: selectedEmployee.position || ''
-        }));
-      }
-    }
   };
 
   // Filter partners based on search
@@ -401,8 +378,9 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     setFormData(prev => ({
       ...prev,
       customer: partnerId
+      // Don't auto-fill customerName - let user input manually
     }));
-    setCustomerSearch(selectedPartner ? selectedPartner.shortName : '');
+    setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
     setShowCustomerDropdown(false);
   };
 
@@ -415,13 +393,40 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     if (!value) {
       setFormData(prev => ({
         ...prev,
-        customer: ''
+        customer: '',
+        customerName: ''
       }));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.customerName.trim()) {
+      toast.error('Vui lòng nhập tên khách hàng!');
+      return;
+    }
+
+    if (!formData.handler) {
+      toast.error('Vui lòng chọn người xử lý!');
+      return;
+    }
+
+    if (!formData.warrantyType) {
+      toast.error('Vui lòng chọn loại bảo hành!');
+      return;
+    }
+
+    if (!formData.title.trim()) {
+      toast.error('Vui lòng nhập tiêu đề bảo hành!');
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      toast.error('Vui lòng nhập mô tả bảo hành!');
+      return;
+    }
     
     // Validate end date
     if (formData.endDate) {
@@ -438,94 +443,65 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     }
     
     try {
-      // Get deployment type id from deployment types
-      const selectedDeploymentType = deploymentTypes.find(dt => dt.id === formData.deploymentType);
-      
-      if (!selectedDeploymentType) {
-        toast.error('Vui lòng chọn loại triển khai!', {
-          duration: 3000,
-          position: 'top-right',
-        });
-        return;
-      }
-
-      // Validate required fields
-      if (!formData.handler) {
-        toast.error('Vui lòng chọn người xử lý!', {
-          duration: 3000,
-          position: 'top-right',
-        });
-        return;
-      }
-
-      if (!formData.customerName.trim()) {
-        toast.error('Vui lòng nhập tên khách hàng!', {
-          duration: 3000,
-          position: 'top-right',
-        });
-        return;
-      }
-
-      // Combine customer title and name
-      const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
-
       // Prepare data for API
-      const deploymentData = {
+      const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
+      
+      const warrantyData = {
         title: formData.title,
         description: formData.description,
         customerName: fullCustomerName,
-        reporterId: session?.user?.id, // Current user as reporter
-        handlerId: formData.handler, // Use selected handler
-        deploymentTypeId: selectedDeploymentType.id,
+        reporterId: session?.user?.id,
+        handlerId: formData.handler,
+        warrantyTypeId: formData.warrantyType,
         customerId: formData.customer || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: new Date(formData.startDate).toISOString(),
+        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
-        notes: formData.notes || null,
+        notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
-        // User self-assessment data
-        userDifficultyLevel: formData.difficultyLevel,
-        userEstimatedTime: formData.estimatedTime,
-        userImpactLevel: formData.impactLevel,
-        userUrgencyLevel: formData.urgencyLevel,
-        userFormScore: formData.formScore
+        // User assessment fields
+        userDifficultyLevel: formData.difficultyLevel ? parseInt(formData.difficultyLevel) : null,
+        userEstimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : null,
+        userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
+        userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
+        userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
+        userAssessmentDate: new Date().toISOString()
       };
 
-      // Send to API
-      const url = editData ? `/api/deployment-cases/${editData.id}` : '/api/deployment-cases';
-      const method = editData ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(deploymentData),
-        credentials: 'include', // Ensure cookies are sent for authentication
-      });
+       console.log('=== Submitting Warranty ===');
+       console.log('Form data:', formData);
+       console.log('Warranty data to send:', warrantyData);
 
-      if (response.ok) {
-        const result = await response.json();
-        
-        // Show success message
-        toast.success(editData ? 'Cập nhật case triển khai thành công!' : 'Tạo case triển khai thành công!', {
-          duration: 3000,
-          position: 'top-right',
-        });
-        
-        // Trigger case creation event for real-time notifications
-        window.dispatchEvent(new CustomEvent('case-created'));
-        
-        // Reset form data
-        resetForm();
-        
-        // Call onSuccess callback with new deployment data
-        if (onSuccess && result.data) {
-          onSuccess(result.data);
-        }
-        
-        // Close modal
-        onClose();
+       // Send to API
+       const isEditing = !!editingWarranty;
+       const url = isEditing ? `/api/warranties/${editingWarranty.id}` : '/api/warranties';
+       const method = isEditing ? 'PUT' : 'POST';
+       
+       const response = await fetch(url, {
+         method,
+         headers: {
+           'Content-Type': 'application/json',
+         },
+         body: JSON.stringify(warrantyData),
+       });
+
+
+       if (response.ok) {
+         const result = await response.json();
+         
+         // Trigger case creation event for real-time notifications
+         window.dispatchEvent(new CustomEvent('case-created'));
+         
+         // Reset form data
+         resetForm();
+         
+         // Call onSuccess callback with new warranty data
+         if (onSuccess && result.data) {
+           onSuccess(result.data);
+         }
+         
+         // Close modal
+         onClose();
       } else {
         const responseText = await response.text();
         console.error('Response text:', responseText);
@@ -537,8 +513,8 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
           error = { error: 'Invalid JSON response' };
         }
          
-        console.error('Failed to create deployment:', error);
-        toast.error(`Lỗi: ${error.error || 'Không thể tạo case triển khai'}`, {
+        console.error('Failed to create warranty:', error);
+        toast.error(`Lỗi: ${error.error || 'Không thể tạo case bảo hành'}`, {
           duration: 4000,
           position: 'top-right',
         });
@@ -554,20 +530,34 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
 
   if (!isOpen) return null;
 
+  // Check if any critical data is still loading
+  const isDataLoading = dataLoading.employees || dataLoading.warrantyTypes;
+
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-8">
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-8 relative">
+        {/* Loading overlay for initial data load */}
+        {isDataLoading && (
+          <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+            <div className="flex flex-col items-center space-y-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="text-sm text-gray-600">Đang tải dữ liệu...</p>
+            </div>
+          </div>
+        )}
         {/* Compact Header */}
-        <div className="sticky top-0 z-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-lg">
+        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-lg z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-white/20 rounded-md">
-                <Rocket className="h-5 w-5" />
+                <Shield className="h-5 w-5" />
               </div>
-              <div>
-                 <h2 className="text-lg font-semibold">{editData ? 'Chỉnh sửa Case Triển Khai (Admin)' : 'Tạo Case Triển Khai (Admin)'}</h2>
-                 <p className="text-blue-100 text-sm">{editData ? 'Cập nhật thông tin triển khai - Admin' : 'Hệ thống quản lý triển khai - Admin'}</p>
-              </div>
+               <div>
+                 <h2 className="text-lg font-semibold">
+                   {editingWarranty ? 'Chỉnh sửa Case Bảo Hành' : 'Tạo Case Bảo Hành'}
+                 </h2>
+                 <p className="text-blue-100 text-sm">Hệ thống quản lý bảo hành</p>
+               </div>
             </div>
             <button
               onClick={onClose}
@@ -590,140 +580,146 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
                 <h3 className="text-sm font-semibold text-gray-700">Thông tin cơ bản</h3>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Người xử lý</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.handler}
-                    onChange={(e) => handleInputChange('handler', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
-                      </option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Loại triển khai</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.deploymentType}
-                    onChange={(e) => handleInputChange('deploymentType', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn loại triển khai</option>
-                    {deploymentTypes.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-                    {deploymentTypes.length === 0 && (
-                      <option value="" disabled>
-                        Chưa có loại triển khai nào được cấu hình
-                      </option>
-                    )}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Khách hàng</span>
-                    <span className="ml-1 w-2"></span>
-                  </label>
-                  <div className="flex gap-2">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center">
+                      <span className="w-24">Người xử lý</span>
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
                     <select
-                      value={formData.customerTitle}
-                      onChange={(e) => handleInputChange('customerTitle', e.target.value)}
-                      className="w-20 px-2 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    >
-                      <option value="Anh">Anh</option>
-                      <option value="Chị">Chị</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={formData.customerName}
-                      onChange={(e) => handleInputChange('customerName', e.target.value)}
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Nhập tên khách hàng..."
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-24">Tên công ty</span>
-                    <span className="ml-1 w-2"></span>
-                  </label>
-                  <div className="relative customer-dropdown-container">
-                    <input
-                      type="text"
-                      value={customerSearch}
-                      onChange={(e) => handleCustomerSearchChange(e.target.value)}
-                      onFocus={() => setShowCustomerDropdown(true)}
+                      value={formData.handler}
+                      onChange={(e) => handleInputChange('handler', e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Tìm kiếm khách hàng..."
-                    />
-                    {showCustomerDropdown && (
-                      <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                        {filteredPartners.length > 0 ? (
-                          filteredPartners.map((partner) => (
-                            <div
-                              key={partner.id}
-                              onClick={() => handleCustomerSelect(partner.id)}
-                              className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                            >
-                              <div className="font-medium">{partner.shortName}</div>
-                              <div className="text-gray-500 text-xs">{partner.fullCompanyName}</div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="px-3 py-2 text-sm text-gray-500">
-                            Không tìm thấy khách hàng
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      required
+                      disabled={dataLoading.employees}
+                    >
+                      <option value="">
+                        {dataLoading.employees ? 'Đang tải...' : 'Chọn nhân viên'}
+                      </option>
+                      {employees.length > 0 ? (
+                        employees.map((employee) => (
+                          <option key={employee.id} value={employee.id}>
+                            {employee.fullName}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled>
+                          {dataLoading.employees ? 'Đang tải...' : 'Không có nhân viên nào'}
+                        </option>
+                      )}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center">
+                      <span className="w-24">Loại bảo hành</span>
+                      <span className="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      value={formData.warrantyType}
+                      onChange={(e) => handleInputChange('warrantyType', e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                      disabled={dataLoading.warrantyTypes}
+                    >
+                      <option value="">
+                        {dataLoading.warrantyTypes ? 'Đang tải...' : 'Chọn loại bảo hành'}
+                      </option>
+                      {warrantyTypes.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))}
+                      {warrantyTypes.length === 0 && !dataLoading.warrantyTypes && (
+                        <option value="" disabled>
+                          Chưa có loại bảo hành nào được cấu hình
+                        </option>
+                      )}
+                    </select>
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                      <span className="w-24">Khách hàng</span>
+                      <span className="ml-1 w-2"></span>
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={formData.customerTitle}
+                        onChange={(e) => handleInputChange('customerTitle', e.target.value)}
+                        className="w-20 px-2 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      >
+                        <option value="Anh">Anh</option>
+                        <option value="Chị">Chị</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={formData.customerName}
+                        onChange={(e) => handleInputChange('customerName', e.target.value)}
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Nhập tên khách hàng..."
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-600 flex items-center h-5">
+                      <span className="w-24">Tên công ty</span>
+                      <span className="ml-1 w-2"></span>
+                    </label>
+                    <div className="relative customer-dropdown-container">
+                      <input
+                        type="text"
+                        value={customerSearch}
+                        onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Tìm kiếm khách hàng..."
+                      />
+                      {showCustomerDropdown && (
+                        <div className="absolute z-[70] w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {filteredPartners.length > 0 ? (
+                            filteredPartners.map((partner) => (
+                              <div
+                                key={partner.id}
+                                onClick={() => handleCustomerSelect(partner.id)}
+                                className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                              >
+                                <div className="font-medium">{partner.shortName}</div>
+                                <div className="text-gray-500 text-xs">{partner.fullCompanyName}</div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-gray-500">
+                              Không tìm thấy khách hàng
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Section 2: Chi tiết triển khai */}
+            {/* Section 2: Chi tiết bảo hành */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-purple-100 rounded-md">
                   <FileText className="h-4 w-4 text-purple-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Chi tiết triển khai</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Chi tiết bảo hành</h3>
               </div>
               
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-600 flex items-center">
-                      <span className="w-24">Tiêu đề triển khai</span>
+                      <span className="w-24">Tiêu đề bảo hành</span>
                       <span className="text-red-500 ml-1">*</span>
                     </label>
                     <input
@@ -731,7 +727,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
                       value={formData.title}
                       onChange={(e) => handleInputChange('title', e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Nhập tiêu đề triển khai"
+                      placeholder="Nhập tiêu đề bảo hành"
                       required
                     />
                   </div>
@@ -763,7 +759,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                    placeholder="Mô tả chi tiết triển khai..."
+                    placeholder="Mô tả chi tiết công việc bảo hành cần thực hiện..."
                     required
                   />
                 </div>
@@ -789,21 +785,21 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
                     type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors min-h-[38px]"
                     required
                   />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-32">Thời gian hoàn thành</span>
+                    <span className="w-32">Thời gian kết thúc</span>
                     <span className="ml-1 w-2"></span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors min-h-[38px]"
                   />
                 </div>
               </div>
@@ -814,7 +810,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
                   <div className="p-1.5 bg-yellow-100 rounded-md">
-                    <CheckCircle className="h-4 w-4 text-yellow-600" />
+                    <Settings className="h-4 w-4 text-yellow-600" />
                   </div>
                   <h3 className="text-sm font-semibold text-yellow-700">Đánh giá của User</h3>
                 </div>
@@ -946,13 +942,13 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
               </div>
             </div>
 
-            {/* Section 5: Trạng thái & Ghi chú */}
+            {/* Section 5: Trạng thái */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-gray-100 rounded-md">
-                  <CheckCircle className="h-4 w-4 text-gray-600" />
+                <div className="p-1.5 bg-orange-100 rounded-md">
+                  <CheckCircle className="h-4 w-4 text-orange-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Trạng thái & Ghi chú</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Trạng thái</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -964,7 +960,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
                   <select
                     value={formData.status}
                     onChange={(e) => handleInputChange('status', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
                     required
                   >
                     <option value="RECEIVED">Tiếp nhận</option>
@@ -983,7 +979,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
                     value={formData.notes}
                     onChange={(e) => handleInputChange('notes', e.target.value)}
                     rows={2}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors resize-none"
                     placeholder="Ghi chú thêm (nếu có)..."
                   />
                 </div>
@@ -991,21 +987,31 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
             </div>
           </div>
 
-          {/* Compact Form Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+          {/* Submit Button */}
+          <div className="flex justify-end pt-4 border-t border-gray-200 mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="mr-3 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
+              disabled={loading}
+              className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center"
             >
-              <Rocket className="h-4 w-4 mr-2" />
-              {editData ? 'Cập nhật Case Triển Khai' : 'Tạo Case Triển Khai'}
+               {loading ? (
+                 <>
+                   <RefreshCw className="animate-spin h-4 w-4 mr-2" />
+                   {editingWarranty ? 'Đang cập nhật...' : 'Đang tạo...'}
+                 </>
+               ) : (
+                 <>
+                   <Shield className="h-4 w-4 mr-2" />
+                   {editingWarranty ? 'Cập nhật Case' : 'Tạo Case'}
+                 </>
+               )}
             </button>
           </div>
         </form>

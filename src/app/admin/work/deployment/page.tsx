@@ -9,7 +9,6 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import CreateDeploymentModal from './CreateDeploymentModal';
-import EditDeploymentModal from './EditDeploymentModal';
 
 interface Employee {
   id: string;
@@ -36,17 +35,18 @@ interface Deployment {
   };
   status: string;
   startDate: string;
-  endDate?: string;
+  endDate: string | null;
   createdAt: string;
   updatedAt: string;
-  notes?: string;
+  notes: string | null;
+  crmReferenceCode: string | null;
   // User assessment fields
-  userDifficultyLevel?: number;
-  userEstimatedTime?: number;
-  userImpactLevel?: number;
-  userUrgencyLevel?: number;
-  userFormScore?: number;
-  userAssessmentDate?: string;
+  userDifficultyLevel: number | null;
+  userEstimatedTime: number | null;
+  userImpactLevel: number | null;
+  userUrgencyLevel: number | null;
+  userFormScore: number | null;
+  userAssessmentDate: string | null;
   // Admin assessment fields
   adminDifficultyLevel?: number;
   adminEstimatedTime?: number;
@@ -76,7 +76,6 @@ export default function AdminDeploymentWorkPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   
   // Edit modal states
-  const [showEditModal, setShowEditModal] = useState(false);
   const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(null);
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -169,7 +168,7 @@ export default function AdminDeploymentWorkPage() {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/deployment-cases', {
+      const response = await fetch('/api/deployment-cases?limit=100', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
@@ -203,7 +202,7 @@ export default function AdminDeploymentWorkPage() {
   const refreshDeployments = useCallback(async () => {
     setRefreshing(true);
     try {
-      const response = await fetch('/api/deployment-cases', {
+      const response = await fetch('/api/deployment-cases?limit=100', {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache',
@@ -230,13 +229,7 @@ export default function AdminDeploymentWorkPage() {
     // Refresh the deployments list
     refreshDeployments();
     setShowCreateModal(false);
-  };
-
-  // Handle edit success
-  const handleEditSuccess = () => {
-    refreshDeployments();
-    setShowEditModal(false);
-    setEditingDeployment(null);
+    setEditingDeployment(null); // Reset editing state
   };
 
   // Delete deployment
@@ -312,14 +305,14 @@ export default function AdminDeploymentWorkPage() {
       deployment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       deployment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       deployment.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (deployment.customer?.fullCompanyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (deployment.customer?.shortName.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesHandler = !selectedHandler || deployment.handler.id === selectedHandler;
     const matchesStatus = !selectedStatus || deployment.status === selectedStatus;
     const matchesDeploymentType = !selectedDeploymentType || 
-      (typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType.name) === selectedDeploymentType;
+      (typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType?.name || '') === selectedDeploymentType;
     const matchesCustomer = !selectedCustomer || deployment.customer?.id === selectedCustomer;
     
     const matchesDateFrom = !dateFrom || new Date(deployment.startDate) >= new Date(dateFrom);
@@ -340,8 +333,9 @@ export default function AdminDeploymentWorkPage() {
     
   const uniqueDeploymentTypes = useMemo(() => 
     Array.from(new Set(deployments.map(deployment => 
-      typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType.name
-    ))), [deployments]);
+      typeof deployment.deploymentType === 'string' ? deployment.deploymentType : 
+      deployment.deploymentType?.name || 'Unknown'
+    ).filter(Boolean))), [deployments]);
     
   const uniqueCustomers = useMemo(() => 
     Array.from(new Set(deployments.map(deployment => deployment.customer?.id).filter(Boolean)))
@@ -400,7 +394,7 @@ export default function AdminDeploymentWorkPage() {
       'Mô tả': deployment.description,
       'Tên khách hàng': deployment.customerName,
       'Người xử lý': deployment.handler.fullName,
-      'Loại bảo hành': typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType.name,
+      'Loại bảo hành': typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType?.name || 'Unknown',
       'Khách hàng': deployment.customer?.fullCompanyName || 'N/A',
       'Trạng thái': deployment.status,
       'Ngày bắt đầu': new Date(deployment.startDate).toLocaleDateString('vi-VN'),
@@ -1273,10 +1267,21 @@ export default function AdminDeploymentWorkPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  console.log('Edit button clicked, deployment:', deployment);
+                                  console.log('=== Edit button clicked ===');
+                                  console.log('Deployment data:', deployment);
+                                  console.log('Customer data:', deployment.customer);
+                                  console.log('Handler data:', deployment.handler);
+                                  console.log('DeploymentType data:', deployment.deploymentType);
+                                  console.log('User assessment data:', {
+                                    userDifficultyLevel: deployment.userDifficultyLevel,
+                                    userEstimatedTime: deployment.userEstimatedTime,
+                                    userImpactLevel: deployment.userImpactLevel,
+                                    userUrgencyLevel: deployment.userUrgencyLevel,
+                                    userFormScore: deployment.userFormScore
+                                  });
                                   setEditingDeployment(deployment);
-                                  setShowEditModal(true);
-                                  console.log('showEditModal should be true now');
+                                  setShowCreateModal(true);
+                                  console.log('showCreateModal should be true now');
                                 }}
                                 className="p-1.5 rounded-md transition-colors duration-200 text-blue-600 hover:text-blue-900 hover:bg-blue-50"
                                 title="Chỉnh sửa case"
@@ -1427,7 +1432,7 @@ export default function AdminDeploymentWorkPage() {
                       <div>Thời gian ước tính: {getEstimatedTimeText(selectedDeployment.userEstimatedTime || 0)}</div>
                       <div>Mức độ ảnh hưởng: {getImpactText(selectedDeployment.userImpactLevel || 0)}</div>
                       <div>Mức độ khẩn cấp: {getUrgencyText(selectedDeployment.userUrgencyLevel || 0)}</div>
-                      <div>Hình thức: {getFormText(selectedDeployment.userFormScore)}</div>
+                      <div>Hình thức: {getFormText(selectedDeployment.userFormScore ?? undefined)}</div>
                       <div className="font-medium text-blue-600">
                         Tổng: {((selectedDeployment.userDifficultyLevel || 0) + (selectedDeployment.userEstimatedTime || 0) + (selectedDeployment.userImpactLevel || 0) + (selectedDeployment.userUrgencyLevel || 0) + (selectedDeployment.userFormScore || 0))}
                       </div>
@@ -1680,23 +1685,15 @@ export default function AdminDeploymentWorkPage() {
 
     </div>
     
-    {/* Create Case Modal */}
+    {/* Create/Edit Case Modal */}
     <CreateDeploymentModal
       isOpen={showCreateModal}
-      onClose={() => setShowCreateModal(false)}
-      onSuccess={handleCreateSuccess}
-    />
-
-    {/* Edit Case Modal */}
-    {console.log('Rendering EditDeploymentModal with showEditModal:', showEditModal, 'editingDeployment:', editingDeployment)}
-    <EditDeploymentModal
-      isOpen={showEditModal}
       onClose={() => {
-        setShowEditModal(false);
+        setShowCreateModal(false);
         setEditingDeployment(null);
       }}
-      onSuccess={handleEditSuccess}
-      caseData={editingDeployment}
+      onSuccess={handleCreateSuccess}
+      editData={editingDeployment}
     />
     </>
   );

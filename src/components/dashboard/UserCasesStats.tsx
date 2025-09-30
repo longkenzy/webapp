@@ -51,22 +51,24 @@ export default function UserCasesStats() {
       }
       
       // Fetch all case types data
-      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes] = await Promise.all([
+      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes, deploymentRes] = await Promise.all([
         fetch('/api/internal-cases?limit=1000'),
         fetch('/api/delivery-cases?limit=1000'),
         fetch('/api/receiving-cases?limit=1000'),
         fetch('/api/maintenance-cases?limit=1000'),
         fetch('/api/incidents?limit=1000'),
-        fetch('/api/warranties?limit=1000')
+        fetch('/api/warranties?limit=1000'),
+        fetch('/api/deployment-cases?limit=1000')
       ]);
 
-      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData] = await Promise.all([
+      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData, deploymentData] = await Promise.all([
         internalRes.json(),
         deliveryRes.json(),
         receivingRes.json(),
         maintenanceRes.json(),
         incidentRes.json(),
-        warrantyRes.json()
+        warrantyRes.json(),
+        deploymentRes.json()
       ]);
 
       // Get current month filter
@@ -176,6 +178,24 @@ export default function UserCasesStats() {
       // Process warranties
       if (warrantyData.data) {
         warrantyData.data.forEach((case_: any) => {
+          if (case_.handler) {
+            allCases.push({
+              ...case_,
+              handlerId: case_.handler.id,
+              handlerName: case_.handler.fullName,
+              handlerAvatar: case_.handler.avatar,
+              handlerDepartment: case_.handler.department,
+              handlerPosition: case_.handler.position,
+              startDate: case_.startDate,
+              status: case_.status
+            });
+          }
+        });
+      }
+
+      // Process deployment cases
+      if (deploymentData.data) {
+        deploymentData.data.forEach((case_: any) => {
           if (case_.handler) {
             allCases.push({
               ...case_,

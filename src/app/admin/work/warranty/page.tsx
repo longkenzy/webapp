@@ -8,6 +8,7 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
+import CreateWarrantyModal from './CreateWarrantyModal';
 
 interface Employee {
   id: string;
@@ -288,14 +289,14 @@ export default function AdminWarrantyWorkPage() {
       warranty.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       warranty.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       warranty.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (warranty.customer?.fullCompanyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (warranty.customer?.shortName.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesHandler = !selectedHandler || warranty.handler.id === selectedHandler;
     const matchesStatus = !selectedStatus || warranty.status === selectedStatus;
     const matchesWarrantyType = !selectedWarrantyType || 
-      (typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType.name) === selectedWarrantyType;
+      (typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType?.name || '') === selectedWarrantyType;
     const matchesCustomer = !selectedCustomer || warranty.customer?.id === selectedCustomer;
     
     const matchesDateFrom = !dateFrom || new Date(warranty.startDate) >= new Date(dateFrom);
@@ -316,8 +317,8 @@ export default function AdminWarrantyWorkPage() {
     
   const uniqueWarrantyTypes = useMemo(() => 
     Array.from(new Set(warranties.map(warranty => 
-      typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType.name
-    ))), [warranties]);
+      typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType?.name || 'Unknown'
+    ).filter(Boolean))), [warranties]);
     
   const uniqueCustomers = useMemo(() => 
     Array.from(new Set(warranties.map(warranty => warranty.customer?.id).filter(Boolean)))
@@ -376,7 +377,7 @@ export default function AdminWarrantyWorkPage() {
       'Mô tả': warranty.description,
       'Tên khách hàng': warranty.customerName,
       'Người xử lý': warranty.handler.fullName,
-      'Loại bảo hành': typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType.name,
+      'Loại bảo hành': typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType?.name || 'Unknown',
       'Khách hàng': warranty.customer?.fullCompanyName || 'N/A',
       'Trạng thái': warranty.status,
       'Ngày bắt đầu': new Date(warranty.startDate).toLocaleDateString('vi-VN'),
@@ -723,6 +724,17 @@ export default function AdminWarrantyWorkPage() {
                 )}
               </div>
             </div>
+            
+            {/* Create Case Button */}
+            {activeTab === 'cases' && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
+              >
+                <Shield className="h-4 w-4" />
+                <span className="font-medium">Tạo Case</span>
+              </button>
+            )}
           </div>
           
           {/* Tabs */}
@@ -1232,6 +1244,17 @@ export default function AdminWarrantyWorkPage() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedWarranty(warranty);
+                                  setShowAddModal(true);
+                                }}
+                                className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors duration-200"
+                                title="Chỉnh sửa case"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedWarranty(warranty);
                                   setShowEvaluationModal(true);
                                   setEvaluationForm({
                                     adminDifficultyLevel: warranty.adminDifficultyLevel?.toString() || '',
@@ -1247,7 +1270,7 @@ export default function AdminWarrantyWorkPage() {
                                 }`}
                                 title={isWarrantyEvaluatedByAdmin(warranty) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
                               >
-                                {isWarrantyEvaluatedByAdmin(warranty) ? <Edit className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                {isWarrantyEvaluatedByAdmin(warranty) ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
                               </button>
                               <button
                                 onClick={(e) => {
@@ -1618,6 +1641,22 @@ export default function AdminWarrantyWorkPage() {
             </div>
           </div>
         )}
+
+        {/* Create/Edit Warranty Modal */}
+        <CreateWarrantyModal
+          isOpen={showAddModal}
+          onClose={() => {
+            setShowAddModal(false);
+            setSelectedWarranty(null);
+          }}
+          onSuccess={(newWarranty) => {
+            // Refresh the warranties list
+            fetchWarranties();
+            const isEditing = !!selectedWarranty;
+            toast.success(isEditing ? 'Case bảo hành đã được cập nhật thành công!' : 'Case bảo hành đã được tạo thành công!');
+          }}
+          editingWarranty={selectedWarranty}
+        />
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { Package, Search, Filter, Download, RefreshCw, FileText } from 'lucide-r
 import toast from 'react-hot-toast';
 import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
 import CreateDeliveryCaseModal from './CreateDeliveryCaseModal';
-import EditDeliveryCaseModal from './EditDeliveryCaseModal';
 import * as XLSX from 'xlsx';
 import { DeliveryCaseStatus } from '@prisma/client';
 
@@ -81,11 +80,8 @@ export default function DeliveryCasesPage() {
   const [customers, setCustomers] = useState<Array<{id: string, shortName: string}>>([]);
   const [allCases, setAllCases] = useState<DeliveryCase[]>([]);
   
-  // Create modal states
+  // Create/Edit modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
-  
-  // Edit modal states
-  const [showEditModal, setShowEditModal] = useState(false);
   const [editingCase, setEditingCase] = useState<DeliveryCase | null>(null);
 
 
@@ -154,7 +150,7 @@ export default function DeliveryCasesPage() {
 
   const handleEditCase = (caseItem: DeliveryCase) => {
     setEditingCase(caseItem);
-    setShowEditModal(true);
+    setShowCreateModal(true); // Sử dụng create modal cho edit
   };
 
   const handleDeleteCase = async (caseItem: DeliveryCase) => {
@@ -196,13 +192,7 @@ export default function DeliveryCasesPage() {
     // Refresh the cases list
     fetchAllData();
     setShowCreateModal(false);
-  };
-
-  const handleEditSuccess = (updatedCase: any) => {
-    // Refresh the cases list
-    fetchAllData();
-    setShowEditModal(false);
-    setEditingCase(null);
+    setEditingCase(null); // Reset editing case
   };
 
   // Export to Excel function
@@ -745,22 +735,15 @@ export default function DeliveryCasesPage() {
           </div>
         </div>
 
-      {/* Create Case Modal */}
+      {/* Create/Edit Case Modal */}
       <CreateDeliveryCaseModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleCreateSuccess}
-      />
-
-      {/* Edit Case Modal */}
-      <EditDeliveryCaseModal
-        isOpen={showEditModal}
         onClose={() => {
-          setShowEditModal(false);
+          setShowCreateModal(false);
           setEditingCase(null);
         }}
-        onSuccess={handleEditSuccess}
-        caseData={editingCase}
+        onSuccess={handleCreateSuccess}
+        editData={editingCase}
       />
     </div>
   );

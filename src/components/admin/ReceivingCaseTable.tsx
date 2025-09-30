@@ -719,6 +719,11 @@ export default function ReceivingCaseTable({
                     <div className="text-xs font-medium text-gray-900 mb-1">
                       {caseItem.title.replace('Nhận hàng từ ', '')}
                     </div>
+                    {caseItem.supplier?.fullCompanyName && (
+                      <div className="text-xs text-gray-600 mb-2">
+                        {caseItem.supplier.fullCompanyName}
+                      </div>
+                    )}
                     {caseItem.products && caseItem.products.length > 0 ? (
                       <div className="space-y-1">
                         {caseItem.products.map((product, idx) => (

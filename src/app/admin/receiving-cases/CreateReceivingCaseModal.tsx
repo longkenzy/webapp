@@ -34,13 +34,48 @@ interface ProductItem {
   serialNumber: string;
 }
 
+interface ReceivingCase {
+  id: string;
+  title: string;
+  description: string;
+  form: string;
+  startDate: string;
+  endDate: string | null;
+  status: string;
+  notes: string | null;
+  crmReferenceCode: string | null;
+  userDifficultyLevel: number | null;
+  userEstimatedTime: number | null;
+  userImpactLevel: number | null;
+  userUrgencyLevel: number | null;
+  userFormScore: number | null;
+  userAssessmentDate: string | null;
+  supplier: {
+    id: string;
+    shortName: string;
+    fullCompanyName: string;
+  } | null;
+  products: {
+    id: string;
+    name: string;
+    code: string | null;
+    quantity: number;
+    serialNumber: string | null;
+  }[];
+  handler: {
+    id: string;
+    fullName: string;
+  };
+}
+
 interface CreateReceivingCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (newCase: any) => void;
+  editData?: ReceivingCase | null; // Thêm prop cho edit mode
 }
 
-export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }: CreateReceivingCaseModalProps) {
+export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, editData }: CreateReceivingCaseModalProps) {
   const { data: session } = useSession();
   const [formData, setFormData] = useState({
     supplierId: '',
@@ -81,6 +116,70 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
+
+  // Populate form data when in edit mode
+  useEffect(() => {
+    if (editData && isOpen) {
+      setFormData({
+        supplierId: editData.supplier?.id || '',
+        productDetails: editData.description || '',
+        deliveryDateTime: editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : '',
+        completionDateTime: editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : '',
+        status: editData.status || 'RECEIVED',
+        crmReferenceCode: editData.crmReferenceCode || '',
+        difficultyLevel: editData.userDifficultyLevel?.toString() || '',
+        estimatedTime: editData.userEstimatedTime?.toString() || '',
+        impactLevel: editData.userImpactLevel?.toString() || '',
+        urgencyLevel: editData.userUrgencyLevel?.toString() || '',
+        form: editData.form || 'Onsite',
+        formScore: editData.userFormScore?.toString() || '2'
+      });
+
+      // Set selected partner
+      if (editData.supplier) {
+        setSelectedPartner({
+          id: editData.supplier.id,
+          fullCompanyName: editData.supplier.fullCompanyName,
+          shortName: editData.supplier.shortName,
+          address: '',
+          contactPerson: null,
+          contactPhone: null
+        });
+        setSearchTerm(editData.supplier.shortName); // Set search term để hiển thị trong input
+      }
+
+      // Set products
+      if (editData.products && editData.products.length > 0) {
+        const productItems: ProductItem[] = editData.products.map(product => ({
+          id: product.id,
+          name: product.name,
+          code: product.code || '',
+          quantity: product.quantity.toString(),
+          serialNumber: product.serialNumber || ''
+        }));
+        setProducts(productItems);
+      }
+    } else if (!editData && isOpen) {
+      // Reset form when creating new case
+      setFormData({
+        supplierId: '',
+        productDetails: '',
+        deliveryDateTime: '',
+        completionDateTime: '',
+        status: 'RECEIVED',
+        crmReferenceCode: '',
+        difficultyLevel: '',
+        estimatedTime: '',
+        impactLevel: '',
+        urgencyLevel: '',
+        form: 'Onsite',
+        formScore: '2'
+      });
+      setProducts([]);
+      setSelectedPartner(null);
+      setSearchTerm(''); // Reset search term
+    }
+  }, [editData, isOpen]);
 
   const statusOptions = [
     { value: 'RECEIVED', label: 'Tiếp nhận' },
@@ -311,8 +410,11 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
       console.log('Current employee:', currentEmployee);
       console.log('Selected partner:', selectedPartner);
 
-      const response = await fetch('/api/receiving-cases', {
-        method: 'POST',
+      const url = editData ? `/api/receiving-cases/${editData.id}` : '/api/receiving-cases';
+      const method = editData ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -327,7 +429,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
       if (response.ok) {
         const result = await response.json();
         
-        toast.success('Tạo case nhận hàng thành công!', {
+        toast.success(editData ? 'Cập nhật case nhận hàng thành công!' : 'Tạo case nhận hàng thành công!', {
           duration: 4000,
           position: 'top-right',
           style: {
@@ -470,8 +572,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                 <Package className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Tạo Case Nhận Hàng (Admin)</h2>
-                <p className="text-blue-100 text-sm">Hệ thống quản lý nhận hàng</p>
+                <h2 className="text-lg font-semibold">{editData ? 'Chỉnh sửa Case Nhận Hàng (Admin)' : 'Tạo Case Nhận Hàng (Admin)'}</h2>
+                <p className="text-blue-100 text-sm">{editData ? 'Cập nhật thông tin nhận hàng' : 'Hệ thống quản lý nhận hàng'}</p>
               </div>
             </div>
             <button
@@ -992,7 +1094,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
               disabled={loading}
               className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Đang tạo...' : 'Tạo Case'}
+              {loading ? (editData ? 'Đang cập nhật...' : 'Đang tạo...') : (editData ? 'Cập nhật Case' : 'Tạo Case')}
             </button>
           </div>
         </form>

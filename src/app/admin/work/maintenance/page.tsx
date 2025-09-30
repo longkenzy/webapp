@@ -8,6 +8,7 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
+import CreateMaintenanceModal from './CreateMaintenanceModal';
 
 interface Employee {
   id: string;
@@ -79,9 +80,11 @@ export default function AdminMaintenanceWorkPage() {
   const { fetchConfigs } = useEvaluation();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedMaintenanceCase, setSelectedMaintenanceCase] = useState<MaintenanceCase | null>(null);
+  const [editingMaintenanceCase, setEditingMaintenanceCase] = useState<MaintenanceCase | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deletedMaintenanceCases, setDeletedMaintenanceCases] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -656,7 +659,7 @@ export default function AdminMaintenanceWorkPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-full mx-auto px-2 py-6">
+        <div className="max-w-full mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="p-2 bg-orange-100 rounded-lg">
@@ -693,6 +696,19 @@ export default function AdminMaintenanceWorkPage() {
                 )}
               </div>
             </div>
+            
+            {/* Create Case Button */}
+            {activeTab === 'cases' && (
+              <div className="mr-2">
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-lg hover:from-orange-700 hover:to-amber-700 transition-all duration-200 shadow-sm"
+                >
+                  <Wrench className="h-4 w-4" />
+                  <span className="font-medium">Tạo Case</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1003,7 +1019,7 @@ export default function AdminMaintenanceWorkPage() {
                 )}
 
                 {/* Results Summary */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                <div className="flex items-center justify-between px-3 py-3 border-t border-gray-200">
                   <div className="text-sm text-gray-600">
                     Hiển thị <span className="font-medium text-gray-900">{filteredMaintenanceCases.length}</span> trong tổng số <span className="font-medium text-gray-900">{maintenanceCases.length}</span> case bảo trì
                     {hasActiveFilters() && (
@@ -1203,6 +1219,17 @@ export default function AdminMaintenanceWorkPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  setEditingMaintenanceCase(case_);
+                                  setShowCreateModal(true);
+                                }}
+                                className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors duration-200"
+                                title="Chỉnh sửa case"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setSelectedMaintenanceCase(case_);
                                   setShowEvaluationModal(true);
                                   setEvaluationForm({
@@ -1219,7 +1246,7 @@ export default function AdminMaintenanceWorkPage() {
                                 }`}
                                 title={isMaintenanceCaseEvaluatedByAdmin(case_) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
                               >
-                                {isMaintenanceCaseEvaluatedByAdmin(case_) ? <Edit className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                {isMaintenanceCaseEvaluatedByAdmin(case_) ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
                               </button>
                               <button
                                 onClick={(e) => {
@@ -1611,6 +1638,33 @@ export default function AdminMaintenanceWorkPage() {
             </div>
           </div>
         )}
+
+        {/* Create/Edit Maintenance Modal */}
+        <CreateMaintenanceModal
+          isOpen={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            setEditingMaintenanceCase(null);
+          }}
+          editingMaintenance={editingMaintenanceCase}
+          onSuccess={(maintenance: any) => {
+            console.log('Maintenance saved:', maintenance);
+            
+            if (editingMaintenanceCase) {
+              // Update existing case in state (no reload needed)
+              setMaintenanceCases(prev => prev.map(c => 
+                c.id === maintenance.id ? maintenance as MaintenanceCase : c
+              ));
+              toast.success('Cập nhật case bảo trì thành công!');
+            } else {
+              // Add new case to the beginning of the list
+              setMaintenanceCases(prev => [maintenance as MaintenanceCase, ...prev]);
+              toast.success('Tạo case bảo trì thành công!');
+            }
+            
+            setEditingMaintenanceCase(null);
+          }}
+        />
     </div>
   );
 }

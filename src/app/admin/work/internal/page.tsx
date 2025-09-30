@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import EditInternalCaseModal from './EditInternalCaseModal';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
+import CreateInternalCaseModal from '../../../user/work/internal/CreateInternalCaseModal';
 
 interface CaseType {
   id: string;
@@ -72,10 +73,12 @@ export default function AdminInternalWorkPage() {
   const { fetchConfigs } = useEvaluation();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCase, setSelectedCase] = useState<InternalCase | null>(null);
+  const [editingCase, setEditingCase] = useState<InternalCase | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deletedCases, setDeletedCases] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -773,19 +776,13 @@ export default function AdminInternalWorkPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'RECEIVED':
-      case 'Tiếp nhận':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'IN_PROGRESS':
-      case 'Đang xử lý':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'COMPLETED':
-      case 'Hoàn thành':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'CANCELLED':
-      case 'Hủy':
         return 'bg-red-100 text-red-800 border-red-200';
-      case 'Tạm dừng':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -1125,6 +1122,19 @@ export default function AdminInternalWorkPage() {
                   )}
                 </div>
               </div>
+              
+              {/* Create Case Button */}
+              {activeTab === 'cases' && (
+                <div className="mr-2">
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
+                  >
+                    <User className="h-4 w-4" />
+                    <span className="font-medium">Tạo Case</span>
+                  </button>
+                </div>
+              )}
             </div>
             
             {/* Tabs */}
@@ -1574,13 +1584,14 @@ export default function AdminInternalWorkPage() {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleOpenEditModal(case_);
+                                        setEditingCase(case_);
+                                        setShowCreateModal(true);
                                       }}
-                                      className="p-1.5 rounded-md transition-colors duration-200 cursor-pointer text-blue-600 hover:bg-blue-50"
+                                      className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors duration-200 cursor-pointer"
                                       title="Chỉnh sửa case"
                                     >
-                              <Edit className="h-4 w-4" />
-                            </button>
+                                      <Edit className="h-4 w-4" />
+                                    </button>
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -1593,7 +1604,7 @@ export default function AdminInternalWorkPage() {
                                       }`}
                                       title={isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
                                     >
-                              {isEvaluated ? <Edit className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                              {isEvaluated ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
                             </button>
                                     <button
                                       onClick={(e) => {
@@ -2146,6 +2157,32 @@ export default function AdminInternalWorkPage() {
       )}
 
       {/* Edit Case Modal */}
+      {/* Create/Edit Internal Case Modal */}
+      <CreateInternalCaseModal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setEditingCase(null);
+        }}
+        editingCase={editingCase}
+        onSuccess={(internalCase: any) => {
+          console.log('Internal case saved:', internalCase);
+          
+          if (editingCase) {
+            // Update existing case in state (no reload needed)
+            setInternalCases(prev => prev.map(c => 
+              c.id === internalCase.id ? internalCase as InternalCase : c
+            ));
+          } else {
+            // Add new case to the beginning of the list
+            setInternalCases(prev => [internalCase as InternalCase, ...prev]);
+          }
+          
+          setEditingCase(null);
+          // Don't show toast here - modal already shows it
+        }}
+      />
+
       <EditInternalCaseModal
         isOpen={showEditModal}
         onClose={handleCloseEditModal}

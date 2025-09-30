@@ -33,13 +33,48 @@ interface ProductItem {
   serialNumber: string;
 }
 
+interface DeliveryCase {
+  id: string;
+  title: string;
+  description: string;
+  form: string;
+  startDate: string;
+  endDate: string | null;
+  status: string;
+  notes: string | null;
+  crmReferenceCode: string | null;
+  userDifficultyLevel: number | null;
+  userEstimatedTime: number | null;
+  userImpactLevel: number | null;
+  userUrgencyLevel: number | null;
+  userFormScore: number | null;
+  userAssessmentDate: string | null;
+  customer: {
+    id: string;
+    shortName: string;
+    fullCompanyName: string;
+  } | null;
+  products: {
+    id: string;
+    name: string;
+    code: string | null;
+    quantity: number;
+    serialNumber: string | null;
+  }[];
+  handler: {
+    id: string;
+    fullName: string;
+  };
+}
+
 interface CreateDeliveryCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (newCase: any) => void;
+  editData?: DeliveryCase | null; // Thêm prop cho edit mode
 }
 
-export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: CreateDeliveryCaseModalProps) {
+export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, editData }: CreateDeliveryCaseModalProps) {
   const { data: session } = useSession();
   const [formData, setFormData] = useState({
     customerId: '',
@@ -90,11 +125,100 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
 
+  // Populate form data when in edit mode
+  useEffect(() => {
+    if (editData && isOpen) {
+      console.log('=== Populating form data for edit ===');
+      console.log('Edit data:', editData);
+      console.log('Customer:', editData.customer);
+      console.log('Products:', editData.products);
+      
+      // Get form options to map the correct label
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      const defaultFormOption = formOptions.find(option => option.points === 2) || formOptions[0];
+      const selectedFormOption = formOptions.find(option => 
+        option.label === editData.form || 
+        (editData.userFormScore && option.points === editData.userFormScore)
+      );
+      
+      setFormData({
+        customerId: editData.customer?.id || '',
+        productDetails: editData.description || '',
+        deliveryDateTime: editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : '',
+        completionDateTime: editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : '',
+        status: editData.status || 'RECEIVED',
+        form: selectedFormOption?.label || defaultFormOption?.label || 'Onsite',
+        crmReferenceCode: editData.crmReferenceCode || '', // ✅ Thêm trường Mã CRM
+        difficultyLevel: editData.userDifficultyLevel?.toString() || '',
+        estimatedTime: editData.userEstimatedTime?.toString() || '',
+        impactLevel: editData.userImpactLevel?.toString() || '',
+        urgencyLevel: editData.userUrgencyLevel?.toString() || '',
+        formScore: editData.userFormScore?.toString() || '2',
+        assessmentNotes: ''
+      });
+      
+      console.log('Form options:', formOptions);
+      console.log('Selected form option:', selectedFormOption);
+      console.log('Edit data form:', editData.form);
+      console.log('Edit data userFormScore:', editData.userFormScore);
+      
+      console.log('Form data set:', {
+        customerId: editData.customer?.id || '',
+        productDetails: editData.description || '',
+        deliveryDateTime: editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : '',
+        completionDateTime: editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : '',
+        status: editData.status || 'RECEIVED',
+        form: selectedFormOption?.label || defaultFormOption?.label || 'Onsite',
+        crmReferenceCode: editData.crmReferenceCode || '',
+        difficultyLevel: editData.userDifficultyLevel?.toString() || '',
+        estimatedTime: editData.userEstimatedTime?.toString() || '',
+        impactLevel: editData.userImpactLevel?.toString() || '',
+        urgencyLevel: editData.userUrgencyLevel?.toString() || '',
+        formScore: editData.userFormScore?.toString() || '2'
+      });
+
+      // Set selected partner
+      if (editData.customer) {
+        console.log('Setting selected partner:', editData.customer);
+        setSelectedPartner({
+          id: editData.customer.id,
+          fullCompanyName: editData.customer.fullCompanyName,
+          shortName: editData.customer.shortName,
+          address: '',
+          contactPerson: null,
+          contactPhone: null
+        });
+        setSearchTerm(editData.customer.shortName); // Set search term để hiển thị trong input
+        console.log('Search term set to:', editData.customer.shortName);
+      }
+
+      // Set products
+      if (editData.products && editData.products.length > 0) {
+        console.log('Setting products:', editData.products);
+        const productItems: ProductItem[] = editData.products.map(product => ({
+          id: product.id,
+          name: product.name,
+          code: product.code || '',
+          quantity: product.quantity.toString(),
+          serialNumber: product.serialNumber || ''
+        }));
+        setProducts(productItems);
+        console.log('Product items set:', productItems);
+      }
+    } else if (!editData && isOpen) {
+      // Reset form when creating new case
+      resetForm();
+    }
+  }, [editData, isOpen]);
+
   // Load initial data
   useEffect(() => {
     if (isOpen) {
       console.log('Modal opened, loading data...');
-      resetForm();
+      // Only reset form if not in edit mode
+      if (!editData) {
+        resetForm();
+      }
       // Load data in parallel for better performance
       Promise.all([
         loadCustomers(),
@@ -104,7 +228,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         setError('Lỗi tải dữ liệu. Vui lòng thử lại.');
       });
     }
-  }, [isOpen]);
+  }, [isOpen, editData]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -449,8 +573,11 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
       console.log('Case data to send:', caseData);
 
       // Send to API
-      const response = await fetch('/api/delivery-cases', {
-        method: 'POST',
+      const url = editData ? `/api/delivery-cases/${editData.id}` : '/api/delivery-cases';
+      const method = editData ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -463,7 +590,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         const result = await response.json();
         
         // Show success notification
-        toast.success('Tạo case giao hàng thành công!', {
+        toast.success(editData ? 'Cập nhật case giao hàng thành công!' : 'Tạo case giao hàng thành công!', {
           duration: 4000,
           position: 'top-right',
           style: {
@@ -559,8 +686,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
                  <Package className="h-5 w-5" />
                </div>
                <div>
-                 <h2 className="text-lg font-semibold">Tạo Case Giao Hàng (Admin)</h2>
-                 <p className="text-blue-100 text-sm">Hệ thống quản lý giao hàng - Admin</p>
+                 <h2 className="text-lg font-semibold">{editData ? 'Chỉnh sửa Case Giao Hàng (Admin)' : 'Tạo Case Giao Hàng (Admin)'}</h2>
+                 <p className="text-blue-100 text-sm">{editData ? 'Cập nhật thông tin giao hàng - Admin' : 'Hệ thống quản lý giao hàng - Admin'}</p>
                </div>
              </div>
             <button
@@ -1126,7 +1253,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
                 disabled={loading}
                 className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Đang tạo...' : 'Tạo Case'}
+                {loading ? (editData ? 'Đang cập nhật...' : 'Đang tạo...') : (editData ? 'Cập nhật Case' : 'Tạo Case')}
               </button>
             </div>
           </div>

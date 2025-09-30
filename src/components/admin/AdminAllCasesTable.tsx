@@ -19,7 +19,8 @@ import {
   Wrench,
   Shield,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Rocket
 } from "lucide-react";
 import Link from "next/link";
 
@@ -64,7 +65,7 @@ interface UnifiedCase {
   caseType: string;
   createdAt: string;
   updatedAt: string;
-  type: 'internal' | 'delivery' | 'receiving' | 'maintenance' | 'incident' | 'warranty';
+  type: 'internal' | 'delivery' | 'receiving' | 'maintenance' | 'incident' | 'warranty' | 'deployment';
 }
 
 // Memoized Case Row Component
@@ -260,6 +261,8 @@ function AdminAllCasesTable() {
         return <AlertTriangle className="h-4 w-4" />;
       case 'warranty':
         return <Shield className="h-4 w-4" />;
+      case 'deployment':
+        return <Rocket className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
@@ -279,6 +282,8 @@ function AdminAllCasesTable() {
         return 'Case sự cố';
       case 'warranty':
         return 'Case bảo hành';
+      case 'deployment':
+        return 'Case triển khai';
       default:
         return 'Case';
     }
@@ -298,6 +303,8 @@ function AdminAllCasesTable() {
         return `/admin/work/incident`;
       case 'warranty':
         return `/admin/work/warranty`;
+      case 'deployment':
+        return `/admin/work/deployment`;
       default:
         return '#';
     }
@@ -316,22 +323,24 @@ function AdminAllCasesTable() {
         }
       };
       
-      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes] = await Promise.all([
+      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes, deploymentRes] = await Promise.all([
         fetch('/api/internal-cases?limit=100', fetchOptions),
         fetch('/api/delivery-cases?limit=100', fetchOptions),
         fetch('/api/receiving-cases?limit=100', fetchOptions),
         fetch('/api/maintenance-cases?limit=100', fetchOptions),
         fetch('/api/incidents?limit=100', fetchOptions),
-        fetch('/api/warranties?limit=100', fetchOptions)
+        fetch('/api/warranties?limit=100', fetchOptions),
+        fetch('/api/deployment-cases?limit=100', fetchOptions)
       ]);
 
-      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData] = await Promise.all([
+      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData, deploymentData] = await Promise.all([
         internalRes.json(),
         deliveryRes.json(),
         receivingRes.json(),
         maintenanceRes.json(),
         incidentRes.json(),
-        warrantyRes.json()
+        warrantyRes.json(),
+        deploymentRes.json()
       ]);
 
       const unifiedCases: UnifiedCase[] = [];
@@ -496,6 +505,31 @@ function AdminAllCasesTable() {
             createdAt: case_.createdAt,
             updatedAt: case_.updatedAt,
             type: 'warranty'
+          });
+        });
+      }
+
+      // Process deployment cases
+      if (deploymentData.data) {
+        deploymentData.data.forEach((case_: any) => {
+          const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
+          
+          unifiedCases.push({
+            id: case_.id,
+            title: titleWithForm,
+            description: case_.description,
+            handlerName: case_.handler?.fullName || 'Chưa phân công',
+            handler: case_.handler ? {
+              avatar: case_.handler.avatar
+            } : undefined,
+            customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || case_.customerName || 'Khách hàng',
+            status: case_.status,
+            startDate: case_.startDate,
+            endDate: case_.endDate,
+            caseType: case_.deploymentType?.name || 'Triển khai',
+            createdAt: case_.createdAt,
+            updatedAt: case_.updatedAt,
+            type: 'deployment'
           });
         });
       }
@@ -768,14 +802,15 @@ function AdminAllCasesTable() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+      <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
         {[
           { type: 'internal', label: 'Nội bộ', icon: FileText, color: 'bg-blue-500' },
           { type: 'delivery', label: 'Giao hàng', icon: Truck, color: 'bg-green-500' },
           { type: 'receiving', label: 'Nhận hàng', icon: Package, color: 'bg-yellow-500' },
           { type: 'maintenance', label: 'Bảo trì', icon: Wrench, color: 'bg-purple-500' },
           { type: 'incident', label: 'Sự cố', icon: AlertTriangle, color: 'bg-red-500' },
-          { type: 'warranty', label: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' }
+          { type: 'warranty', label: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' },
+          { type: 'deployment', label: 'Triển khai', icon: Rocket, color: 'bg-cyan-500' }
         ].map(({ type, label, icon: Icon, color }) => {
           const count = filteredCases.filter(c => c.type === type).length;
           return (
@@ -830,6 +865,7 @@ function AdminAllCasesTable() {
               <option value="maintenance">Case bảo trì</option>
               <option value="incident">Case sự cố</option>
               <option value="warranty">Case bảo hành</option>
+              <option value="deployment">Case triển khai</option>
             </select>
           </div>
 

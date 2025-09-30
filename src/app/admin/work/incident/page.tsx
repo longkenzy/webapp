@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import EditIncidentModal from './EditIncidentModal';
+import CreateIncidentModal from '../../../user/work/incident/CreateIncidentModal';
 
 interface Employee {
   id: string;
@@ -66,10 +67,12 @@ export default function AdminIncidentWorkPage() {
   const { fetchConfigs } = useEvaluation();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deletedIncidents, setDeletedIncidents] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -698,6 +701,19 @@ export default function AdminIncidentWorkPage() {
                 )}
               </div>
             </div>
+            
+            {/* Create Case Button */}
+            {activeTab === 'cases' && (
+              <div className="mr-2">
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-lg hover:from-red-700 hover:to-orange-700 transition-all duration-200 shadow-sm"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="font-medium">Tạo Case</span>
+                </button>
+              </div>
+            )}
           </div>
           
           {/* Tabs */}
@@ -1206,7 +1222,8 @@ export default function AdminIncidentWorkPage() {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleOpenEditModal(incident);
+                                  setEditingIncident(incident);
+                                  setShowCreateModal(true);
                                 }}
                                 className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors duration-200"
                                 title="Chỉnh sửa sự cố"
@@ -1232,7 +1249,7 @@ export default function AdminIncidentWorkPage() {
                                 }`}
                                 title={isIncidentEvaluatedByAdmin(incident) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
                               >
-                                {isIncidentEvaluatedByAdmin(incident) ? <Edit className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                {isIncidentEvaluatedByAdmin(incident) ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
                               </button>
                               <button
                                 onClick={(e) => {
@@ -1549,6 +1566,32 @@ export default function AdminIncidentWorkPage() {
             </div>
           </div>
         )}
+
+        {/* Create/Edit Incident Modal */}
+        <CreateIncidentModal
+          isOpen={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            setEditingIncident(null);
+          }}
+          editingIncident={editingIncident}
+          onSuccess={(incident) => {
+            console.log('Incident saved:', incident);
+            
+            if (editingIncident) {
+              // Update existing incident in state (no reload needed)
+              setIncidents(prev => prev.map(i => 
+                i.id === incident.id ? incident : i
+              ));
+            } else {
+              // Add new incident to the beginning of the list
+              setIncidents(prev => [incident, ...prev]);
+            }
+            
+            setEditingIncident(null);
+            // Don't show toast here - modal already shows it
+          }}
+        />
 
         {/* Edit Incident Modal */}
         <EditIncidentModal

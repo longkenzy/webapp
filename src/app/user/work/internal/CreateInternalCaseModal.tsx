@@ -28,9 +28,10 @@ interface CreateInternalCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (newCase: unknown) => void;
+  editingCase?: any; // Case data for editing
 }
 
-export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: CreateInternalCaseModalProps) {
+export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, editingCase }: CreateInternalCaseModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
@@ -57,7 +58,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
     description: '',
     startDate: '03/09/2025 08:31 AM',
     endDate: '',
-    status: 'Tiếp nhận',
+    status: 'RECEIVED', // Changed to English value
     notes: '',
     // User self-assessment fields
     difficultyLevel: '',
@@ -136,7 +137,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         hour12: true
       }),
       endDate: '',
-      status: 'Tiếp nhận',
+      status: 'RECEIVED', // Changed to English value
       notes: '',
       // User self-assessment fields
       difficultyLevel: '',
@@ -162,7 +163,37 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
       // Refresh evaluation configs to get latest options
       fetchConfigs();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchEmployees, fetchCaseTypes, fetchConfigs]);
+
+  // Populate form when editing
+  useEffect(() => {
+    if (isOpen && editingCase) {
+      // Populate form with editing case data
+      setFormData({
+        requester: editingCase.requester?.id || '',
+        position: editingCase.requester?.position || '',
+        handler: editingCase.handler?.id || '',
+        caseType: editingCase.caseType || '',
+        title: editingCase.title || '',
+        description: editingCase.description || '',
+        startDate: editingCase.startDate ? new Date(editingCase.startDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+        endDate: editingCase.endDate ? new Date(editingCase.endDate).toISOString().slice(0, 16) : '',
+        status: editingCase.status || 'RECEIVED',
+        notes: editingCase.notes || '',
+        difficultyLevel: editingCase.userDifficultyLevel?.toString() || '',
+        estimatedTime: editingCase.userEstimatedTime?.toString() || '',
+        impactLevel: editingCase.userImpactLevel?.toString() || '',
+        urgencyLevel: editingCase.userUrgencyLevel?.toString() || '',
+        form: editingCase.form || 'Onsite',
+        formScore: editingCase.userFormScore?.toString() || '2'
+      });
+      
+      console.log('Editing internal case:', editingCase);
+    } else if (isOpen && !editingCase) {
+      // Reset form for new case
+      resetForm();
+    }
+  }, [isOpen, editingCase, resetForm]);
 
   // Auto-fill handler with current user when employees are loaded
   useEffect(() => {
@@ -278,9 +309,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         form: formData.form,
         startDate: formData.startDate,
         endDate: formData.endDate || null,
-        status: formData.status === 'Tiếp nhận' ? 'RECEIVED' : 
-                formData.status === 'Đang xử lý' ? 'IN_PROGRESS' :
-                formData.status === 'Hoàn thành' ? 'COMPLETED' : 'CANCELLED',
+        status: formData.status,
         notes: formData.notes || null,
         // User self-assessment data
         userDifficultyLevel: formData.difficultyLevel,
@@ -295,8 +324,12 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
       console.log('Case data to send:', caseData);
 
       // Send to API
-      const response = await fetch('/api/internal-cases', {
-        method: 'POST',
+      const isEditing = !!editingCase;
+      const url = isEditing ? `/api/internal-cases/${editingCase.id}` : '/api/internal-cases';
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -308,7 +341,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
         const result = await response.json();
         
         // Show success message (you can add a toast notification here)
-        toast.success('Tạo case nội bộ thành công!', {
+        toast.success(isEditing ? 'Cập nhật case nội bộ thành công!' : 'Tạo case nội bộ thành công!', {
           duration: 3000,
           position: 'top-right',
         });
@@ -367,7 +400,9 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                 <Wrench className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Tạo Case Nội Bộ</h2>
+                <h2 className="text-lg font-semibold">
+                  {editingCase ? 'Chỉnh sửa Case Nội Bộ' : 'Tạo Case Nội Bộ'}
+                </h2>
                 <p className="text-blue-100 text-sm">Hệ thống quản lý case</p>
               </div>
             </div>
@@ -786,10 +821,10 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
                   >
-                    <option value="Tiếp nhận">Tiếp nhận</option>
-                    <option value="Đang xử lý">Đang xử lý</option>
-                    <option value="Hoàn thành">Hoàn thành</option>
-                    <option value="Hủy">Hủy</option>
+                    <option value="RECEIVED">Tiếp nhận</option>
+                    <option value="IN_PROGRESS">Đang xử lý</option>
+                    <option value="COMPLETED">Hoàn thành</option>
+                    <option value="CANCELLED">Hủy</option>
                   </select>
                 </div>
 
@@ -820,10 +855,20 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess }: 
             </button>
             <button
               type="submit"
-              className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
+              disabled={loading}
+              className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <CheckCircle className="h-4 w-4 mr-1 sm:mr-2" />
-              Tạo Case
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-1 sm:mr-2 animate-spin" />
+                  {editingCase ? 'Đang cập nhật...' : 'Đang tạo...'}
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-1 sm:mr-2" />
+                  {editingCase ? 'Cập nhật Case' : 'Tạo Case'}
+                </>
+              )}
             </button>
           </div>
         </form>

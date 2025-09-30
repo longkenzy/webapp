@@ -5,7 +5,6 @@ import { Package, Search, Filter, Download, Trash2, RefreshCw, FileText } from '
 import toast from 'react-hot-toast';
 import ReceivingCaseTable from '@/components/admin/ReceivingCaseTable';
 import CreateReceivingCaseModal from './CreateReceivingCaseModal';
-import EditReceivingCaseModal from './EditReceivingCaseModal';
 import * as XLSX from 'xlsx';
 import { ReceivingCaseStatus } from '@prisma/client';
 
@@ -87,11 +86,8 @@ export default function ReceivingCasesPage() {
   const [deleting, setDeleting] = useState(false);
   const [deletedCases, setDeletedCases] = useState<Set<string>>(new Set());
   
-  // Create modal states
+  // Create/Edit modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
-  
-  // Edit modal states
-  const [showEditModal, setShowEditModal] = useState(false);
   const [editingCase, setEditingCase] = useState<ReceivingCase | null>(null);
 
   // Debounce search term
@@ -159,7 +155,7 @@ export default function ReceivingCasesPage() {
 
   const handleEditCase = (caseItem: ReceivingCase) => {
     setEditingCase(caseItem);
-    setShowEditModal(true);
+    setShowCreateModal(true); // Sử dụng create modal cho edit
   };
 
   const handleOpenDeleteModal = (caseItem: ReceivingCase) => {
@@ -177,13 +173,7 @@ export default function ReceivingCasesPage() {
     // Refresh the cases list
     fetchAllData();
     setShowCreateModal(false);
-  };
-
-  const handleEditSuccess = (updatedCase: any) => {
-    // Refresh the cases list
-    fetchAllData();
-    setShowEditModal(false);
-    setEditingCase(null);
+    setEditingCase(null); // Reset editing case
   };
 
   const handleDeleteCase = async () => {
@@ -862,22 +852,15 @@ export default function ReceivingCasesPage() {
         </div>
       )}
 
-      {/* Create Case Modal */}
+      {/* Create/Edit Case Modal */}
       <CreateReceivingCaseModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleCreateSuccess}
-      />
-
-      {/* Edit Case Modal */}
-      <EditReceivingCaseModal
-        isOpen={showEditModal}
         onClose={() => {
-          setShowEditModal(false);
+          setShowCreateModal(false);
           setEditingCase(null);
         }}
-        onSuccess={handleEditSuccess}
-        caseData={editingCase}
+        onSuccess={handleCreateSuccess}
+        editData={editingCase}
       />
     </div>
   );

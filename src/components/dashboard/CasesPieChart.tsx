@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CheckCircle, Clock, AlertTriangle, XCircle, RefreshCw, FileText, Truck, Package, Wrench, Shield, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, XCircle, RefreshCw, FileText, Truck, Package, Wrench, Shield, TrendingUp, PieChart as PieChartIcon, Rocket } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LabelList } from 'recharts';
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 import { useDashboardRefresh } from '@/contexts/DashboardRefreshContext';
@@ -36,22 +36,24 @@ export default function CasesPieChart() {
       }
       
       // Fetch all case types data
-      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes] = await Promise.all([
+      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes, deploymentRes] = await Promise.all([
         fetch('/api/internal-cases?limit=1000'),
         fetch('/api/delivery-cases?limit=1000'),
         fetch('/api/receiving-cases?limit=1000'),
         fetch('/api/maintenance-cases?limit=1000'),
         fetch('/api/incidents?limit=1000'),
-        fetch('/api/warranties?limit=1000')
+        fetch('/api/warranties?limit=1000'),
+        fetch('/api/deployment-cases?limit=1000')
       ]);
 
-      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData] = await Promise.all([
+      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData, deploymentData] = await Promise.all([
         internalRes.json(),
         deliveryRes.json(),
         receivingRes.json(),
         maintenanceRes.json(),
         incidentRes.json(),
-        warrantyRes.json()
+        warrantyRes.json(),
+        deploymentRes.json()
       ]);
 
       // Get current month filter
@@ -76,7 +78,8 @@ export default function CasesPieChart() {
           receiving: receivingData.receivingCases?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
           maintenance: maintenanceData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
           incident: incidentData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
-          warranty: warrantyData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0
+          warranty: warrantyData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0,
+          deployment: deploymentData.data?.filter((case_: any) => isCurrentMonth(case_.startDate)).length || 0
         };
       } else {
         // All time data
@@ -86,7 +89,8 @@ export default function CasesPieChart() {
           receiving: receivingData.receivingCases?.length || 0,
           maintenance: maintenanceData.data?.length || 0,
           incident: incidentData.data?.length || 0,
-          warranty: warrantyData.data?.length || 0
+          warranty: warrantyData.data?.length || 0,
+          deployment: deploymentData.data?.length || 0
         };
       }
 
@@ -134,6 +138,13 @@ export default function CasesPieChart() {
           color: '#6366F1',
           icon: Shield,
           label: 'Case bảo hành'
+        },
+        {
+          name: 'Case triển khai',
+          value: caseTypeCounts.deployment,
+          color: '#06B6D4',
+          icon: Rocket,
+          label: 'Case triển khai'
         }
       ].filter(item => item.value > 0); // Only show types with cases
 

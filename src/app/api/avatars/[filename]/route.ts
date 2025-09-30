@@ -5,10 +5,10 @@ import { existsSync } from "fs";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { filename: string } }
+  { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
-    const { filename } = params;
+    const { filename } = await params;
     
     // Security check - prevent directory traversal
     if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
@@ -36,8 +36,9 @@ export async function GET(
       return NextResponse.json({ error: "Avatar not found" }, { status: 404 });
     }
     
-    // Read the file
+    // Read the file as Uint8Array
     const fileBuffer = await readFile(filePath);
+    const uint8Array = new Uint8Array(fileBuffer);
     
     // Determine content type based on file extension
     const extension = filename.split('.').pop()?.toLowerCase();
@@ -59,7 +60,7 @@ export async function GET(
     }
     
     // Return the file with appropriate headers
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(uint8Array, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',

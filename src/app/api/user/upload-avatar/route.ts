@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure avatars directory exists with fallback for production
-    let avatarsDir: string;
+    let avatarsDir: string = '';
     
     // Try different directory paths for production
     const possiblePaths = [

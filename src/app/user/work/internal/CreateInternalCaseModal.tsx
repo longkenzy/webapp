@@ -24,10 +24,49 @@ interface CaseType {
   updatedAt: string;
 }
 
+interface InternalCaseData {
+  id: string;
+  title: string;
+  description: string;
+  requester: {
+    id: string;
+    fullName: string;
+    position: string;
+    department: string;
+  };
+  handler: {
+    id: string;
+    fullName: string;
+    position: string;
+    department: string;
+    avatar?: string | null;
+  };
+  caseType: string;
+  form: string;
+  status: string;
+  startDate: string;
+  endDate?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  notes?: string | null;
+  userDifficultyLevel?: number | null;
+  userEstimatedTime?: number | null;
+  userImpactLevel?: number | null;
+  userUrgencyLevel?: number | null;
+  userFormScore?: number | null;
+  userAssessmentDate?: string | null;
+  adminDifficultyLevel?: number | null;
+  adminEstimatedTime?: number | null;
+  adminImpactLevel?: number | null;
+  adminUrgencyLevel?: number | null;
+  adminAssessmentDate?: string | null;
+  adminAssessmentNotes?: string | null;
+}
+
 interface CreateInternalCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newCase: unknown) => void;
+  onSuccess?: (newCase: InternalCaseData) => void;
   editingCase?: any; // Case data for editing
 }
 

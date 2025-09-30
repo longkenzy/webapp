@@ -88,6 +88,9 @@ export default function InternalCasePage() {
     goToPage,
     goToNextPage,
     goToPrevPage,
+    // Optimistic updates
+    addCase,
+    closeCase,
   } = useInternalCases();
 
   // Memoized filter summary
@@ -114,27 +117,13 @@ export default function InternalCasePage() {
 
   const handleCloseCase = useCallback(async (caseId: string) => {
     try {
-      const response = await fetch(`/api/internal-cases/${caseId}/close`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        // Refresh cases to get updated data without showing loading
-        await fetchInternalCases(0, false);
-        return result;
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to close case');
-      }
+      // Use optimistic update from hook - UI updates immediately
+      return await closeCase(caseId);
     } catch (error) {
       console.error('Error closing case:', error);
       throw error;
     }
-  }, [fetchInternalCases]);
+  }, [closeCase]);
 
   // Load cases on component mount
   useEffect(() => {
@@ -708,9 +697,29 @@ export default function InternalCasePage() {
       <CreateInternalCaseModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={async () => {
-          // Refresh cases to get updated data without showing loading
-          await fetchInternalCases(0, false);
+        onSuccess={(newCase) => {
+          // Use optimistic update - add case immediately to UI
+          if (newCase) {
+            // Convert null to undefined for type compatibility
+            const caseToAdd = {
+              ...newCase,
+              endDate: newCase.endDate ?? undefined,
+              notes: newCase.notes ?? undefined,
+              userDifficultyLevel: newCase.userDifficultyLevel ?? undefined,
+              userEstimatedTime: newCase.userEstimatedTime ?? undefined,
+              userImpactLevel: newCase.userImpactLevel ?? undefined,
+              userUrgencyLevel: newCase.userUrgencyLevel ?? undefined,
+              userFormScore: newCase.userFormScore ?? undefined,
+              userAssessmentDate: newCase.userAssessmentDate ?? undefined,
+              adminDifficultyLevel: newCase.adminDifficultyLevel ?? undefined,
+              adminEstimatedTime: newCase.adminEstimatedTime ?? undefined,
+              adminImpactLevel: newCase.adminImpactLevel ?? undefined,
+              adminUrgencyLevel: newCase.adminUrgencyLevel ?? undefined,
+              adminAssessmentDate: newCase.adminAssessmentDate ?? undefined,
+              adminAssessmentNotes: newCase.adminAssessmentNotes ?? undefined,
+            } as InternalCase;
+            addCase(caseToAdd);
+          }
         }}
       />
 

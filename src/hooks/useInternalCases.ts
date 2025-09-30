@@ -231,6 +231,58 @@ export function useInternalCases({ initialCases = [] }: UseInternalCasesProps = 
     setDateTo('');
   }, []);
 
+  // Add case with optimistic update
+  const addCase = useCallback((newCase: InternalCase) => {
+    // Optimistically add to state at the beginning (newest first)
+    setInternalCases(prev => [newCase, ...prev]);
+  }, []);
+
+  // Close case with optimistic update
+  const closeCase = useCallback(async (caseId: string) => {
+    const now = new Date().toISOString();
+    
+    // Find the case to update
+    const caseToUpdate = internalCases.find(c => c.id === caseId);
+    if (!caseToUpdate) {
+      throw new Error('Case not found');
+    }
+
+    // Optimistically update status and endDate
+    const optimisticCase = {
+      ...caseToUpdate,
+      status: 'COMPLETED',
+      endDate: now,
+      updatedAt: now
+    };
+
+    setInternalCases(prev => prev.map(c => c.id === caseId ? optimisticCase : c));
+    
+    try {
+      const response = await fetch(`/api/internal-cases/${caseId}/close`, {
+        method: 'PUT',
+      });
+
+      if (!response.ok) {
+        // Revert on failure
+        setInternalCases(prev => prev.map(c => c.id === caseId ? caseToUpdate : c));
+        throw new Error('Failed to close case');
+      }
+
+      const result = await response.json();
+      // Update with actual server data
+      if (result.data) {
+        setInternalCases(prev => prev.map(c => c.id === caseId ? result.data : c));
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error closing case:', error);
+      // Revert on error
+      setInternalCases(prev => prev.map(c => c.id === caseId ? caseToUpdate : c));
+      throw error;
+    }
+  }, [internalCases]);
+
   // Delete case with optimistic update
   const deleteCase = useCallback(async (caseToDelete: InternalCase) => {
     // Optimistically remove from state
@@ -320,6 +372,8 @@ export function useInternalCases({ initialCases = [] }: UseInternalCasesProps = 
     refreshInternalCases,
     toggleRowExpansion,
     clearFilters,
+    addCase,
+    closeCase,
     deleteCase,
     updateCase,
     

@@ -138,43 +138,51 @@ export async function POST(request: NextRequest) {
 
     console.log("Internal case created successfully:", internalCase);
 
-    // Create notifications for admin users
-    try {
-      const adminUsers = await getAdminUsers();
-      const requesterName = requester.fullName;
+    // Send notifications in parallel (non-blocking)
+    Promise.all([
+      // Create notifications for admin users
+      (async () => {
+        try {
+          const adminUsers = await getAdminUsers();
+          const requesterName = requester.fullName;
+          
+          // Create all notifications in parallel
+          await Promise.all(
+            adminUsers.map(admin =>
+              createCaseCreatedNotification(
+                'internal',
+                internalCase.id,
+                internalCase.title,
+                requesterName,
+                admin.id
+              )
+            )
+          );
+          console.log(`Notifications sent to ${adminUsers.length} admin users`);
+        } catch (notificationError) {
+          console.error('Error creating notifications:', notificationError);
+        }
+      })(),
       
-      for (const admin of adminUsers) {
-        await createCaseCreatedNotification(
-          'internal',
-          internalCase.id,
-          internalCase.title,
-          requesterName,
-          admin.id
-        );
-      }
-      console.log(`Notifications sent to ${adminUsers.length} admin users`);
-    } catch (notificationError) {
-      console.error('Error creating notifications:', notificationError);
-      // Don't fail the case creation if notifications fail
-    }
-
-    // Send Telegram notification to admin
-    try {
-      await sendCaseCreatedTelegram({
-        caseId: internalCase.id,
-        caseType: internalCase.caseType,
-        caseTitle: internalCase.title,
-        caseDescription: internalCase.description,
-        requesterName: requester.fullName,
-        requesterEmail: requester.companyEmail,
-        handlerName: handler.fullName,
-        createdAt: new Date().toLocaleString('vi-VN')
-      });
-      console.log('✅ Telegram notification sent successfully');
-    } catch (telegramError) {
-      console.error('❌ Error sending Telegram notification:', telegramError);
-      // Don't fail the case creation if Telegram fails
-    }
+      // Send Telegram notification to admin
+      (async () => {
+        try {
+          await sendCaseCreatedTelegram({
+            caseId: internalCase.id,
+            caseType: internalCase.caseType,
+            caseTitle: internalCase.title,
+            caseDescription: internalCase.description,
+            requesterName: requester.fullName,
+            requesterEmail: requester.companyEmail,
+            handlerName: handler.fullName,
+            createdAt: new Date().toLocaleString('vi-VN')
+          });
+          console.log('✅ Telegram notification sent successfully');
+        } catch (telegramError) {
+          console.error('❌ Error sending Telegram notification:', telegramError);
+        }
+      })()
+    ]).catch(err => console.error('Background notification error:', err));
 
     return NextResponse.json({
       message: "Internal case created successfully",

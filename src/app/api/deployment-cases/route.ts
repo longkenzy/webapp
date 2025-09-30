@@ -148,7 +148,8 @@ export async function POST(request: NextRequest) {
             fullName: true,
             position: true,
             department: true,
-            companyEmail: true
+            companyEmail: true,
+            avatar: true
           }
         },
         handler: {
@@ -157,7 +158,8 @@ export async function POST(request: NextRequest) {
             fullName: true,
             position: true,
             department: true,
-            companyEmail: true
+            companyEmail: true,
+            avatar: true
           }
         },
         deploymentType: {

@@ -1025,15 +1025,15 @@ export default function UserDashboardPage() {
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center overflow-hidden">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center overflow-hidden">
                         {case_.handler?.avatar ? (
                           <img 
-                            src={case_.handler.avatar} 
+                            src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`} 
                             alt={case_.handlerName}
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <User className="h-3 w-3 text-green-600" />
+                          <User className="h-4 w-4 text-green-600" />
                         )}
                       </div>
                       <span className="text-sm text-gray-900 font-medium">{case_.handlerName}</span>

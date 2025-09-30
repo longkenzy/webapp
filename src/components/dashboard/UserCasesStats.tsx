@@ -505,7 +505,7 @@ export default function UserCasesStats() {
                         <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
                           {user.avatar ? (
                             <img 
-                              src={user.avatar} 
+                              src={user.avatar.startsWith('/avatars/') ? user.avatar : `/avatars/${user.avatar}`} 
                               alt={user.userName}
                               className="w-full h-full object-cover rounded-full"
                             />

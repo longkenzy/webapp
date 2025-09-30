@@ -10,6 +10,7 @@ interface Employee {
   fullName: string;
   position: string;
   department: string;
+  avatar?: string;
 }
 
 interface InternalCase {
@@ -291,8 +292,18 @@ export default function DashboardCasesTable() {
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center space-x-2">
-                      <div className="w-6 h-6 bg-blue-200 rounded-full flex items-center justify-center">
-                        <User className="h-3 w-3 text-blue-600" />
+                      <div className="w-8 h-8 rounded-full overflow-hidden">
+                        {case_.handler.avatar ? (
+                          <img 
+                            src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`} 
+                            alt={case_.handler.fullName}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-blue-200 flex items-center justify-center">
+                            <User className="h-4 w-4 text-blue-600" />
+                          </div>
+                        )}
                       </div>
                       <div>
                         <div className="text-sm text-gray-900">{case_.handler.fullName}</div>

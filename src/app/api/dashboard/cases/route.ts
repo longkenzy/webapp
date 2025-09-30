@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         }
       },

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAvatarRefresh } from '@/contexts/AvatarRefreshContext';
 import { 
   Home, 
   Calendar, 
@@ -28,6 +29,7 @@ import {
 export default function UserNavbar() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const { registerRefreshCallback } = useAvatarRefresh();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isWorkDropdownOpen, setIsWorkDropdownOpen] = useState(false);
@@ -94,46 +96,43 @@ export default function UserNavbar() {
     }, 150);
   };
 
-  // Fetch user avatar
-  useEffect(() => {
-    let isMounted = true;
-    
-    const fetchUserAvatar = async () => {
-      console.log('Session in UserNavbar:', session);
-      if (session?.user?.id && isMounted) {
-        try {
-          const response = await fetch('/api/user/profile', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include', // Include cookies for authentication
-          });
-          
-          console.log('Profile fetch response:', response.status, response.statusText);
-          
-          if (response.ok && isMounted) {
-            const data = await response.json();
-            setUserAvatar(data.avatarUrl);
-          } else if (response.status === 401) {
-            console.warn('User not authenticated for profile fetch');
-          } else {
-            console.error('Failed to fetch user profile:', response.status, response.statusText);
-          }
-        } catch (error) {
-          console.error('Error fetching user avatar:', error);
+  // Fetch user avatar function
+  const fetchUserAvatar = useCallback(async () => {
+    if (session?.user?.id) {
+      try {
+        const response = await fetch('/api/user/profile', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Include cookies for authentication
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setUserAvatar(data.avatarUrl);
+        } else if (response.status === 401) {
+          console.warn('User not authenticated for profile fetch');
+        } else {
+          console.error('Failed to fetch user profile:', response.status, response.statusText);
         }
+      } catch (error) {
+        console.error('Error fetching user avatar:', error);
       }
-    };
-
-    fetchUserAvatar().catch(error => {
-      console.error('Unhandled error in fetchUserAvatar:', error);
-    });
-
-    return () => {
-      isMounted = false;
-    };
+    }
   }, [session?.user?.id]);
+
+  // Register refresh callback with context
+  useEffect(() => {
+    registerRefreshCallback(fetchUserAvatar);
+  }, [registerRefreshCallback, fetchUserAvatar]);
+
+  // Initial fetch when session changes
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchUserAvatar();
+    }
+  }, [session?.user?.id, fetchUserAvatar]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -278,7 +277,7 @@ export default function UserNavbar() {
                 <div className="w-8 h-8 rounded-full overflow-hidden group-hover:opacity-90 transition-opacity duration-200">
                   {userAvatar ? (
                     <img 
-                      src={userAvatar} 
+                      src={userAvatar.startsWith('/avatars/') ? userAvatar : `/avatars/${userAvatar}`} 
                       alt="Avatar" 
                       className="w-full h-full object-cover"
                     />

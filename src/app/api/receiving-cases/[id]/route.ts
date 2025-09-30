@@ -250,18 +250,20 @@ export async function PUT(
             select: {
               id: true,
               fullName: true,
-              position: true,
-              department: true
-            }
-          },
+            position: true,
+            department: true,
+            avatar: true
+          }
+        },
           handler: {
             select: {
               id: true,
               fullName: true,
-              position: true,
-              department: true
-            }
-          },
+            position: true,
+            department: true,
+            avatar: true
+          }
+        },
           supplier: {
             select: {
               id: true,

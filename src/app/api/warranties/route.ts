@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         reporter: { select: { id: true, fullName: true, position: true } },
-        handler: { select: { id: true, fullName: true, position: true } },
+        handler: { select: { id: true, fullName: true, position: true, avatar: true } },
         warrantyType: { select: { id: true, name: true } },
         customer: { select: { id: true, fullCompanyName: true, shortName: true } }
       }
@@ -183,17 +183,19 @@ export async function GET(request: NextRequest) {
             select: { 
               id: true, 
               fullName: true, 
-              position: true,
-              department: true
-            } 
+              position: true, 
+              department: true,
+              avatar: true
+            }
           },
           handler: { 
             select: { 
               id: true, 
               fullName: true, 
-              position: true,
-              department: true
-            } 
+              position: true, 
+              department: true,
+              avatar: true
+            }
           },
           warrantyType: { 
             select: { 

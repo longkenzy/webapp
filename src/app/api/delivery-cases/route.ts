@@ -65,7 +65,8 @@ export async function GET(request: NextRequest) {
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         handler: {
@@ -73,7 +74,8 @@ export async function GET(request: NextRequest) {
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         customer: {
@@ -227,7 +229,8 @@ export async function POST(request: NextRequest) {
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         handler: {
@@ -235,7 +238,8 @@ export async function POST(request: NextRequest) {
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         customer: {

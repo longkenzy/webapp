@@ -136,7 +136,8 @@ export async function PUT(
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         handler: {
@@ -144,7 +145,8 @@ export async function PUT(
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         }
       }
@@ -187,7 +189,8 @@ export async function GET(
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         handler: {
@@ -195,7 +198,8 @@ export async function GET(
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         comments: {

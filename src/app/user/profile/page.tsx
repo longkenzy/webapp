@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "react-hot-toast";
+import { useAvatarRefresh } from "@/contexts/AvatarRefreshContext";
 
 interface UserProfile {
   id: string;
@@ -49,6 +50,7 @@ interface UserProfile {
 
 export default function UserProfilePage() {
   const { data: session } = useSession();
+  const { refreshAvatar } = useAvatarRefresh();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -117,6 +119,8 @@ export default function UserProfilePage() {
         const result = await response.json();
         setProfile(prev => prev ? { ...prev, avatarUrl: result.avatarUrl } : null);
         toast.success("Cập nhật avatar thành công!");
+        // Trigger refresh avatar in navbar
+        refreshAvatar();
       } else {
         const error = await response.json();
         toast.error(error.error || "Lỗi khi upload avatar");
@@ -223,7 +227,7 @@ export default function UserProfilePage() {
         <div className="flex items-center space-x-6">
           <div className="relative">
             <img
-              src={profile.avatarUrl || "/logo/logo.png"}
+              src={profile.avatarUrl ? (profile.avatarUrl.startsWith('/avatars/') ? profile.avatarUrl : `/avatars/${profile.avatarUrl}`) : "/logo/logo.png"}
               alt="Avatar"
               className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
             />

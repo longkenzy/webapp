@@ -95,7 +95,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
     form: 'Onsite',
     title: '',
     description: '',
-    startDate: new Date().toISOString().slice(0, 16), // Format: YYYY-MM-DDTHH:mm for datetime-local
+    startDate: '', // Empty by default - user must select time
     endDate: '',
     status: 'RECEIVED', // Changed to English value
     notes: '',
@@ -323,13 +323,29 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate start date is required
+    if (!formData.startDate) {
+      toast.error('Vui lòng chọn thời gian bắt đầu!', {
+        duration: 3000,
+        position: 'top-right',
+      });
+      return;
+    }
+
     // Validate end date
     if (formData.endDate) {
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
       
+      console.log('=== Date Validation ===');
+      console.log('Start Date Input:', formData.startDate);
+      console.log('End Date Input:', formData.endDate);
+      console.log('Start Date Object:', startDate);
+      console.log('End Date Object:', endDate);
+      console.log('End Date <= Start Date?', endDate <= startDate);
+      
       if (endDate <= startDate) {
-        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+        toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!', {
           duration: 3000,
           position: 'top-right',
         });

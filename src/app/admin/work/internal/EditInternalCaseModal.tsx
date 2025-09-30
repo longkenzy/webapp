@@ -293,6 +293,10 @@ export default function EditInternalCaseModal({
     try {
       setLoading(true);
       
+      // Convert datetime-local to ISO string to preserve local timezone
+      const startDateObj = new Date(formData.startDate);
+      const endDateObj = formData.endDate ? new Date(formData.endDate) : null;
+      
       // Prepare data for API
       const updateData = {
         requesterId: formData.requester,
@@ -301,8 +305,8 @@ export default function EditInternalCaseModal({
         form: formData.form,
         title: formData.title,
         description: formData.description,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: startDateObj.toISOString(), // Send as ISO string
+        endDate: endDateObj ? endDateObj.toISOString() : null,
         status: formData.status,
         notes: formData.notes || null,
         // User self-assessment data

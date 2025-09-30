@@ -56,7 +56,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
     form: 'Onsite',
     title: '',
     description: '',
-    startDate: '03/09/2025 08:31 AM',
+    startDate: new Date().toISOString().slice(0, 16), // Format: YYYY-MM-DDTHH:mm for datetime-local
     endDate: '',
     status: 'RECEIVED', // Changed to English value
     notes: '',
@@ -299,6 +299,12 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
     }
     
     try {
+      // Convert datetime-local to ISO string to preserve local timezone
+      // datetime-local format: YYYY-MM-DDTHH:mm
+      // We convert it to a Date object which will be in local timezone
+      const startDateObj = new Date(formData.startDate);
+      const endDateObj = formData.endDate ? new Date(formData.endDate) : null;
+      
       // Prepare data for API
       const caseData = {
         title: formData.title,
@@ -307,8 +313,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         handlerId: formData.handler,
         caseType: formData.caseType,
         form: formData.form,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: startDateObj.toISOString(), // Send as ISO string
+        endDate: endDateObj ? endDateObj.toISOString() : null,
         status: formData.status,
         notes: formData.notes || null,
         // User self-assessment data

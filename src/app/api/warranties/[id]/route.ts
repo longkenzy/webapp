@@ -24,40 +24,34 @@ export async function PUT(
     const {
       endDate,
       status,
-      notes, // Thêm trường Ghi chú
-      crmReferenceCode // Thêm trường Mã CRM
+      notes,
+      crmReferenceCode,
+      // Admin can also update these fields
+      title,
+      description,
+      customerName,
+      customerId,
+      handlerId,
+      warrantyTypeId,
+      startDate,
+      // User assessment
+      userDifficultyLevel,
+      userEstimatedTime,
+      userImpactLevel,
+      userUrgencyLevel,
+      userFormScore,
+      // Admin assessment
+      adminDifficultyLevel,
+      adminEstimatedTime,
+      adminImpactLevel,
+      adminUrgencyLevel,
+      adminAssessmentNotes
     } = body;
-
-    // First, let's check if there are any warranties in the database
-    const allWarranties = await db.warranty.findMany({
-      take: 5,
-      include: {
-        reporter: true,
-        handler: true,
-        warrantyType: true,
-        customer: true
-      }
-    }).catch(dbError => {
-      console.error("Database error when finding all warranties:", dbError);
-      throw dbError;
-    });
-    
-    console.log("Total warranties in database:", allWarranties.length);
-    console.log("Sample warranty IDs:", allWarranties.map(w => w.id));
 
     // Check if warranty exists
     console.log("Checking if warranty exists with ID:", id);
     const existingWarranty = await db.warranty.findUnique({
-      where: { id },
-      include: {
-        reporter: true,
-        handler: true,
-        warrantyType: true,
-        customer: true
-      }
-    }).catch(dbError => {
-      console.error("Database error when finding warranty:", dbError);
-      throw dbError;
+      where: { id }
     });
 
     if (!existingWarranty) {
@@ -70,17 +64,76 @@ export async function PUT(
 
     console.log("Found existing warranty:", existingWarranty.id);
 
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (endDate && (startDate || existingWarranty.startDate)) {
+      const startDateToCheck = startDate ? new Date(startDate) : new Date(existingWarranty.startDate);
+      const endDateObj = new Date(endDate);
+      
+      console.log("=== API Warranty Date Validation ===");
+      console.log("Start Date to check:", startDateToCheck);
+      console.log("End Date:", endDateObj);
+      console.log("End <= Start?", endDateObj <= startDateToCheck);
+      
+      if (endDateObj <= startDateToCheck) {
+        console.log("Invalid end date:", { startDate: startDateToCheck, endDate: endDateObj });
+        return NextResponse.json({ 
+          error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
+        }, { status: 400 });
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (status !== undefined) updateData.status = status;
+    if (notes !== undefined) updateData.notes = notes;
+    if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (customerName !== undefined) updateData.customerName = customerName;
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    
+    // Handle relations with connect/disconnect
+    if (customerId !== undefined) {
+      if (customerId) {
+        updateData.customer = { connect: { id: customerId } };
+      } else {
+        updateData.customer = { disconnect: true };
+      }
+    }
+    if (handlerId !== undefined) {
+      updateData.handler = { connect: { id: handlerId } };
+    }
+    if (warrantyTypeId !== undefined) {
+      updateData.warrantyType = { connect: { id: warrantyTypeId } };
+    }
+
+    // User assessment
+    if (userDifficultyLevel !== undefined) updateData.userDifficultyLevel = userDifficultyLevel !== null ? parseInt(userDifficultyLevel) : null;
+    if (userEstimatedTime !== undefined) updateData.userEstimatedTime = userEstimatedTime !== null ? parseInt(userEstimatedTime) : null;
+    if (userImpactLevel !== undefined) updateData.userImpactLevel = userImpactLevel !== null ? parseInt(userImpactLevel) : null;
+    if (userUrgencyLevel !== undefined) updateData.userUrgencyLevel = userUrgencyLevel !== null ? parseInt(userUrgencyLevel) : null;
+    if (userFormScore !== undefined) updateData.userFormScore = userFormScore !== null ? parseInt(userFormScore) : null;
+    
+    // Admin assessment
+    if (adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = adminDifficultyLevel !== null ? parseInt(adminDifficultyLevel) : null;
+    if (adminEstimatedTime !== undefined) updateData.adminEstimatedTime = adminEstimatedTime !== null ? parseInt(adminEstimatedTime) : null;
+    if (adminImpactLevel !== undefined) updateData.adminImpactLevel = adminImpactLevel !== null ? parseInt(adminImpactLevel) : null;
+    if (adminUrgencyLevel !== undefined) updateData.adminUrgencyLevel = adminUrgencyLevel !== null ? parseInt(adminUrgencyLevel) : null;
+    if (adminAssessmentNotes !== undefined) updateData.adminAssessmentNotes = adminAssessmentNotes;
+    
+    if (adminDifficultyLevel !== undefined || adminEstimatedTime !== undefined || adminImpactLevel !== undefined || adminUrgencyLevel !== undefined) {
+      updateData.adminAssessmentDate = new Date();
+    }
+
     // Update the warranty in database
-    console.log("Updating warranty with data:", { endDate, status, notes, crmReferenceCode });
+    console.log("Updating warranty with data:", updateData);
     const updatedWarranty = await db.warranty.update({
       where: { id },
-      data: {
-        endDate: endDate ? new Date(endDate) : null,
-        status: status || existingWarranty.status,
-        notes: notes || null, // Thêm Ghi chú
-        crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
-        updatedAt: new Date()
-      },
+      data: updateData,
       include: {
         reporter: true,
         handler: true,

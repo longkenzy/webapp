@@ -38,37 +38,61 @@ export async function POST(request: NextRequest) {
     console.log('=== API Create Warranty ===');
     console.log('Body received:', body);
 
-    // Use warrantyTypeId if provided, otherwise use warrantyType
-    const warrantyTypeToUse = warrantyTypeId || warrantyType;
+    console.log('WarrantyTypeId:', warrantyTypeId);
+    console.log('WarrantyType:', warrantyType);
 
     // Validate required fields
-    if (!title || !description || !handlerId || !warrantyTypeToUse || !customerName) {
-      console.log('Missing required fields:', { title, description, handlerId, warrantyTypeToUse, customerName });
+    if (!title || !description || !handlerId || !customerName) {
+      console.log('Missing required fields:', { title, description, handlerId, customerName });
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Validate end date
-    if (endDate && new Date(endDate) <= new Date(startDate)) {
-      return NextResponse.json({ 
-        error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
-      }, { status: 400 });
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (startDate && endDate) {
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      
+      console.log("=== API Warranty Date Validation (Create) ===");
+      console.log("Start Date:", startDateObj);
+      console.log("End Date:", endDateObj);
+      console.log("End <= Start?", endDateObj <= startDateObj);
+      
+      if (endDateObj <= startDateObj) {
+        return NextResponse.json({ 
+          error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
+        }, { status: 400 });
+      }
     }
 
-    // Get warranty type and default employee in parallel
-    const [warrantyTypeRecord, defaultEmployee] = await Promise.all([
-      db.warrantyType.findFirst({ where: { name: warrantyTypeToUse } }),
-      db.employee.findFirst()
-    ]);
+    // Find warranty type by ID or name
+    let warrantyTypeRecord = null;
+    if (warrantyTypeId) {
+      // Try to find by ID first
+      warrantyTypeRecord = await db.warrantyType.findUnique({ 
+        where: { id: warrantyTypeId } 
+      });
+      console.log('Warranty type found by ID:', warrantyTypeRecord?.name);
+    } else if (warrantyType) {
+      // Fallback to finding by name
+      warrantyTypeRecord = await db.warrantyType.findFirst({ 
+        where: { name: warrantyType } 
+      });
+      console.log('Warranty type found by name:', warrantyTypeRecord?.name);
+    }
 
     if (!warrantyTypeRecord) {
+      console.log('Warranty type not found. WarrantyTypeId:', warrantyTypeId, 'WarrantyType:', warrantyType);
       return NextResponse.json(
         { error: "Invalid warranty type" },
         { status: 400 }
       );
     }
+
+    // Get default employee for reporter
+    const defaultEmployee = await db.employee.findFirst();
 
     if (!defaultEmployee) {
       return NextResponse.json(
@@ -108,43 +132,51 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Create notifications for admin users
-    try {
-      const adminUsers = await getAdminUsers();
-      const requesterName = defaultEmployee.fullName;
+    // Send notifications in parallel (non-blocking)
+    Promise.all([
+      // Create notifications for admin users
+      (async () => {
+        try {
+          const adminUsers = await getAdminUsers();
+          const requesterName = defaultEmployee.fullName;
+          
+          // Create all notifications in parallel
+          await Promise.all(
+            adminUsers.map(admin =>
+              createCaseCreatedNotification(
+                'warranty',
+                newWarranty.id,
+                newWarranty.title,
+                requesterName,
+                admin.id
+              )
+            )
+          );
+          console.log(`Notifications sent to ${adminUsers.length} admin users`);
+        } catch (notificationError) {
+          console.error('Error creating notifications:', notificationError);
+        }
+      })(),
       
-      for (const admin of adminUsers) {
-        await createCaseCreatedNotification(
-          'warranty',
-          newWarranty.id,
-          newWarranty.title,
-          requesterName,
-          admin.id
-        );
-      }
-      console.log(`Notifications sent to ${adminUsers.length} admin users`);
-    } catch (notificationError) {
-      console.error('Error creating notifications:', notificationError);
-      // Don't fail the case creation if notifications fail
-    }
-
-    // Send Telegram notification to admin
-    try {
-      await sendCaseCreatedTelegram({
-        caseId: newWarranty.id,
-        caseType: 'Case bảo hành',
-        caseTitle: newWarranty.title,
-        caseDescription: newWarranty.description,
-        requesterName: defaultEmployee.fullName,
-        requesterEmail: defaultEmployee.companyEmail,
-        handlerName: newWarranty.handler.fullName,
-        createdAt: new Date().toLocaleString('vi-VN')
-      });
-      console.log('✅ Telegram notification sent successfully');
-    } catch (telegramError) {
-      console.error('❌ Error sending Telegram notification:', telegramError);
-      // Don't fail the case creation if Telegram fails
-    }
+      // Send Telegram notification to admin
+      (async () => {
+        try {
+          await sendCaseCreatedTelegram({
+            caseId: newWarranty.id,
+            caseType: 'Case bảo hành',
+            caseTitle: newWarranty.title,
+            caseDescription: newWarranty.description,
+            requesterName: defaultEmployee.fullName,
+            requesterEmail: defaultEmployee.companyEmail,
+            handlerName: newWarranty.handler.fullName,
+            createdAt: new Date().toLocaleString('vi-VN')
+          });
+          console.log('✅ Telegram notification sent successfully');
+        } catch (telegramError) {
+          console.error('❌ Error sending Telegram notification:', telegramError);
+        }
+      })()
+    ]).catch(err => console.error('Background notification error:', err));
 
     return NextResponse.json({
       message: "Warranty created successfully",

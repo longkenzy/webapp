@@ -534,9 +534,9 @@ function AdminAllCasesTable() {
         });
       }
 
-      // Sort all cases by start date (newest first)
-      unifiedCases.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
-      setAllCases(unifiedCases);
+      // Sort all cases by start date (newest first) - create a copy before sorting to avoid read-only error
+      const sortedCases = [...unifiedCases].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+      setAllCases(sortedCases);
 
       // Filter cases for today tab: only show incomplete cases and cases from today
       const today = new Date();

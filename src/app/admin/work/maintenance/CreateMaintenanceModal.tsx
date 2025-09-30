@@ -27,13 +27,25 @@ interface CreateMaintenanceModalProps {
   onClose: () => void;
   onSuccess?: (newMaintenance: unknown) => void;
   editingMaintenance?: any; // Maintenance data for editing
+  // Pre-loaded data to avoid re-fetching
+  employees?: Employee[];
+  customers?: any[];
+  maintenanceTypes?: MaintenanceType[];
 }
 
-export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, editingMaintenance }: CreateMaintenanceModalProps) {
+export default function CreateMaintenanceModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  editingMaintenance,
+  employees: preloadedEmployees = [],
+  customers: preloadedCustomers = [],
+  maintenanceTypes: preloadedMaintenanceTypes = []
+}: CreateMaintenanceModalProps) {
   const { data: session } = useSession();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [partners, setPartners] = useState<any[]>([]);
-  const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>(preloadedEmployees);
+  const [partners, setPartners] = useState<any[]>(preloadedCustomers);
+  const [maintenanceTypes, setMaintenanceTypes] = useState<MaintenanceType[]>(preloadedMaintenanceTypes);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,7 +75,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
     customer: '',
     title: '',
     description: '',
-    startDate: new Date().toISOString().slice(0, 16),
+    startDate: '', // Empty by default - user must select time
     endDate: '',
     status: 'RECEIVED',
     notes: '',
@@ -251,6 +263,29 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
         console.log('Editing maintenance case:', editingMaintenance);
         console.log('Resolved maintenanceTypeId:', maintenanceTypeId);
 
+        // Convert datetime to local timezone for datetime-local input
+        let startDateLocal = '';
+        if (editingMaintenance.startDate) {
+          const startDateObj = new Date(editingMaintenance.startDate);
+          const year = startDateObj.getFullYear();
+          const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(startDateObj.getDate()).padStart(2, '0');
+          const hours = String(startDateObj.getHours()).padStart(2, '0');
+          const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
+          startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        let endDateLocal = '';
+        if (editingMaintenance.endDate) {
+          const endDateObj = new Date(editingMaintenance.endDate);
+          const year = endDateObj.getFullYear();
+          const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(endDateObj.getDate()).padStart(2, '0');
+          const hours = String(endDateObj.getHours()).padStart(2, '0');
+          const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+          endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
         // Set form data immediately for instant display
         setFormData({
           customerTitle,
@@ -260,8 +295,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
           customer: editingMaintenance.customer?.id || '',
           title: editingMaintenance.title || '',
           description: editingMaintenance.description || '',
-          startDate: editingMaintenance.startDate ? new Date(editingMaintenance.startDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-          endDate: editingMaintenance.endDate ? new Date(editingMaintenance.endDate).toISOString().slice(0, 16) : '',
+          startDate: startDateLocal,
+          endDate: endDateLocal,
           status: editingMaintenance.status || 'RECEIVED',
           notes: editingMaintenance.notes || '',
           crmReferenceCode: editingMaintenance.crmReferenceCode || '',
@@ -272,6 +307,9 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
           form: 'Onsite', // Default
           formScore: editingMaintenance.userFormScore?.toString() || '2'
         });
+        
+        console.log('Converted startDate:', startDateLocal);
+        console.log('Converted endDate:', endDateLocal);
         
         // Set customer search if customer exists
         if (editingMaintenance.customer) {
@@ -315,12 +353,28 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
   }, [showCustomerDropdown]);
 
   // Preload data when component mounts for faster modal opening
+  // Sync preloaded data
   useEffect(() => {
-    fetchEmployees();
-    fetchPartners();
-    fetchMaintenanceTypes();
+    if (preloadedEmployees.length > 0) setEmployees(preloadedEmployees);
+  }, [preloadedEmployees]);
+
+  useEffect(() => {
+    if (preloadedCustomers.length > 0) setPartners(preloadedCustomers);
+  }, [preloadedCustomers]);
+
+  useEffect(() => {
+    if (preloadedMaintenanceTypes.length > 0) setMaintenanceTypes(preloadedMaintenanceTypes);
+  }, [preloadedMaintenanceTypes]);
+
+  // Only fetch if data not preloaded (fallback)
+  useEffect(() => {
     fetchConfigs();
-  }, [fetchEmployees, fetchPartners, fetchMaintenanceTypes, fetchConfigs]);
+    
+    // Only fetch if not already provided
+    if (employees.length === 0) fetchEmployees();
+    if (partners.length === 0) fetchPartners();
+    if (maintenanceTypes.length === 0) fetchMaintenanceTypes();
+  }, [fetchConfigs]);
 
   // Refresh data when modal opens to ensure latest data
   useEffect(() => {
@@ -354,16 +408,17 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
     };
   }, [fetchMaintenanceTypes]);
 
-  // Auto-fill handler with current user when employees are loaded
+  // Auto-fill handler with current user when employees are loaded (ONLY for CREATE mode)
   useEffect(() => {
-    if (employees.length > 0 && session?.user?.email && !editingMaintenance) {
+    // CRITICAL: Only auto-select when creating NEW case, NOT when editing
+    if (employees.length > 0 && session?.user?.email && !editingMaintenance && isOpen) {
       // Find current user in employees list by email
       const currentUser = employees.find(emp => 
         emp.companyEmail?.toLowerCase() === session.user.email?.toLowerCase()
       );
       
       if (currentUser) {
-        console.log('Auto-selecting current user as handler:', currentUser);
+        console.log('Auto-selecting current user as handler (CREATE mode only):', currentUser);
         setFormData(prev => {
           // Only set if handler is not already set
           if (!prev.handler) {
@@ -379,7 +434,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
         console.log('Available employees:', employees.map(e => ({ id: e.id, name: e.fullName, email: e.companyEmail })));
       }
     }
-  }, [employees, session?.user?.email, editingMaintenance]);
+  }, [employees, session?.user?.email, editingMaintenance, isOpen]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -475,13 +530,20 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
       return;
     }
     
-    // Validate end date
-    if (formData.endDate) {
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (formData.startDate && formData.endDate) {
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
       
+      console.log('=== Date Validation (Maintenance Modal) ===');
+      console.log('Start Date Input:', formData.startDate);
+      console.log('End Date Input:', formData.endDate);
+      console.log('Start Date Object:', startDate);
+      console.log('End Date Object:', endDate);
+      console.log('End <= Start?', endDate <= startDate);
+      
       if (endDate <= startDate) {
-        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+        toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!', {
           duration: 3000,
           position: 'top-right',
         });
@@ -492,12 +554,12 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
     try {
       // Prepare data for API
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
+      const isEditing = !!editingMaintenance;
       
-      const maintenanceData = {
+      const maintenanceData: any = {
         title: formData.title,
         description: formData.description,
         customerName: fullCustomerName,
-        reporterId: session?.user?.id,
         handlerId: formData.handler,
         maintenanceTypeId: formData.maintenanceType,
         customerId: formData.customer || null,
@@ -505,7 +567,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
         notes: formData.notes,
-        crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
+        crmReferenceCode: formData.crmReferenceCode || null,
         // User assessment fields
         userDifficultyLevel: formData.difficultyLevel ? parseInt(formData.difficultyLevel) : null,
         userEstimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : null,
@@ -515,12 +577,17 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess, edi
         userAssessmentDate: new Date().toISOString()
       };
 
+      // Only send reporterId when CREATING, not when EDITING
+      if (!isEditing) {
+        maintenanceData.reporterId = session?.user?.id;
+      }
+
        console.log('=== Submitting Maintenance ===');
+       console.log('Is Editing?', isEditing);
        console.log('Form data:', formData);
        console.log('Maintenance data to send:', maintenanceData);
 
        // Send to API
-       const isEditing = !!editingMaintenance;
        const url = isEditing ? `/api/maintenance-cases/${editingMaintenance.id}` : '/api/maintenance-cases';
        const method = isEditing ? 'PUT' : 'POST';
        

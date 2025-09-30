@@ -96,7 +96,30 @@ export async function PUT(
     const body = await request.json();
     console.log("Request body:", body);
     
-    const { endDate, status, notes } = body;
+    // Destructure all possible fields from body
+    const { 
+      endDate, 
+      status, 
+      notes,
+      // Admin can also update these fields
+      requesterId,
+      handlerId,
+      caseType,
+      form,
+      title,
+      description,
+      startDate,
+      userDifficultyLevel,
+      userEstimatedTime,
+      userImpactLevel,
+      userUrgencyLevel,
+      userFormScore,
+      adminDifficultyLevel,
+      adminEstimatedTime,
+      adminImpactLevel,
+      adminUrgencyLevel,
+      adminAssessmentNotes
+    } = body;
 
     // Check if internal case exists
     const existingCase = await db.internalCase.findUnique({
@@ -108,28 +131,58 @@ export async function PUT(
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
-    // Validate end date
-    if (endDate) {
-      const startDate = new Date(existingCase.startDate);
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (endDate && (startDate || existingCase.startDate)) {
+      const startDateToCheck = startDate ? new Date(startDate) : new Date(existingCase.startDate);
       const endDateObj = new Date(endDate);
       
-      if (endDateObj <= startDate) {
-        console.log("Invalid end date:", { startDate, endDate });
+      console.log("=== API Date Validation ===");
+      console.log("Start Date to check:", startDateToCheck);
+      console.log("End Date:", endDateObj);
+      console.log("End <= Start?", endDateObj <= startDateToCheck);
+      
+      if (endDateObj <= startDateToCheck) {
+        console.log("Invalid end date:", { startDate: startDateToCheck, endDate: endDateObj });
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
       }
     }
 
+    // Prepare update data
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    // Only update fields that are provided
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (status !== undefined) updateData.status = status;
+    if (notes !== undefined) updateData.notes = notes;
+    if (requesterId !== undefined) updateData.requesterId = requesterId;
+    if (handlerId !== undefined) updateData.handlerId = handlerId;
+    if (caseType !== undefined) updateData.caseType = caseType;
+    if (form !== undefined) updateData.form = form;
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (userDifficultyLevel !== undefined) updateData.userDifficultyLevel = userDifficultyLevel !== null ? parseInt(userDifficultyLevel) : null;
+    if (userEstimatedTime !== undefined) updateData.userEstimatedTime = userEstimatedTime !== null ? parseInt(userEstimatedTime) : null;
+    if (userImpactLevel !== undefined) updateData.userImpactLevel = userImpactLevel !== null ? parseInt(userImpactLevel) : null;
+    if (userUrgencyLevel !== undefined) updateData.userUrgencyLevel = userUrgencyLevel !== null ? parseInt(userUrgencyLevel) : null;
+    if (userFormScore !== undefined) updateData.userFormScore = userFormScore !== null ? parseInt(userFormScore) : null;
+    if (adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = adminDifficultyLevel !== null ? parseInt(adminDifficultyLevel) : null;
+    if (adminEstimatedTime !== undefined) updateData.adminEstimatedTime = adminEstimatedTime !== null ? parseInt(adminEstimatedTime) : null;
+    if (adminImpactLevel !== undefined) updateData.adminImpactLevel = adminImpactLevel !== null ? parseInt(adminImpactLevel) : null;
+    if (adminUrgencyLevel !== undefined) updateData.adminUrgencyLevel = adminUrgencyLevel !== null ? parseInt(adminUrgencyLevel) : null;
+    if (adminAssessmentNotes !== undefined) updateData.adminAssessmentNotes = adminAssessmentNotes;
+    if (adminDifficultyLevel !== undefined || adminEstimatedTime !== undefined || adminImpactLevel !== undefined || adminUrgencyLevel !== undefined) {
+      updateData.adminAssessmentDate = new Date();
+    }
+
     // Update internal case
     const updatedCase = await db.internalCase.update({
       where: { id },
-      data: {
-        endDate: endDate ? new Date(endDate) : null,
-        status: status || existingCase.status,
-        notes: notes !== undefined ? notes : existingCase.notes,
-        updatedAt: new Date()
-      },
+      data: updateData,
       include: {
         requester: {
           select: {

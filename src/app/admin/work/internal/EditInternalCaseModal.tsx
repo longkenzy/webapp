@@ -176,9 +176,33 @@ export default function EditInternalCaseModal({
     }
   }, []);
 
-  // Initialize form data when modal opens
+  // Fetch data when modal opens FIRST
   useEffect(() => {
-    if (isOpen && caseData) {
+    if (isOpen) {
+      fetchEmployees();
+      fetchCaseTypes();
+      fetchConfigs();
+    }
+  }, [isOpen, fetchEmployees, fetchCaseTypes, fetchConfigs]);
+
+  // Initialize form data AFTER employees are loaded
+  useEffect(() => {
+    if (isOpen && caseData && employees.length > 0) {
+      console.log('=== Initializing Form Data ===');
+      console.log('Case Handler ID:', caseData.handler.id);
+      console.log('Case Handler Name:', caseData.handler.fullName);
+      console.log('Available Employees:', employees.map(e => ({ id: e.id, name: e.fullName })));
+      
+      // Verify handler exists in employees list
+      const handlerExists = employees.some(emp => emp.id === caseData.handler.id);
+      console.log('Handler exists in employees list?', handlerExists);
+      
+      if (!handlerExists) {
+        console.warn('⚠️ WARNING: Handler not found in employees list!');
+        console.warn('Handler ID:', caseData.handler.id);
+        console.warn('Handler Name:', caseData.handler.fullName);
+      }
+      
       // Convert datetime to local timezone for datetime-local input
       const startDateObj = new Date(caseData.startDate);
       const startYear = startDateObj.getFullYear();
@@ -199,10 +223,13 @@ export default function EditInternalCaseModal({
         endDateLocal = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
       }
 
+      // CRITICAL: Set handler ID from caseData, NOT from current user
+      const handlerIdToSet = caseData.handler.id;
+      
       setFormData({
         requester: caseData.requester.id,
         position: caseData.requester.position || '',
-        handler: caseData.handler.id,
+        handler: handlerIdToSet, // Use the handler from case data
         caseType: caseData.caseType,
         form: caseData.form,
         title: caseData.title,
@@ -224,17 +251,15 @@ export default function EditInternalCaseModal({
         adminUrgencyLevel: caseData.adminUrgencyLevel?.toString() || '',
         adminAssessmentNotes: caseData.adminAssessmentNotes || ''
       });
+      
+      console.log('✅ Form Data Set - Handler:', handlerIdToSet);
+      
+      // Verify after setting
+      setTimeout(() => {
+        console.log('⏱️ Verify formData.handler after 100ms:', handlerIdToSet);
+      }, 100);
     }
-  }, [isOpen, caseData]);
-
-  // Fetch data when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchEmployees();
-      fetchCaseTypes();
-      fetchConfigs();
-    }
-  }, [isOpen, fetchEmployees, fetchCaseTypes, fetchConfigs]);
+  }, [isOpen, caseData, employees]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -296,13 +321,20 @@ export default function EditInternalCaseModal({
     
     if (!caseData) return;
 
-    // Validate end date
-    if (formData.endDate) {
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (formData.startDate && formData.endDate) {
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
       
+      console.log('=== Date Validation (Admin Edit Modal) ===');
+      console.log('Start Date Input:', formData.startDate);
+      console.log('End Date Input:', formData.endDate);
+      console.log('Start Date Object:', startDate);
+      console.log('End Date Object:', endDate);
+      console.log('End <= Start?', endDate <= startDate);
+      
       if (endDate <= startDate) {
-        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+        toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!', {
           duration: 3000,
           position: 'top-right',
         });
@@ -477,7 +509,12 @@ export default function EditInternalCaseModal({
                   </label>
                   <select
                     value={formData.handler}
-                    onChange={(e) => handleInputChange('handler', e.target.value)}
+                    onChange={(e) => {
+                      console.log('🔄 Handler changed to:', e.target.value);
+                      const selectedEmp = employees.find(emp => emp.id === e.target.value);
+                      console.log('Selected employee:', selectedEmp?.fullName);
+                      handleInputChange('handler', e.target.value);
+                    }}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
                     disabled={loading}
@@ -488,7 +525,7 @@ export default function EditInternalCaseModal({
                     {employees.length > 0 ? (
                       employees.map((employee) => (
                         <option key={employee.id} value={employee.id}>
-                          {employee.fullName}
+                          {employee.fullName} {employee.id === caseData?.handler.id ? '✓ (Người xử lý hiện tại)' : ''}
                         </option>
                       ))
                     ) : (
@@ -497,6 +534,10 @@ export default function EditInternalCaseModal({
                       </option>
                     )}
                   </select>
+                  {/* Debug info */}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Selected: {formData.handler || 'None'} | Case Handler: {caseData?.handler.id}
+                  </p>
                 </div>
 
                 <div className="space-y-1">

@@ -21,13 +21,25 @@ interface CreateWarrantyModalProps {
   onClose: () => void;
   onSuccess?: (newWarranty: unknown) => void;
   editingWarranty?: any; // Warranty data for editing
+  // Pre-loaded data to avoid re-fetching
+  employees?: Employee[];
+  customers?: any[];
+  warrantyTypes?: Array<{ id: string; name: string; description?: string }>;
 }
 
-export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editingWarranty }: CreateWarrantyModalProps) {
+export default function CreateWarrantyModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  editingWarranty,
+  employees: preloadedEmployees = [],
+  customers: preloadedCustomers = [],
+  warrantyTypes: preloadedWarrantyTypes = []
+}: CreateWarrantyModalProps) {
   const { data: session } = useSession();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [partners, setPartners] = useState<any[]>([]);
-  const [warrantyTypes, setWarrantyTypes] = useState<Array<{ id: string; name: string; description?: string }>>([]);
+  const [employees, setEmployees] = useState<Employee[]>(preloadedEmployees);
+  const [partners, setPartners] = useState<any[]>(preloadedCustomers);
+  const [warrantyTypes, setWarrantyTypes] = useState<Array<{ id: string; name: string; description?: string }>>(preloadedWarrantyTypes);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,7 +69,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
     customer: '',
     title: '',
     description: '',
-    startDate: new Date().toISOString().slice(0, 16),
+    startDate: '', // Empty by default - user must select time
     endDate: '',
     status: 'RECEIVED',
     notes: '',
@@ -233,6 +245,29 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
           }
         }
 
+        // Convert datetime to local timezone for datetime-local input
+        let startDateLocal = '';
+        if (editingWarranty.startDate) {
+          const startDateObj = new Date(editingWarranty.startDate);
+          const year = startDateObj.getFullYear();
+          const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(startDateObj.getDate()).padStart(2, '0');
+          const hours = String(startDateObj.getHours()).padStart(2, '0');
+          const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
+          startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        let endDateLocal = '';
+        if (editingWarranty.endDate) {
+          const endDateObj = new Date(editingWarranty.endDate);
+          const year = endDateObj.getFullYear();
+          const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(endDateObj.getDate()).padStart(2, '0');
+          const hours = String(endDateObj.getHours()).padStart(2, '0');
+          const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+          endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
         // Set form data immediately for instant display
         setFormData({
           customerTitle,
@@ -242,8 +277,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
           customer: editingWarranty.customer?.id || '',
           title: editingWarranty.title || '',
           description: editingWarranty.description || '',
-          startDate: editingWarranty.startDate ? new Date(editingWarranty.startDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-          endDate: editingWarranty.endDate ? new Date(editingWarranty.endDate).toISOString().slice(0, 16) : '',
+          startDate: startDateLocal,
+          endDate: endDateLocal,
           status: editingWarranty.status || 'RECEIVED',
           notes: editingWarranty.notes || '',
           crmReferenceCode: editingWarranty.crmReferenceCode || '',
@@ -254,6 +289,9 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
           form: 'Onsite', // Default
           formScore: editingWarranty.userFormScore?.toString() || '2'
         });
+        
+        console.log('Converted startDate:', startDateLocal);
+        console.log('Converted endDate:', endDateLocal);
         
         // Set customer search if customer exists
         if (editingWarranty.customer) {
@@ -281,12 +319,28 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
   }, [showCustomerDropdown]);
 
   // Preload data when component mounts for faster modal opening
+  // Sync preloaded data
   useEffect(() => {
-    fetchEmployees();
-    fetchPartners();
-    fetchWarrantyTypes();
+    if (preloadedEmployees.length > 0) setEmployees(preloadedEmployees);
+  }, [preloadedEmployees]);
+
+  useEffect(() => {
+    if (preloadedCustomers.length > 0) setPartners(preloadedCustomers);
+  }, [preloadedCustomers]);
+
+  useEffect(() => {
+    if (preloadedWarrantyTypes.length > 0) setWarrantyTypes(preloadedWarrantyTypes);
+  }, [preloadedWarrantyTypes]);
+
+  // Only fetch if data not preloaded (fallback)
+  useEffect(() => {
     fetchConfigs();
-  }, [fetchEmployees, fetchPartners, fetchWarrantyTypes, fetchConfigs]);
+    
+    // Only fetch if not already provided
+    if (employees.length === 0) fetchEmployees();
+    if (partners.length === 0) fetchPartners();
+    if (warrantyTypes.length === 0) fetchWarrantyTypes();
+  }, [fetchConfigs]);
 
   // Refresh data when modal opens to ensure latest data
   useEffect(() => {
@@ -321,18 +375,21 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
   }, [fetchWarrantyTypes]);
 
   // Auto-fill handler with current user when employees are loaded
+  // Auto-fill handler with current user when employees are loaded (ONLY for CREATE mode)
   useEffect(() => {
-    if (employees.length > 0 && session?.user?.email) {
+    // CRITICAL: Only auto-select when creating NEW case, NOT when editing
+    if (employees.length > 0 && session?.user?.email && !editingWarranty && isOpen) {
       // Find current user in employees list
       const currentUser = employees.find(emp => emp.companyEmail === session.user.email);
       if (currentUser) {
+        console.log('Auto-selecting current user as handler (CREATE mode only):', currentUser);
         setFormData(prev => ({
           ...prev,
           handler: currentUser.id
         }));
       }
     }
-  }, [employees, session?.user?.email]);
+  }, [employees, session?.user?.email, editingWarranty, isOpen]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -428,13 +485,20 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
       return;
     }
     
-    // Validate end date
-    if (formData.endDate) {
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (formData.startDate && formData.endDate) {
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
       
+      console.log('=== Date Validation (Warranty Modal) ===');
+      console.log('Start Date Input:', formData.startDate);
+      console.log('End Date Input:', formData.endDate);
+      console.log('Start Date Object:', startDate);
+      console.log('End Date Object:', endDate);
+      console.log('End <= Start?', endDate <= startDate);
+      
       if (endDate <= startDate) {
-        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+        toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!', {
           duration: 3000,
           position: 'top-right',
         });
@@ -445,12 +509,12 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
     try {
       // Prepare data for API
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
+      const isEditing = !!editingWarranty;
       
-      const warrantyData = {
+      const warrantyData: any = {
         title: formData.title,
         description: formData.description,
         customerName: fullCustomerName,
-        reporterId: session?.user?.id,
         handlerId: formData.handler,
         warrantyTypeId: formData.warrantyType,
         customerId: formData.customer || null,
@@ -458,7 +522,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
         status: formData.status,
         notes: formData.notes,
-        crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
+        crmReferenceCode: formData.crmReferenceCode || null,
         // User assessment fields
         userDifficultyLevel: formData.difficultyLevel ? parseInt(formData.difficultyLevel) : null,
         userEstimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : null,
@@ -468,12 +532,17 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess, editin
         userAssessmentDate: new Date().toISOString()
       };
 
+      // Only send reporterId when CREATING, not when EDITING
+      if (!isEditing) {
+        warrantyData.reporterId = session?.user?.id;
+      }
+
        console.log('=== Submitting Warranty ===');
+       console.log('Is Editing?', isEditing);
        console.log('Form data:', formData);
        console.log('Warranty data to send:', warrantyData);
 
        // Send to API
-       const isEditing = !!editingWarranty;
        const url = isEditing ? `/api/warranties/${editingWarranty.id}` : '/api/warranties';
        const method = isEditing ? 'PUT' : 'POST';
        

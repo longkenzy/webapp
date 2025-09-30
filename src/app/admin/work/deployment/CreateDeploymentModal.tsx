@@ -52,14 +52,26 @@ interface CreateDeploymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (newCase: any) => void;
-  editData?: DeploymentCase | null; // Thêm prop cho edit mode
+  editData?: DeploymentCase | null;
+  // Pre-loaded data for performance
+  employees?: Employee[];
+  partners?: any[];
+  deploymentTypes?: any[];
 }
 
-export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, editData }: CreateDeploymentModalProps) {
+export default function CreateDeploymentModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  editData,
+  employees: preloadedEmployees,
+  partners: preloadedPartners,
+  deploymentTypes: preloadedDeploymentTypes
+}: CreateDeploymentModalProps) {
   const { data: session } = useSession();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [partners, setPartners] = useState<any[]>([]);
-  const [deploymentTypes, setDeploymentTypes] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>(preloadedEmployees || []);
+  const [partners, setPartners] = useState<any[]>(preloadedPartners || []);
+  const [deploymentTypes, setDeploymentTypes] = useState<any[]>(preloadedDeploymentTypes || []);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -96,6 +108,29 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
       console.log('Default form option:', defaultFormOption);
       console.log('Selected form option:', selectedFormOption);
       
+      // Convert datetime to local timezone for datetime-local input
+      let startDateLocal = '';
+      if (editData.startDate) {
+        const startDateObj = new Date(editData.startDate);
+        const year = startDateObj.getFullYear();
+        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(startDateObj.getDate()).padStart(2, '0');
+        const hours = String(startDateObj.getHours()).padStart(2, '0');
+        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
+        startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      let endDateLocal = '';
+      if (editData.endDate) {
+        const endDateObj = new Date(editData.endDate);
+        const year = endDateObj.getFullYear();
+        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(endDateObj.getDate()).padStart(2, '0');
+        const hours = String(endDateObj.getHours()).padStart(2, '0');
+        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+        endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
       const newFormData = {
         customerTitle: editData.customerName?.includes('Anh') ? 'Anh' : 'Chị',
         customerName: editData.customerName || '',
@@ -104,8 +139,8 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
         customer: editData.customer?.id || '',
         title: editData.title || '',
         description: editData.description || '',
-        startDate: editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : '',
-        endDate: editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : '',
+        startDate: startDateLocal,
+        endDate: endDateLocal,
         status: editData.status || 'RECEIVED',
         notes: editData.notes || '',
         crmReferenceCode: editData.crmReferenceCode || '',
@@ -118,6 +153,8 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
       };
       
       console.log('Setting form data:', newFormData);
+      console.log('Converted startDate:', startDateLocal);
+      console.log('Converted endDate:', endDateLocal);
       setFormData(newFormData);
       
       // Set customer search term
@@ -136,7 +173,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
         customer: '',
         title: '',
         description: '',
-        startDate: new Date().toISOString().slice(0, 16),
+        startDate: '', // Empty - user must select time
         endDate: '',
         status: 'RECEIVED',
         notes: '',
@@ -160,7 +197,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     customer: '',
     title: '',
     description: '',
-    startDate: new Date().toISOString().slice(0, 16),
+    startDate: '', // Empty by default - user must select time
     endDate: '',
     status: 'RECEIVED',
     notes: '',
@@ -333,17 +370,55 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
     }
   }, [showCustomerDropdown]);
 
-  // Fetch data when modal opens
+  // Sync preloaded data when props change (optimized)
   useEffect(() => {
-    if (isOpen) {
-      fetchCurrentEmployee();
-      fetchEmployees();
-      fetchPartners();
-      fetchDeploymentTypes();
-      // Refresh evaluation configs to get latest options
-      fetchConfigs();
+    if (preloadedEmployees && preloadedEmployees.length > 0) {
+      setEmployees(preloadedEmployees);
     }
-  }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchDeploymentTypes]);
+  }, [preloadedEmployees]);
+
+  useEffect(() => {
+    if (preloadedPartners && preloadedPartners.length > 0) {
+      setPartners(preloadedPartners);
+    }
+  }, [preloadedPartners]);
+
+  useEffect(() => {
+    if (preloadedDeploymentTypes && preloadedDeploymentTypes.length > 0) {
+      setDeploymentTypes(preloadedDeploymentTypes);
+    }
+  }, [preloadedDeploymentTypes]);
+
+  // Fetch data when modal opens (only if not preloaded) - optimized
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const loadData = async () => {
+      // Always fetch current employee
+      fetchCurrentEmployee();
+      
+      // Only fetch if not pre-loaded
+      const promises = [];
+      if (!preloadedEmployees || employees.length === 0) {
+        promises.push(fetchEmployees());
+      }
+      if (!preloadedPartners || partners.length === 0) {
+        promises.push(fetchPartners());
+      }
+      if (!preloadedDeploymentTypes || deploymentTypes.length === 0) {
+        promises.push(fetchDeploymentTypes());
+      }
+      
+      // Always refresh evaluation configs to get latest options
+      promises.push(fetchConfigs());
+
+      // Load all in parallel
+      await Promise.all(promises);
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -423,13 +498,29 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess, edit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate end date
-    if (formData.endDate) {
+    // Validate startDate is required
+    if (!formData.startDate) {
+      toast.error('Vui lòng chọn thời gian bắt đầu!', {
+        duration: 3000,
+        position: 'top-right',
+      });
+      return;
+    }
+    
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (formData.startDate && formData.endDate) {
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
       
+      console.log('=== Date Validation (Deployment Modal) ===');
+      console.log('Start Date Input:', formData.startDate);
+      console.log('End Date Input:', formData.endDate);
+      console.log('Start Date Object:', startDate);
+      console.log('End Date Object:', endDate);
+      console.log('End <= Start?', endDate <= startDate);
+      
       if (endDate <= startDate) {
-        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+        toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!', {
           duration: 3000,
           position: 'top-right',
         });

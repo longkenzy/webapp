@@ -16,6 +16,7 @@ interface Employee {
   fullName: string;
   position: string;
   department: string;
+  companyEmail: string;
 }
 
 interface Incident {
@@ -83,6 +84,12 @@ export default function AdminIncidentWorkPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'config' | 'cases'>('cases');
+  
+  // Pre-loaded data for modals (to avoid re-fetching)
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
+  const [customersLoaded, setCustomersLoaded] = useState(false);
   
   // Filter states
   const [selectedHandler, setSelectedHandler] = useState<string>('');
@@ -157,6 +164,42 @@ export default function AdminIncidentWorkPage() {
     if (score === undefined || score === null) return 'Chưa đánh giá';
     return `${score} điểm`;
   };
+
+  // Pre-load employees (cached, only load once)
+  const fetchEmployees = useCallback(async () => {
+    if (employeesLoaded) return; // Skip if already loaded
+    
+    try {
+      const response = await fetch('/api/employees/list', {
+        headers: { 'Cache-Control': 'max-age=600' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data || []);
+        setEmployeesLoaded(true);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  }, [employeesLoaded]);
+
+  // Pre-load customers (cached, only load once)
+  const fetchCustomers = useCallback(async () => {
+    if (customersLoaded) return; // Skip if already loaded
+    
+    try {
+      const response = await fetch('/api/partners/list', {
+        headers: { 'Cache-Control': 'max-age=600' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCustomers(data || []);
+        setCustomersLoaded(true);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  }, [customersLoaded]);
 
   // Fetch incidents from API with caching and retry
   const fetchIncidents = useCallback(async (retryCount = 0) => {
@@ -602,11 +645,20 @@ export default function AdminIncidentWorkPage() {
   };
 
   // Load data on component mount
+  // Load all data in parallel on mount
   useEffect(() => {
-    fetchIncidents();
-    fetchConfigs();
-    fetchIncidentTypes();
-  }, [fetchIncidents, fetchConfigs, fetchIncidentTypes]);
+    Promise.all([
+      fetchIncidents(),
+      fetchConfigs(),
+      fetchIncidentTypes(),
+      fetchEmployees(),
+      fetchCustomers()
+    ]).then(() => {
+      console.log('✅ All data loaded');
+    }).catch(err => {
+      console.error('❌ Error loading data:', err);
+    });
+  }, [fetchIncidents, fetchConfigs, fetchIncidentTypes, fetchEmployees, fetchCustomers]);
 
   // Get status badge color
   const getStatusBadgeColor = (status: string) => {
@@ -1575,6 +1627,9 @@ export default function AdminIncidentWorkPage() {
             setEditingIncident(null);
           }}
           editingIncident={editingIncident}
+          employees={employees}
+          customers={customers}
+          incidentTypes={incidentTypes}
           onSuccess={(incident) => {
             console.log('Incident saved:', incident);
             
@@ -1599,6 +1654,9 @@ export default function AdminIncidentWorkPage() {
           onClose={handleCloseEditModal}
           onSuccess={handleEditSuccess}
           incidentData={selectedIncident}
+          employees={employees}
+          customers={customers}
+          incidentTypes={incidentTypes}
         />
 
         {/* Incident Type Modal */}

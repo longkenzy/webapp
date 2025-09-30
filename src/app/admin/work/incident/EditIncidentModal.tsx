@@ -9,6 +9,7 @@ interface Employee {
   fullName: string;
   position: string;
   department: string;
+  companyEmail: string;
 }
 
 interface Incident {
@@ -53,9 +54,21 @@ interface EditIncidentModalProps {
   onClose: () => void;
   onSuccess: (updatedIncident: Incident) => void;
   incidentData: Incident | null;
+  // Pre-loaded data to avoid re-fetching
+  employees?: Employee[];
+  customers?: any[];
+  incidentTypes?: Array<{id: string, name: string}>;
 }
 
-export default function EditIncidentModal({ isOpen, onClose, onSuccess, incidentData }: EditIncidentModalProps) {
+export default function EditIncidentModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  incidentData,
+  employees: preloadedEmployees = [],
+  customers: preloadedCustomers = [],
+  incidentTypes: preloadedIncidentTypes = []
+}: EditIncidentModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -70,15 +83,80 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
     crmReferenceCode: ''
   });
 
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [incidentTypes, setIncidentTypes] = useState<Array<{id: string, name: string}>>([]);
-  const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>(preloadedEmployees);
+  const [customers, setCustomers] = useState<any[]>(preloadedCustomers);
+  const [incidentTypes, setIncidentTypes] = useState<Array<{id: string, name: string}>>(preloadedIncidentTypes);
   const [saving, setSaving] = useState(false);
 
-  // Load data when modal opens
+  // Sync preloaded data when it changes
   useEffect(() => {
-    if (isOpen && incidentData) {
+    if (preloadedEmployees.length > 0) setEmployees(preloadedEmployees);
+  }, [preloadedEmployees]);
+
+  useEffect(() => {
+    if (preloadedCustomers.length > 0) setCustomers(preloadedCustomers);
+  }, [preloadedCustomers]);
+
+  useEffect(() => {
+    if (preloadedIncidentTypes.length > 0) setIncidentTypes(preloadedIncidentTypes);
+  }, [preloadedIncidentTypes]);
+
+  // Load form data only if preloaded data is not available (fallback)
+  useEffect(() => {
+    if (isOpen && (employees.length === 0 || customers.length === 0 || incidentTypes.length === 0)) {
+      loadFormData();
+    }
+  }, [isOpen]);
+
+  // Body scroll lock when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const scrollY = window.scrollY;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
+
+  // Initialize form data AFTER employees are loaded
+  useEffect(() => {
+    if (isOpen && incidentData && employees.length > 0) {
+      console.log('=== Initializing Incident Form Data ===');
+      console.log('Incident Handler ID:', incidentData.handler?.id);
+      console.log('Incident Handler Name:', incidentData.handler?.fullName);
+      
+      // Convert datetime to local timezone for datetime-local input
+      let startDateLocal = '';
+      if (incidentData.startDate) {
+        const startDateObj = new Date(incidentData.startDate);
+        const year = startDateObj.getFullYear();
+        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(startDateObj.getDate()).padStart(2, '0');
+        const hours = String(startDateObj.getHours()).padStart(2, '0');
+        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
+        startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      let endDateLocal = '';
+      if (incidentData.endDate) {
+        const endDateObj = new Date(incidentData.endDate);
+        const year = endDateObj.getFullYear();
+        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(endDateObj.getDate()).padStart(2, '0');
+        const hours = String(endDateObj.getHours()).padStart(2, '0');
+        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+        endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
       setFormData({
         title: incidentData.title || '',
         description: incidentData.description || '',
@@ -87,44 +165,55 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
         customerId: incidentData.customer?.id || '',
         handlerId: incidentData.handler?.id || '',
         status: incidentData.status || '',
-        startDate: incidentData.startDate ? new Date(incidentData.startDate).toISOString().split('T')[0] : '',
-        endDate: incidentData.endDate ? new Date(incidentData.endDate).toISOString().split('T')[0] : '',
+        startDate: startDateLocal,
+        endDate: endDateLocal,
         notes: incidentData.notes || '',
         crmReferenceCode: incidentData.crmReferenceCode || ''
       });
       
-      loadFormData();
+      console.log('✅ Form Data Set - Handler:', incidentData.handler?.id);
+      console.log('Converted startDate:', startDateLocal);
+      console.log('Converted endDate:', endDateLocal);
     }
-  }, [isOpen, incidentData]);
+  }, [isOpen, incidentData, employees]);
 
+  // Load form data only as fallback (if preloaded data is not available)
   const loadFormData = async () => {
-    setLoading(true);
     try {
-      // Load employees
-      const employeesResponse = await fetch('/api/employees/list');
-      if (employeesResponse.ok) {
-        const employeesData = await employeesResponse.json();
-        setEmployees(employeesData || []);
+      // Only fetch if not already provided via props
+      const promises = [];
+      
+      if (employees.length === 0) {
+        promises.push(
+          fetch('/api/employees/list', { headers: { 'Cache-Control': 'max-age=600' } })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setEmployees(data || []))
+        );
       }
 
-      // Load customers
-      const customersResponse = await fetch('/api/partners/list');
-      if (customersResponse.ok) {
-        const customersData = await customersResponse.json();
-        setCustomers(customersData || []);
+      if (customers.length === 0) {
+        promises.push(
+          fetch('/api/partners/list', { headers: { 'Cache-Control': 'max-age=600' } })
+            .then(res => res.ok ? res.json() : [])
+            .then(data => setCustomers(data || []))
+        );
       }
 
-      // Load incident types
-      const incidentTypesResponse = await fetch('/api/incident-types');
-      if (incidentTypesResponse.ok) {
-        const incidentTypesData = await incidentTypesResponse.json();
-        setIncidentTypes(incidentTypesData.data || []);
+      if (incidentTypes.length === 0) {
+        promises.push(
+          fetch('/api/incident-types', { headers: { 'Cache-Control': 'max-age=600' } })
+            .then(res => res.ok ? res.json() : { data: [] })
+            .then(data => setIncidentTypes(data.data || []))
+        );
+      }
+
+      // Load all in parallel
+      if (promises.length > 0) {
+        await Promise.all(promises);
       }
     } catch (error) {
       console.error('Error loading form data:', error);
       toast.error('Lỗi khi tải dữ liệu form');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -133,8 +222,33 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
     
     if (!incidentData) return;
 
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (formData.startDate && formData.endDate) {
+      const startDate = new Date(formData.startDate);
+      const endDate = new Date(formData.endDate);
+      
+      console.log('=== Date Validation (Admin Edit Incident) ===');
+      console.log('Start Date Input:', formData.startDate);
+      console.log('End Date Input:', formData.endDate);
+      console.log('Start Date Object:', startDate);
+      console.log('End Date Object:', endDate);
+      console.log('End <= Start?', endDate <= startDate);
+      
+      if (endDate <= startDate) {
+        toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!', {
+          duration: 3000,
+          position: 'top-right',
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     try {
+      // Convert datetime-local to ISO string
+      const startDateObj = formData.startDate ? new Date(formData.startDate) : null;
+      const endDateObj = formData.endDate ? new Date(formData.endDate) : null;
+
       const response = await fetch(`/api/incidents/${incidentData.id}`, {
         method: 'PUT',
         headers: {
@@ -148,8 +262,8 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
           customerId: formData.customerId || null,
           handlerId: formData.handlerId,
           status: formData.status,
-          startDate: formData.startDate,
-          endDate: formData.endDate || null,
+          startDate: startDateObj ? startDateObj.toISOString() : null,
+          endDate: endDateObj ? endDateObj.toISOString() : null,
           notes: formData.notes,
           crmReferenceCode: formData.crmReferenceCode
         }),
@@ -215,13 +329,7 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-red-600" />
-              <span className="ml-2 text-gray-600">Đang tải dữ liệu...</span>
-            </div>
-          ) : (
-            <div className="space-y-6">
+          <div className="space-y-6">
               {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -359,10 +467,10 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ngày bắt đầu *
+                    Thời gian bắt đầu *
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     name="startDate"
                     value={formData.startDate}
                     onChange={handleInputChange}
@@ -373,10 +481,10 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ngày kết thúc
+                    Thời gian kết thúc
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     name="endDate"
                     value={formData.endDate}
                     onChange={handleInputChange}
@@ -415,7 +523,6 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
                 />
               </div>
             </div>
-          )}
         </form>
 
         {/* Footer */}
@@ -429,7 +536,7 @@ export default function EditIncidentModal({ isOpen, onClose, onSuccess, incident
           </button>
           <button
             onClick={handleSubmit}
-            disabled={saving || loading}
+            disabled={saving}
             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
           >
             {saving ? (

@@ -15,6 +15,7 @@ interface Employee {
   fullName: string;
   position: string;
   department: string;
+  companyEmail: string;
 }
 
 
@@ -123,11 +124,11 @@ export default function AdminMaintenanceWorkPage() {
   const [showMaintenanceTypeModal, setShowMaintenanceTypeModal] = useState(false);
 
 
-  // Employees list for filters
+  // Pre-loaded data for filters and modals
   const [employees, setEmployees] = useState<Employee[]>([]);
-  
-  // Partners list for customer filter
   const [partners, setPartners] = useState<any[]>([]);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
+  const [partnersLoaded, setPartnersLoaded] = useState(false);
 
   // Fetch maintenance cases
   const fetchMaintenanceCases = useCallback(async (forceRefresh = false) => {
@@ -163,49 +164,41 @@ export default function AdminMaintenanceWorkPage() {
     }
   }, []);
 
-  // Fetch employees
+  // Pre-load employees (cached, only load once)
   const fetchEmployees = useCallback(async () => {
+    if (employeesLoaded) return; // Skip if already loaded
+    
     try {
       const response = await fetch('/api/employees/list', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=300',
-        },
+        headers: { 'Cache-Control': 'max-age=600' }
       });
       if (response.ok) {
         const data = await response.json();
-        setEmployees(data);
-      } else {
-        console.error('Failed to fetch employees:', response.status, response.statusText);
-        setEmployees([]);
+        setEmployees(data || []);
+        setEmployeesLoaded(true);
       }
     } catch (error) {
       console.error('Error fetching employees:', error);
-      setEmployees([]);
     }
-  }, []);
+  }, [employeesLoaded]);
 
-  // Fetch partners
+  // Pre-load partners (cached, only load once)
   const fetchPartners = useCallback(async () => {
+    if (partnersLoaded) return; // Skip if already loaded
+    
     try {
       const response = await fetch('/api/partners/list', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'max-age=300',
-        },
+        headers: { 'Cache-Control': 'max-age=600' }
       });
       if (response.ok) {
         const data = await response.json();
         setPartners(data || []);
-      } else {
-        console.error('Failed to fetch partners:', response.status, response.statusText);
-        setPartners([]);
+        setPartnersLoaded(true);
       }
     } catch (error) {
       console.error('Error fetching partners:', error);
-      setPartners([]);
     }
-  }, []);
+  }, [partnersLoaded]);
 
 
   // Fetch maintenance types
@@ -650,8 +643,10 @@ export default function AdminMaintenanceWorkPage() {
       fetchPartners(),
       fetchMaintenanceTypes(),
       fetchConfigs()
-    ]).catch(error => {
-      console.error('Error fetching initial data:', error);
+    ]).then(() => {
+      console.log('✅ All maintenance data loaded');
+    }).catch(error => {
+      console.error('❌ Error fetching initial data:', error);
     });
   }, [fetchMaintenanceCases, fetchEmployees, fetchPartners, fetchMaintenanceTypes, fetchConfigs]);
 
@@ -1647,6 +1642,9 @@ export default function AdminMaintenanceWorkPage() {
             setEditingMaintenanceCase(null);
           }}
           editingMaintenance={editingMaintenanceCase}
+          employees={employees}
+          customers={partners}
+          maintenanceTypes={maintenanceTypes}
           onSuccess={(maintenance: any) => {
             console.log('Maintenance saved:', maintenance);
             

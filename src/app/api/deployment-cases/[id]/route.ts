@@ -92,17 +92,29 @@ export async function PUT(
     const { id  } = await params;
     const body = await request.json();
     
+    console.log('=== API PUT Deployment Case ===');
+    console.log('Body received:', body);
+    
     const {
       title,
       description,
       handlerId,
+      deploymentTypeId,
+      customerId,
+      customerName,
       caseType,
       form,
       startDate,
       endDate,
       status,
       notes,
-      crmReferenceCode, // Thêm trường Mã CRM
+      crmReferenceCode,
+      // User assessment fields
+      userDifficultyLevel,
+      userEstimatedTime,
+      userImpactLevel,
+      userUrgencyLevel,
+      userFormScore,
       // Admin assessment fields
       adminDifficultyLevel,
       adminEstimatedTime,
@@ -121,37 +133,31 @@ export async function PUT(
       return NextResponse.json({ error: "Deployment case not found" }, { status: 404 });
     }
 
-    // Validate end date
+    // Validate end date (only if both dates exist) - allow any past/future dates
     if (endDate && endDate !== null && endDate !== '') {
-      const startDateObj = new Date(startDate || currentCase.startDate);
+      const startDateToCheck = startDate ? new Date(startDate) : new Date(currentCase.startDate);
       const endDateObj = new Date(endDate);
       
-      if (endDateObj <= startDateObj) {
+      console.log("=== API Deployment Date Validation (Update) ===");
+      console.log("Start Date:", startDateToCheck);
+      console.log("End Date:", endDateObj);
+      console.log("End <= Start?", endDateObj <= startDateToCheck);
+      
+      if (endDateObj <= startDateToCheck) {
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
       }
     }
 
-    // Validate handler exists if provided
-    if (handlerId) {
-      const handler = await db.employee.findUnique({
-        where: { id: handlerId }
-      });
-
-      if (!handler) {
-        return NextResponse.json(
-          { error: "Handler not found" },
-          { status: 400 }
-        );
-      }
-    }
-
-    const updateData: any = {};
+    // Build update data dynamically
+    const updateData: any = {
+      updatedAt: new Date()
+    };
     
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (handlerId !== undefined) updateData.handlerId = handlerId;
+    if (customerName !== undefined) updateData.customerName = customerName;
     if (caseType !== undefined) updateData.caseType = caseType;
     if (form !== undefined) updateData.form = form;
     if (startDate !== undefined) updateData.startDate = new Date(startDate);
@@ -166,6 +172,30 @@ export async function PUT(
     if (notes !== undefined) updateData.notes = notes;
     if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
     
+    // Handle Prisma relations using connect/disconnect syntax
+    if (handlerId !== undefined) {
+      updateData.handler = { connect: { id: handlerId } };
+    }
+    
+    if (deploymentTypeId !== undefined) {
+      updateData.deploymentType = { connect: { id: deploymentTypeId } };
+    }
+    
+    if (customerId !== undefined) {
+      if (customerId) {
+        updateData.customer = { connect: { id: customerId } };
+      } else {
+        updateData.customer = { disconnect: true };
+      }
+    }
+    
+    // User assessment fields
+    if (userDifficultyLevel !== undefined) updateData.userDifficultyLevel = userDifficultyLevel ? parseInt(userDifficultyLevel) : null;
+    if (userEstimatedTime !== undefined) updateData.userEstimatedTime = userEstimatedTime ? parseInt(userEstimatedTime) : null;
+    if (userImpactLevel !== undefined) updateData.userImpactLevel = userImpactLevel ? parseInt(userImpactLevel) : null;
+    if (userUrgencyLevel !== undefined) updateData.userUrgencyLevel = userUrgencyLevel ? parseInt(userUrgencyLevel) : null;
+    if (userFormScore !== undefined) updateData.userFormScore = userFormScore ? parseInt(userFormScore) : null;
+    
     // Admin assessment fields
     if (adminDifficultyLevel !== undefined) updateData.adminDifficultyLevel = adminDifficultyLevel ? parseInt(adminDifficultyLevel) : null;
     if (adminEstimatedTime !== undefined) updateData.adminEstimatedTime = adminEstimatedTime ? parseInt(adminEstimatedTime) : null;
@@ -177,9 +207,8 @@ export async function PUT(
     if (Object.keys(updateData).some(key => key.startsWith('admin'))) {
       updateData.adminAssessmentDate = new Date();
     }
-
-    // Always update the updatedAt timestamp
-    updateData.updatedAt = new Date();
+    
+    console.log('Update data to be sent to Prisma:', updateData);
 
     const deploymentCase = await db.deploymentCase.update({
       where: { id },

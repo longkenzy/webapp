@@ -21,13 +21,25 @@ interface CreateIncidentModalProps {
   onClose: () => void;
   onSuccess?: (newIncident: any) => void;
   editingIncident?: any; // Incident data for editing
+  // Pre-loaded data to avoid re-fetching
+  employees?: Employee[];
+  customers?: any[];
+  incidentTypes?: any[];
 }
 
-export default function CreateIncidentModal({ isOpen, onClose, onSuccess, editingIncident }: CreateIncidentModalProps) {
+export default function CreateIncidentModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  editingIncident,
+  employees: preloadedEmployees = [],
+  customers: preloadedCustomers = [],
+  incidentTypes: preloadedIncidentTypes = []
+}: CreateIncidentModalProps) {
   const { data: session } = useSession();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [partners, setPartners] = useState<any[]>([]);
-  const [incidentTypes, setIncidentTypes] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>(preloadedEmployees);
+  const [partners, setPartners] = useState<any[]>(preloadedCustomers);
+  const [incidentTypes, setIncidentTypes] = useState<any[]>(preloadedIncidentTypes);
   const [customerSearch, setCustomerSearch] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -203,16 +215,31 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess, editin
   }, [showCustomerDropdown]);
 
   // Fetch data when modal opens
+  // Sync preloaded data
+  useEffect(() => {
+    if (preloadedEmployees.length > 0) setEmployees(preloadedEmployees);
+  }, [preloadedEmployees]);
+
+  useEffect(() => {
+    if (preloadedCustomers.length > 0) setPartners(preloadedCustomers);
+  }, [preloadedCustomers]);
+
+  useEffect(() => {
+    if (preloadedIncidentTypes.length > 0) setIncidentTypes(preloadedIncidentTypes);
+  }, [preloadedIncidentTypes]);
+
+  // Only fetch if data not preloaded (fallback)
   useEffect(() => {
     if (isOpen) {
       fetchCurrentEmployee();
-      fetchEmployees();
-      fetchPartners();
-      fetchIncidentTypes();
-      // Refresh evaluation configs to get latest options
       fetchConfigs();
+      
+      // Only fetch if not already provided
+      if (employees.length === 0) fetchEmployees();
+      if (partners.length === 0) fetchPartners();
+      if (incidentTypes.length === 0) fetchIncidentTypes();
     }
-  }, [isOpen, fetchCurrentEmployee, fetchEmployees, fetchPartners, fetchIncidentTypes, fetchConfigs]);
+  }, [isOpen, fetchCurrentEmployee, fetchConfigs]);
 
   // Populate form when editing
   useEffect(() => {
@@ -237,6 +264,29 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess, editin
       console.log('Editing incident:', editingIncident);
       console.log('Resolved incidentTypeId:', incidentTypeId);
 
+      // Convert datetime to local timezone for datetime-local input
+      let startDateLocal = '';
+      if (editingIncident.startDate) {
+        const startDateObj = new Date(editingIncident.startDate);
+        const year = startDateObj.getFullYear();
+        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(startDateObj.getDate()).padStart(2, '0');
+        const hours = String(startDateObj.getHours()).padStart(2, '0');
+        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
+        startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      let endDateLocal = '';
+      if (editingIncident.endDate) {
+        const endDateObj = new Date(editingIncident.endDate);
+        const year = endDateObj.getFullYear();
+        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(endDateObj.getDate()).padStart(2, '0');
+        const hours = String(endDateObj.getHours()).padStart(2, '0');
+        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+        endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
       setFormData({
         customerTitle,
         customerName: title,
@@ -245,8 +295,8 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess, editin
         customer: editingIncident.customer?.id || '',
         title: editingIncident.title || '',
         description: editingIncident.description || '',
-        startDate: editingIncident.startDate ? new Date(editingIncident.startDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-        endDate: editingIncident.endDate ? new Date(editingIncident.endDate).toISOString().slice(0, 16) : '',
+        startDate: startDateLocal,
+        endDate: endDateLocal,
         status: editingIncident.status || 'RECEIVED',
         notes: editingIncident.notes || '',
         crmReferenceCode: editingIncident.crmReferenceCode || '',
@@ -257,6 +307,9 @@ export default function CreateIncidentModal({ isOpen, onClose, onSuccess, editin
         form: 'Onsite', // Default
         formScore: editingIncident.userFormScore?.toString() || '2'
       });
+      
+      console.log('Converted startDate:', startDateLocal);
+      console.log('Converted endDate:', endDateLocal);
 
       // Set customer search if customer exists
       if (editingIncident.customer) {

@@ -345,7 +345,7 @@ export default function CasesPieChart() {
             {/* Legend */}
             <div className="space-y-2">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">Chi tiết</h4>
-              {stats.caseTypes
+              {[...stats.caseTypes]
                 .sort((a, b) => b.value - a.value)
                 .map((item, index) => {
                   const Icon = item.icon;

@@ -208,6 +208,29 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
   useEffect(() => {
     if (isOpen && editingCase) {
       // Populate form with editing case data
+      // Convert datetime to local timezone for datetime-local input
+      let startDateLocal = '';
+      if (editingCase.startDate) {
+        const startDateObj = new Date(editingCase.startDate);
+        const year = startDateObj.getFullYear();
+        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(startDateObj.getDate()).padStart(2, '0');
+        const hours = String(startDateObj.getHours()).padStart(2, '0');
+        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
+        startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      let endDateLocal = '';
+      if (editingCase.endDate) {
+        const endDateObj = new Date(editingCase.endDate);
+        const year = endDateObj.getFullYear();
+        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(endDateObj.getDate()).padStart(2, '0');
+        const hours = String(endDateObj.getHours()).padStart(2, '0');
+        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+        endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
       setFormData({
         requester: editingCase.requester?.id || '',
         position: editingCase.requester?.position || '',
@@ -215,8 +238,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         caseType: editingCase.caseType || '',
         title: editingCase.title || '',
         description: editingCase.description || '',
-        startDate: editingCase.startDate ? new Date(editingCase.startDate).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
-        endDate: editingCase.endDate ? new Date(editingCase.endDate).toISOString().slice(0, 16) : '',
+        startDate: startDateLocal,
+        endDate: endDateLocal,
         status: editingCase.status || 'RECEIVED',
         notes: editingCase.notes || '',
         difficultyLevel: editingCase.userDifficultyLevel?.toString() || '',
@@ -228,15 +251,18 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
       });
       
       console.log('Editing internal case:', editingCase);
+      console.log('Converted startDate:', startDateLocal);
+      console.log('Converted endDate:', endDateLocal);
     } else if (isOpen && !editingCase) {
       // Reset form for new case
       resetForm();
     }
   }, [isOpen, editingCase, resetForm]);
 
-  // Auto-fill handler with current user when employees are loaded
+  // Auto-fill handler with current user when employees are loaded (ONLY for CREATE mode, NOT for EDIT mode)
   useEffect(() => {
-    if (employees.length > 0 && session?.user) {
+    // CRITICAL: Only auto-select handler when creating NEW case, NOT when editing
+    if (employees.length > 0 && session?.user && !editingCase) {
       console.log('Session user:', session.user);
       console.log('Available employees:', employees.map(emp => ({ id: emp.id, fullName: emp.fullName, companyEmail: emp.companyEmail })));
       
@@ -262,7 +288,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
       }
       
       if (currentUser) {
-        console.log('Auto-selected handler:', currentUser.fullName);
+        console.log('Auto-selected handler (CREATE mode only):', currentUser.fullName);
         setFormData(prev => ({
           ...prev,
           handler: currentUser.id
@@ -271,10 +297,9 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         console.log('Could not find current user in employees list');
         console.log('Session user email:', session.user.email);
         console.log('Session user name:', session.user.name);
-        console.log('Session user email:', session.user.email);
       }
     }
-  }, [employees, session?.user]);
+  }, [employees, session?.user, editingCase]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {

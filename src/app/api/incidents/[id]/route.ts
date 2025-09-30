@@ -25,8 +25,16 @@ export async function PUT(
     const {
       endDate,
       status,
-      notes, // Thêm trường Ghi chú
-      crmReferenceCode, // Thêm trường Mã CRM
+      notes,
+      crmReferenceCode,
+      // Admin can also update these fields
+      title,
+      description,
+      incidentType,
+      customerName,
+      customerId,
+      handlerId,
+      startDate,
       // Admin assessment fields
       adminDifficultyLevel,
       adminEstimatedTime,
@@ -48,13 +56,18 @@ export async function PUT(
       );
     }
 
-    // Validate end date
-    if (endDate) {
-      const startDate = new Date(existingIncident.startDate);
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (endDate && (startDate || existingIncident.startDate)) {
+      const startDateToCheck = startDate ? new Date(startDate) : new Date(existingIncident.startDate);
       const endDateObj = new Date(endDate);
       
-      if (endDateObj <= startDate) {
-        console.log("Invalid end date:", { startDate: existingIncident.startDate, endDate });
+      console.log("=== API Incident Date Validation ===");
+      console.log("Start Date to check:", startDateToCheck);
+      console.log("End Date:", endDateObj);
+      console.log("End <= Start?", endDateObj <= startDateToCheck);
+      
+      if (endDateObj <= startDateToCheck) {
+        console.log("Invalid end date:", { startDate: startDateToCheck, endDate: endDateObj });
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
@@ -62,19 +75,29 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: any = {};
+    const updateData: any = {
+      updatedAt: new Date()
+    };
     
-    if (endDate !== undefined) {
-      updateData.endDate = endDate ? new Date(endDate) : null;
-    }
-    if (status !== undefined) {
-      updateData.status = status;
-    }
-    if (notes !== undefined) {
-      updateData.notes = notes; // Thêm Ghi chú
-    }
-    if (crmReferenceCode !== undefined) {
-      updateData.crmReferenceCode = crmReferenceCode; // Thêm Mã CRM
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (status !== undefined) updateData.status = status;
+    if (notes !== undefined) updateData.notes = notes;
+    if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (customerName !== undefined) updateData.customerName = customerName;
+    if (customerId !== undefined) updateData.customerId = customerId;
+    if (handlerId !== undefined) updateData.handlerId = handlerId;
+    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    
+    // Handle incidentType - need to find incidentTypeId by name
+    if (incidentType !== undefined && incidentType) {
+      const incidentTypeRecord = await db.incidentType.findFirst({
+        where: { name: incidentType }
+      });
+      if (incidentTypeRecord) {
+        updateData.incidentTypeId = incidentTypeRecord.id;
+      }
     }
 
     // Admin assessment fields

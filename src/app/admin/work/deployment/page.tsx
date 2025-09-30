@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from 'react';
 import { Plus, Settings, Rocket, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
@@ -8,7 +8,9 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
-import CreateDeploymentModal from './CreateDeploymentModal';
+
+// Lazy load modal for better initial page load
+const CreateDeploymentModal = lazy(() => import('./CreateDeploymentModal'));
 
 interface Employee {
   id: string;
@@ -87,6 +89,7 @@ export default function AdminDeploymentWorkPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'config' | 'cases'>('cases');
   
   // Filter states
@@ -120,6 +123,12 @@ export default function AdminDeploymentWorkPage() {
   const [isAddingNewRow, setIsAddingNewRow] = useState(false);
   const [newDeploymentTypeName, setNewDeploymentTypeName] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Pre-loaded data for modals
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [partners, setPartners] = useState<any[]>([]);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
+  const [partnersLoaded, setPartnersLoaded] = useState(false);
 
   // Helper function to check if deployment is evaluated by admin
   const isDeploymentEvaluatedByAdmin = (deployment: Deployment) => {
@@ -299,15 +308,16 @@ export default function AdminDeploymentWorkPage() {
   }, []);
 
   // Filter deployments (memoized for performance)
+  // Use debounced search term for filtering (performance optimization)
   const filteredWarranties = useMemo(() => deployments.filter(deployment => {
-    const matchesSearch = !searchTerm || 
-      deployment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      deployment.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      deployment.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      deployment.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (deployment.customer?.fullCompanyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (deployment.customer?.shortName.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSearch = !debouncedSearchTerm || 
+      deployment.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      deployment.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      deployment.customerName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      deployment.handler.fullName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      (typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType?.name || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      (deployment.customer?.fullCompanyName.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) ||
+      (deployment.customer?.shortName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()));
 
     const matchesHandler = !selectedHandler || deployment.handler.id === selectedHandler;
     const matchesStatus = !selectedStatus || deployment.status === selectedStatus;
@@ -320,7 +330,7 @@ export default function AdminDeploymentWorkPage() {
 
     return matchesSearch && matchesHandler && matchesStatus && matchesDeploymentType && 
            matchesCustomer && matchesDateFrom && matchesDateTo;
-  }), [deployments, searchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo]);
+  }), [deployments, debouncedSearchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo]);
 
   // Get unique values for filters (memoized for performance)
   const uniqueHandlers = useMemo(() => 
@@ -624,12 +634,69 @@ export default function AdminDeploymentWorkPage() {
     setDeploymentTypeForm({ name: '', isActive: true });
   };
 
-  // Load data on component mount
+  // Fetch employees (with caching)
+  const fetchEmployees = useCallback(async () => {
+    if (employeesLoaded) return; // Don't re-fetch if already loaded
+    
+    try {
+      const response = await fetch('/api/employees/list', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=600', // Cache for 10 minutes
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data);
+        setEmployeesLoaded(true);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  }, [employeesLoaded]);
+
+  // Fetch partners (with caching)
+  const fetchPartners = useCallback(async () => {
+    if (partnersLoaded) return; // Don't re-fetch if already loaded
+    
+    try {
+      const response = await fetch('/api/partners', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'max-age=600', // Cache for 10 minutes
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPartners(data.data || []);
+        setPartnersLoaded(true);
+      }
+    } catch (error) {
+      console.error('Error fetching partners:', error);
+    }
+  }, [partnersLoaded]);
+
+  // Debounce search term (300ms delay)
   useEffect(() => {
-    fetchDeployments();
-    fetchConfigs();
-    fetchDeploymentTypes();
-  }, [fetchDeployments, fetchConfigs, fetchDeploymentTypes]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Load all data on component mount in parallel
+  useEffect(() => {
+    Promise.all([
+      fetchDeployments(),
+      fetchConfigs(),
+      fetchDeploymentTypes(),
+      fetchEmployees(),
+      fetchPartners()
+    ]).then(() => {
+      console.log('✅ All deployment data loaded');
+    });
+  }, [fetchDeployments, fetchConfigs, fetchDeploymentTypes, fetchEmployees, fetchPartners]);
 
   // Get status badge color
   const getStatusBadgeColor = (status: string) => {
@@ -1685,16 +1752,21 @@ export default function AdminDeploymentWorkPage() {
 
     </div>
     
-    {/* Create/Edit Case Modal */}
-    <CreateDeploymentModal
-      isOpen={showCreateModal}
-      onClose={() => {
-        setShowCreateModal(false);
-        setEditingDeployment(null);
-      }}
-      onSuccess={handleCreateSuccess}
-      editData={editingDeployment}
-    />
+    {/* Create/Edit Case Modal - Lazy loaded for better performance */}
+    <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>}>
+      <CreateDeploymentModal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setEditingDeployment(null);
+        }}
+        onSuccess={handleCreateSuccess}
+        editData={editingDeployment}
+        employees={employees}
+        partners={partners}
+        deploymentTypes={deploymentTypes}
+      />
+    </Suspense>
     </>
   );
 }

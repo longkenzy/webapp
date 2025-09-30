@@ -414,12 +414,12 @@ export default function UserDashboardPage() {
         });
       }
 
-      // Sort by start date (newest first)
-      unifiedCases.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+      // Sort by start date (newest first) - create a copy before sorting to avoid read-only error
+      const sortedCases = [...unifiedCases].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
       
       // Extract unique customers for search dropdown
       const customerMap = new Map<string, number>();
-      unifiedCases.forEach(case_ => {
+      sortedCases.forEach(case_ => {
         if (case_.type !== 'internal' && case_.customerName && case_.customerName !== 'Khách hàng' && case_.customerName !== 'Nhà cung cấp') {
           const customerName = case_.customerName;
           customerMap.set(customerName, (customerMap.get(customerName) || 0) + 1);
@@ -431,7 +431,7 @@ export default function UserDashboardPage() {
         .sort((a, b) => b.count - a.count); // Sort by frequency
       
       setUniqueCustomers(uniqueCustomersList);
-      setCases(unifiedCases);
+      setCases(sortedCases);
     } catch (err) {
       console.error('Error fetching cases:', err);
       setError('Không thể tải danh sách cases. Vui lòng thử lại sau.');

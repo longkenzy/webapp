@@ -49,13 +49,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate end date
-    if (endDate) {
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (startDate && endDate) {
       const startDateObj = new Date(startDate);
       const endDateObj = new Date(endDate);
       
+      console.log("=== API Deployment Date Validation (Create) ===");
+      console.log("Start Date:", startDateObj);
+      console.log("End Date:", endDateObj);
+      console.log("End <= Start?", endDateObj <= startDateObj);
+      
       if (endDateObj <= startDateObj) {
-        console.log("Invalid end date:", { startDate, endDate });
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
@@ -173,43 +177,51 @@ export async function POST(request: NextRequest) {
 
     console.log("Deployment case created successfully:", deploymentCase);
 
-    // Create notifications for admin users
-    try {
-      const adminUsers = await getAdminUsers();
-      const reporterName = reporter.fullName;
+    // Send notifications in parallel (non-blocking)
+    Promise.all([
+      // Create notifications for admin users
+      (async () => {
+        try {
+          const adminUsers = await getAdminUsers();
+          const reporterName = reporter.fullName;
+          
+          // Create all notifications in parallel
+          await Promise.all(
+            adminUsers.map(admin =>
+              createCaseCreatedNotification(
+                'deployment',
+                deploymentCase.id,
+                deploymentCase.title,
+                reporterName,
+                admin.id
+              )
+            )
+          );
+          console.log(`Notifications sent to ${adminUsers.length} admin users`);
+        } catch (notificationError) {
+          console.error('Error creating notifications:', notificationError);
+        }
+      })(),
       
-      for (const admin of adminUsers) {
-        await createCaseCreatedNotification(
-          'deployment',
-          deploymentCase.id,
-          deploymentCase.title,
-          reporterName,
-          admin.id
-        );
-      }
-      console.log(`Notifications sent to ${adminUsers.length} admin users`);
-    } catch (notificationError) {
-      console.error('Error creating notifications:', notificationError);
-      // Don't fail the case creation if notifications fail
-    }
-
-    // Send Telegram notification to admin
-    try {
-      await sendCaseCreatedTelegram({
-        caseId: deploymentCase.id,
-        caseType: 'Case triển khai',
-        caseTitle: deploymentCase.title,
-        caseDescription: deploymentCase.description,
-        requesterName: reporter.fullName,
-        requesterEmail: reporter.companyEmail,
-        handlerName: deploymentCase.handler.fullName,
-        createdAt: new Date().toLocaleString('vi-VN')
-      });
-      console.log('✅ Telegram notification sent successfully');
-    } catch (telegramError) {
-      console.error('❌ Error sending Telegram notification:', telegramError);
-      // Don't fail the case creation if Telegram fails
-    }
+      // Send Telegram notification to admin
+      (async () => {
+        try {
+          await sendCaseCreatedTelegram({
+            caseId: deploymentCase.id,
+            caseType: 'Case triển khai',
+            caseTitle: deploymentCase.title,
+            caseDescription: deploymentCase.description,
+            requesterName: reporter.fullName,
+            requesterEmail: reporter.companyEmail,
+            handlerName: deploymentCase.handler.fullName,
+            createdAt: new Date().toLocaleString('vi-VN')
+          });
+          console.log('✅ Telegram notification sent successfully');
+        } catch (telegramError) {
+          console.error('❌ Error sending Telegram notification:', telegramError);
+        }
+      })()
+    ]).catch(err => console.error('Background notification error:', err));
 
     return NextResponse.json({
       message: "Deployment case created successfully",

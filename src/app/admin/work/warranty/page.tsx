@@ -15,6 +15,7 @@ interface Employee {
   fullName: string;
   position: string;
   department: string;
+  companyEmail: string;
 }
 
 interface Warranty {
@@ -73,12 +74,18 @@ export default function AdminWarrantyWorkPage() {
   const [deletedWarranties, setDeletedWarranties] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
-  // States for incidents list
+  // States for warranties list
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'config' | 'cases'>('cases');
+  
+  // Pre-loaded data for modals
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
+  const [customersLoaded, setCustomersLoaded] = useState(false);
   
   // Filter states
   const [selectedHandler, setSelectedHandler] = useState<string>('');
@@ -153,6 +160,42 @@ export default function AdminWarrantyWorkPage() {
     if (score === undefined || score === null) return 'Chưa đánh giá';
     return `${score} điểm`;
   };
+
+  // Pre-load employees (cached, only load once)
+  const fetchEmployees = useCallback(async () => {
+    if (employeesLoaded) return;
+    
+    try {
+      const response = await fetch('/api/employees/list', {
+        headers: { 'Cache-Control': 'max-age=600' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data || []);
+        setEmployeesLoaded(true);
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  }, [employeesLoaded]);
+
+  // Pre-load customers (cached, only load once)
+  const fetchCustomers = useCallback(async () => {
+    if (customersLoaded) return;
+    
+    try {
+      const response = await fetch('/api/partners/list', {
+        headers: { 'Cache-Control': 'max-age=600' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCustomers(data || []);
+        setCustomersLoaded(true);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    }
+  }, [customersLoaded]);
 
   // Fetch warranties from API with caching and retry
   const fetchWarranties = useCallback(async (retryCount = 0) => {
@@ -602,12 +645,20 @@ export default function AdminWarrantyWorkPage() {
     setWarrantyTypeForm({ name: '', isActive: true });
   };
 
-  // Load data on component mount
+  // Load all data in parallel on mount
   useEffect(() => {
-    fetchWarranties();
-    fetchConfigs();
-    fetchWarrantyTypes();
-  }, [fetchWarranties, fetchConfigs, fetchWarrantyTypes]);
+    Promise.all([
+      fetchWarranties(),
+      fetchConfigs(),
+      fetchWarrantyTypes(),
+      fetchEmployees(),
+      fetchCustomers()
+    ]).then(() => {
+      console.log('✅ All warranty data loaded');
+    }).catch(err => {
+      console.error('❌ Error loading data:', err);
+    });
+  }, [fetchWarranties, fetchConfigs, fetchWarrantyTypes, fetchEmployees, fetchCustomers]);
 
   // Get status badge color
   const getStatusBadgeColor = (status: string) => {
@@ -1656,6 +1707,9 @@ export default function AdminWarrantyWorkPage() {
             toast.success(isEditing ? 'Case bảo hành đã được cập nhật thành công!' : 'Case bảo hành đã được tạo thành công!');
           }}
           editingWarranty={selectedWarranty}
+          employees={employees}
+          customers={customers}
+          warrantyTypes={warrantyTypes}
         />
     </div>
   );

@@ -173,7 +173,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
+        timeZone: 'Asia/Ho_Chi_Minh'
       }),
       endDate: '',
       status: 'RECEIVED', // Changed to English value

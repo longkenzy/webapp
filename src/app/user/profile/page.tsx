@@ -439,7 +439,7 @@ export default function UserProfilePage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Ngày sinh</label>
               <input
                 type="text"
-                value={new Date(profile.employee.dateOfBirth).toLocaleDateString('vi-VN')}
+                value={new Date(profile.employee.dateOfBirth).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                 disabled
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
               />
@@ -469,7 +469,7 @@ export default function UserProfilePage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Ngày bắt đầu làm việc</label>
               <input
                 type="text"
-                value={new Date(profile.employee.startDate).toLocaleDateString('vi-VN')}
+                value={new Date(profile.employee.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                 disabled
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
               />

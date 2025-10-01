@@ -810,7 +810,8 @@ export default function AdminInternalWorkPage() {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Asia/Ho_Chi_Minh'
     });
   };
 
@@ -1403,13 +1404,13 @@ export default function AdminInternalWorkPage() {
                             {dateFrom && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                                 <Calendar className="h-2.5 w-2.5 mr-1" />
-                                Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
+                                Từ: {new Date(dateFrom + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                               </span>
                             )}
                             {dateTo && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
                                 <Calendar className="h-2.5 w-2.5 mr-1" />
-                                Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
+                                Đến: {new Date(dateTo + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                               </span>
                             )}
                           </div>

@@ -1215,7 +1215,8 @@ export default function AdminWarrantyWorkPage() {
                               month: '2-digit', 
                               day: '2-digit', 
                               hour: '2-digit', 
-                              minute: '2-digit' 
+                              minute: '2-digit',
+                              timeZone: 'Asia/Ho_Chi_Minh'
                             })}</div>
                             {warranty.endDate && (
                               <div>Kết thúc: {new Date(warranty.endDate).toLocaleString('vi-VN', { 
@@ -1223,7 +1224,8 @@ export default function AdminWarrantyWorkPage() {
                                 month: '2-digit', 
                                 day: '2-digit', 
                                 hour: '2-digit', 
-                                minute: '2-digit' 
+                                minute: '2-digit',
+                                timeZone: 'Asia/Ho_Chi_Minh'
                               })}</div>
                             )}
                           </td>

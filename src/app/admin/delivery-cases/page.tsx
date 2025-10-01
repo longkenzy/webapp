@@ -330,10 +330,10 @@ export default function DeliveryCasesPage() {
           'Trạng thái': case_.status === 'RECEIVED' ? 'Tiếp nhận' : 
                        case_.status === 'IN_PROGRESS' ? 'Đang xử lý' :
                        case_.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy',
-          'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN'),
-          'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
-          'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN'),
-          'Ngày cập nhật': new Date(case_.updatedAt).toLocaleDateString('vi-VN'),
+          'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+          'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa hoàn thành',
+          'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+          'Ngày cập nhật': new Date(case_.updatedAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
           'Ghi chú': case_.notes || '',
           // User evaluation
           'User - Mức độ khó': case_.userDifficultyLevel ? 
@@ -381,7 +381,7 @@ export default function DeliveryCasesPage() {
              case_.adminUrgencyLevel === 3 ? 'Trung bình' :
              case_.adminUrgencyLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
           'Admin - Tổng điểm': adminTotalScore || 'Chưa đánh giá',
-          'Admin - Ngày đánh giá': case_.adminAssessmentDate ? new Date(case_.adminAssessmentDate).toLocaleDateString('vi-VN') : 'Chưa đánh giá',
+          'Admin - Ngày đánh giá': case_.adminAssessmentDate ? new Date(case_.adminAssessmentDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa đánh giá',
           'Admin - Ghi chú đánh giá': case_.adminAssessmentNotes || '',
           // Total score
           'Tổng điểm cuối cùng': grandTotal,

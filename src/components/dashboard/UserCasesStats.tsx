@@ -361,7 +361,7 @@ export default function UserCasesStats() {
           </div>
           {lastUpdate && (
             <p className="text-xs text-gray-500 flex items-center space-x-1 mt-1">
-              <span>Cập nhật lần cuối: {lastUpdate.toLocaleTimeString('vi-VN')}</span>
+              <span>Cập nhật lần cuối: {lastUpdate.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
               {isAutoRefreshing && (
                 <RefreshCw className="h-3 w-3 animate-spin text-purple-500" />
               )}

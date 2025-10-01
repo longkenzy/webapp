@@ -171,7 +171,8 @@ export default function DeliveryPrintPage() {
         formattedDate: new Date(deliveryDate).toLocaleDateString('vi-VN', {
           day: '2-digit',
           month: '2-digit',
-          year: 'numeric'
+          year: 'numeric',
+          timeZone: 'Asia/Ho_Chi_Minh'
         })
       };
 

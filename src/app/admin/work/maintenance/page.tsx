@@ -1135,7 +1135,8 @@ export default function AdminMaintenanceWorkPage() {
                               month: '2-digit', 
                               day: '2-digit', 
                               hour: '2-digit', 
-                              minute: '2-digit' 
+                              minute: '2-digit',
+                              timeZone: 'Asia/Ho_Chi_Minh'
                             })}</div>
                             {case_.endDate && (
                               <div>Kết thúc: {new Date(case_.endDate).toLocaleString('vi-VN', { 
@@ -1143,7 +1144,8 @@ export default function AdminMaintenanceWorkPage() {
                                 month: '2-digit', 
                                 day: '2-digit', 
                                 hour: '2-digit', 
-                                minute: '2-digit' 
+                                minute: '2-digit',
+                                timeZone: 'Asia/Ho_Chi_Minh'
                               })}</div>
                             )}
                           </td>

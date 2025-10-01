@@ -311,9 +311,10 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Add caching headers
-    response.headers.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
-    response.headers.set('ETag', `"${Date.now()}"`);
+    // Disable caching to ensure fresh data after updates
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     
     return response;
 

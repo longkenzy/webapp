@@ -29,7 +29,7 @@ export default async function EmployeeViewPage({ params }: PageProps) {
   }
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('vi-VN');
+    return new Date(date).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
   };
 
   const getAge = (dateOfBirth: Date) => {

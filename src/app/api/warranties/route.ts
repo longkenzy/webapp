@@ -259,8 +259,10 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Add caching headers for better performance
-    response.headers.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+    // Disable caching to ensure fresh data after updates
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
     return response;
 
   } catch (error) {

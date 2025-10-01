@@ -1254,7 +1254,8 @@ export default function AdminDeploymentWorkPage() {
                               month: '2-digit', 
                               day: '2-digit', 
                               hour: '2-digit', 
-                              minute: '2-digit' 
+                              minute: '2-digit',
+                              timeZone: 'Asia/Ho_Chi_Minh'
                             })}</div>
                             {deployment.endDate && (
                               <div>Kết thúc: {new Date(deployment.endDate).toLocaleString('vi-VN', { 
@@ -1262,7 +1263,8 @@ export default function AdminDeploymentWorkPage() {
                                 month: '2-digit', 
                                 day: '2-digit', 
                                 hour: '2-digit', 
-                                minute: '2-digit' 
+                                minute: '2-digit',
+                                timeZone: 'Asia/Ho_Chi_Minh'
                               })}</div>
                             )}
                           </td>

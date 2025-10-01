@@ -53,7 +53,7 @@ export default function LiveIndicator({
       
       {lastUpdate && (
         <span className="text-xs text-gray-500">
-          • {lastUpdate.toLocaleTimeString('vi-VN')}
+          • {lastUpdate.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
         </span>
       )}
     </div>

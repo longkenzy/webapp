@@ -53,7 +53,8 @@ export async function PUT(
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            companyEmail: true
           }
         },
         handler: {
@@ -61,15 +62,38 @@ export async function PUT(
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            companyEmail: true
+          }
+        },
+        customer: {
+          select: {
+            id: true,
+            fullCompanyName: true,
+            shortName: true,
+            contactPerson: true,
+            contactPhone: true
+          }
+        },
+        deploymentType: {
+          select: {
+            id: true,
+            name: true,
+            description: true
           }
         }
       }
     });
 
+    // Transform data to match frontend expectations
+    const transformedCase = {
+      ...deploymentCase,
+      customerName: deploymentCase.customer?.shortName || deploymentCase.customer?.fullCompanyName || 'Khách hàng'
+    };
+
     return NextResponse.json({
       message: "Deployment case evaluation updated successfully",
-      data: deploymentCase
+      data: transformedCase
     });
 
   } catch (error) {

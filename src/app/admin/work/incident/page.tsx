@@ -1195,7 +1195,8 @@ export default function AdminIncidentWorkPage() {
                               month: '2-digit', 
                               day: '2-digit', 
                               hour: '2-digit', 
-                              minute: '2-digit' 
+                              minute: '2-digit',
+                              timeZone: 'Asia/Ho_Chi_Minh'
                             })}</div>
                             {incident.endDate && (
                               <div>Kết thúc: {new Date(incident.endDate).toLocaleString('vi-VN', { 
@@ -1203,7 +1204,8 @@ export default function AdminIncidentWorkPage() {
                                 month: '2-digit', 
                                 day: '2-digit', 
                                 hour: '2-digit', 
-                                minute: '2-digit' 
+                                minute: '2-digit',
+                                timeZone: 'Asia/Ho_Chi_Minh'
                               })}</div>
                             )}
                           </td>

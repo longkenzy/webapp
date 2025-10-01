@@ -121,7 +121,7 @@ export default function RealtimeNotification({
                 {notification.message}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {notification.timestamp.toLocaleTimeString('vi-VN')}
+                {notification.timestamp.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
               </p>
             </div>
             

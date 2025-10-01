@@ -120,10 +120,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         const data = await response.json();
         setPartners(data);
       } else {
-        console.error('Failed to fetch partners');
       }
     } catch (error) {
-      console.error('Error fetching partners:', error);
     } finally {
       setLoadingPartners(false);
     }
@@ -143,13 +141,10 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         if (employee) {
           setCurrentEmployee(employee);
         } else {
-          console.error('Current user employee not found');
         }
       } else {
-        console.error('Failed to fetch employees');
       }
     } catch (error) {
-      console.error('Error fetching current employee:', error);
     }
   };
 
@@ -211,6 +206,27 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
       newErrors.deliveryDateTime = 'Ngày giờ giao là bắt buộc';
     }
 
+    // Validate date relationships
+    if (formData.deliveryDateTime && formData.completionDateTime) {
+      const deliveryDate = new Date(formData.deliveryDateTime);
+      const completionDate = new Date(formData.completionDateTime);
+      
+      if (completionDate <= deliveryDate) {
+        newErrors.completionDateTime = 'Ngày hoàn thành phải lớn hơn ngày giao';
+      }
+    }
+
+
+    // Validate delivery date is not in the future
+    if (formData.deliveryDateTime) {
+      const deliveryDate = new Date(formData.deliveryDateTime);
+      const now = new Date();
+      
+      if (deliveryDate > now) {
+        newErrors.deliveryDateTime = 'Ngày giao không thể là thời gian tương lai';
+      }
+    }
+
     // Validate evaluation fields
     if (!formData.difficultyLevel) {
       newErrors.difficultyLevel = 'Mức độ khó là bắt buộc';
@@ -263,8 +279,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         handlerId: currentEmployee.id,
         supplierId: formData.supplierId,
         form: formData.form,
-        startDate: formData.deliveryDateTime,
-        endDate: formData.completionDateTime || null,
+        startDate: formData.deliveryDateTime ? new Date(formData.deliveryDateTime).toISOString() : null,
+        endDate: formData.completionDateTime ? new Date(formData.completionDateTime).toISOString() : null,
         status: ReceivingCaseStatus.RECEIVED,
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
@@ -276,9 +292,6 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         products: products // Send products array directly
       };
 
-      console.log('=== Submitting Receiving Case ===');
-      console.log('Form data:', formData);
-      console.log('Case data to send:', caseData);
 
       // Send to API
       const response = await fetch('/api/receiving-cases', {
@@ -314,11 +327,9 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         
         try {
           const errorData = await response.json();
-          console.error('Error response:', errorData);
           errorMessage = errorData.error || errorData.message || 'Unknown error';
           errorDetails = errorData.details || '';
         } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
           errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
         
@@ -335,7 +346,6 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         });
       }
     } catch (error) {
-      console.error('Error creating case:', error);
       
       // Show error notification
       toast.error('Có lỗi xảy ra khi tạo case. Vui lòng thử lại.', {
@@ -704,8 +714,16 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                     type="datetime-local"
                     value={formData.completionDateTime}
                     onChange={(e) => handleInputChange('completionDateTime', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                      errors.completionDateTime ? 'border-red-300' : 'border-gray-300'
+                    }`}
                   />
+                  {errors.completionDateTime && (
+                    <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
+                      <AlertCircle className="h-3 w-3" />
+                      <span>{errors.completionDateTime}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1">

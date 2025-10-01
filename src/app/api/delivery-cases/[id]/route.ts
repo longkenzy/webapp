@@ -53,7 +53,8 @@ export async function GET(
             name: true,
             code: true,
             quantity: true,
-            serialNumber: true
+            serialNumber: true,
+            inProgressAt: true
           }
         },
         _count: {
@@ -94,9 +95,6 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
-    console.log('=== API PUT Delivery Case ===');
-    console.log('Body received:', body);
-    
     const {
       title,
       description,
@@ -121,6 +119,7 @@ export async function PUT(
       adminImpactLevel,
       adminUrgencyLevel,
       adminAssessmentNotes,
+      inProgressAt,
       products
     } = body;
 
@@ -129,7 +128,7 @@ export async function PUT(
       where: {
         id: id
       },
-      select: { startDate: true }
+      select: { startDate: true, inProgressAt: true }
     });
 
     if (!existingCase) {
@@ -141,15 +140,20 @@ export async function PUT(
       const startDateToCheck = startDate ? new Date(startDate) : new Date(existingCase.startDate);
       const endDateObj = new Date(endDate);
       
-      console.log("=== API Delivery Date Validation (Update) ===");
-      console.log("Start Date:", startDateToCheck);
-      console.log("End Date:", endDateObj);
-      console.log("End <= Start?", endDateObj <= startDateToCheck);
-      
       if (endDateObj <= startDateToCheck) {
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
+      }
+      
+      // Validate end date with inProgressAt if it exists
+      if (existingCase.inProgressAt) {
+        const inProgressDate = new Date(existingCase.inProgressAt);
+        if (endDateObj <= inProgressDate) {
+          return NextResponse.json({ 
+            error: "Ngày kết thúc phải lớn hơn thời gian đang xử lý" 
+          }, { status: 400 });
+        }
       }
     }
 
@@ -169,14 +173,32 @@ export async function PUT(
         updateData.endDate = new Date(endDate);
       }
     }
-    if (status !== undefined) updateData.status = status;
+    // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED
+    let finalStatus = status;
+    if (endDate && status !== 'COMPLETED' && status !== undefined) {
+      finalStatus = 'COMPLETED';
+    }
+    
+    if (finalStatus !== undefined) updateData.status = finalStatus;
+    
+    // Handle inProgressAt field
+    if (inProgressAt !== undefined && inProgressAt !== null) {
+      try {
+        updateData.inProgressAt = new Date(inProgressAt);
+      } catch (error) {
+        // Skip this field if there's an error
+      }
+    } else if (inProgressAt === null) {
+      // Only set to null if explicitly passed as null
+      updateData.inProgressAt = null;
+    }
+    
     if (notes !== undefined) updateData.notes = notes;
     if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
     
     // Handle Prisma relations using connect/disconnect syntax
     if (handlerId !== undefined) {
       updateData.handler = { connect: { id: handlerId } };
-      console.log('✅ Updating handler to:', handlerId);
     }
     
     if (requesterId !== undefined) {
@@ -216,8 +238,6 @@ export async function PUT(
         adminImpactLevel !== undefined || adminUrgencyLevel !== undefined) {
       updateData.adminAssessmentDate = new Date();
     }
-    
-    console.log('Update data to be sent to Prisma:', updateData);
 
     // Update delivery case
     const updatedCase = await db.deliveryCase.update({
@@ -257,7 +277,8 @@ export async function PUT(
             name: true,
             code: true,
             quantity: true,
-            serialNumber: true
+            serialNumber: true,
+            inProgressAt: true
           }
         },
         _count: {
@@ -285,7 +306,8 @@ export async function PUT(
             name: product.name,
             code: product.code || null,
             quantity: product.quantity,
-            serialNumber: product.serialNumber || null
+            serialNumber: product.serialNumber || null,
+            inProgressAt: product.inProgressAt ? new Date(product.inProgressAt) : null
           }))
         });
       }

@@ -208,6 +208,7 @@ model ReceivingCase {
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   crmReferenceCode     String?
+  inProgressAt         DateTime?
   handler              Employee               @relation("HandlerReceivingCases", fields: [handlerId], references: [id])
   requester            Employee               @relation("RequesterReceivingCases", fields: [requesterId], references: [id])
   supplier             Partner                @relation(fields: [supplierId], references: [id])
@@ -246,6 +247,7 @@ model ReceivingCaseProduct {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   serialNumber    String?
+  inProgressAt    DateTime?
   receivingCase   ReceivingCase @relation(fields: [receivingCaseId], references: [id], onDelete: Cascade)
 }
 
@@ -276,6 +278,7 @@ model DeliveryCase {
   updatedAt            DateTime              @updatedAt
   status               DeliveryCaseStatus    @default(RECEIVED)
   crmReferenceCode     String?
+  inProgressAt         DateTime?
   customer             Partner               @relation(fields: [customerId], references: [id])
   handler              Employee              @relation("HandlerDeliveryCases", fields: [handlerId], references: [id])
   requester            Employee              @relation("RequesterDeliveryCases", fields: [requesterId], references: [id])
@@ -314,6 +317,7 @@ model DeliveryCaseProduct {
   serialNumber   String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  inProgressAt   DateTime?
   deliveryCase   DeliveryCase @relation(fields: [deliveryCaseId], references: [id], onDelete: Cascade)
 }
 

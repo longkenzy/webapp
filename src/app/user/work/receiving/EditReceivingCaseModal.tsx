@@ -57,6 +57,7 @@ interface ReceivingCase {
   adminUrgencyLevel: number | null;
   adminAssessmentDate: string | null;
   adminAssessmentNotes: string | null;
+  inProgressAt: string | null;
   createdAt: string;
   updatedAt: string;
   requester: Employee;
@@ -201,15 +202,67 @@ export default function EditReceivingCaseModal({
         });
         return;
       }
+      
+
+      // Validate end date with case status timeline
+      // If case has inProgressAt, end date should be after the time it was set to IN_PROGRESS
+      if (caseData.inProgressAt) {
+        const inProgressTime = new Date(caseData.inProgressAt);
+        if (endDate <= inProgressTime) {
+          toast.error('Ngày kết thúc phải lớn hơn thời gian đang xử lý!', {
+            duration: 3000,
+            position: 'top-right',
+          });
+          return;
+        }
+      }
     }
 
     try {
       setLoading(true);
       
+      // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED
+      let finalStatus = formData.status;
+      let inProgressAt = caseData.inProgressAt; // Giữ nguyên giá trị hiện tại
+      
+      if (formData.endDate && formData.status !== 'COMPLETED') {
+        finalStatus = 'COMPLETED';
+        
+        // Show notification about auto-status change
+        toast('Trạng thái đã được tự động chuyển thành "Hoàn thành" vì đã có ngày kết thúc', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#F59E0B',
+            color: '#fff',
+          },
+          icon: 'ℹ️',
+        });
+      }
+      
+      // Auto-set inProgressAt if status is changed to IN_PROGRESS
+      
+      if (formData.status === 'IN_PROGRESS' && caseData.status !== 'IN_PROGRESS') {
+        inProgressAt = new Date().toISOString();
+        
+        // Show notification about auto-time setting
+        toast('Thời gian đang xử lý đã được tự động cập nhật', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#3B82F6',
+            color: '#fff',
+          },
+          icon: '🕐',
+        });
+      } else {
+      }
+      
       // Prepare data for API
       const updateData = {
         endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
-        status: formData.status,
+        status: finalStatus,
+        inProgressAt: inProgressAt,
         crmReferenceCode: formData.crmReferenceCode || null,
         products: products.map(product => ({
           id: product.id,
@@ -220,9 +273,6 @@ export default function EditReceivingCaseModal({
         }))
       };
 
-      console.log('=== Updating Receiving Case ===');
-      console.log('Case ID:', caseData.id);
-      console.log('Update data:', updateData);
 
       // Send to API
       const response = await fetch(`/api/receiving-cases/${caseData.id}`, {
@@ -253,11 +303,16 @@ export default function EditReceivingCaseModal({
           onSuccess(result);
         }
       } else {
-        const errorData = await response.json();
-        console.error('Failed to update case:', errorData);
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+        }
         
-        // Show error notification
-        toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
+        // Show error notification with more details
+        const errorMessage = errorData.error || errorData.message || 'Unknown error';
+        toast.error(`Có lỗi xảy ra khi cập nhật case: ${errorMessage}`, {
           duration: 4000,
           position: 'top-right',
           style: {
@@ -267,7 +322,6 @@ export default function EditReceivingCaseModal({
         });
       }
     } catch (error) {
-      console.error('Error updating case:', error);
       
       // Show error notification
       toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {

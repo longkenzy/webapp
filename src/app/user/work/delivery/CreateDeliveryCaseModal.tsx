@@ -93,7 +93,6 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
   // Load initial data
   useEffect(() => {
     if (isOpen) {
-      console.log('Modal opened, loading data...');
       resetForm();
       // Load data in parallel for better performance
       Promise.all([
@@ -148,19 +147,15 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
       const cacheExpiry = 5 * 60 * 1000; // 5 minutes
       
       if (partnersCache && (now - partnersCacheTime) < cacheExpiry) {
-        console.log('Using cached partners data');
         setCustomers(partnersCache);
         return;
       }
       
       setLoadingPartners(true);
-      console.log('Loading customers from API...');
       const response = await fetch('/api/partners/list');
-      console.log('Partners API response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('Partners data:', data);
         // API trả về array trực tiếp, không phải trong object partners
         const partnersData = Array.isArray(data) ? data : [];
         setCustomers(partnersData);
@@ -210,7 +205,6 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
       const response = await fetch('/api/user/basic-info');
       if (response.ok) {
         const data = await response.json();
-        console.log('User basic info data:', data);
         
         // Transform the data to match Employee interface
         if (data.employee) {
@@ -369,7 +363,6 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         employeeId = session.user.employee.id;
       } else {
         // If no employee data in session, we need to fetch it
-        console.log('No employee data in session, fetching from API...');
         try {
           const response = await fetch('/api/user/basic-info');
           if (response.ok) {
@@ -416,12 +409,6 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         }))
       };
 
-      console.log('=== Submitting Delivery Case ===');
-      console.log('Form data:', formData);
-      console.log('Current employee:', currentEmployee);
-      console.log('Employee ID to use:', employeeId);
-      console.log('Products data:', products);
-      console.log('Case data to send:', caseData);
 
       // Send to API
       const response = await fetch('/api/delivery-cases', {

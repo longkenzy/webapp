@@ -13,66 +13,25 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: caseId } = await params;
+    const { id } = await params;
 
-    // Check if case exists
+    // Check if delivery case exists
     const existingCase = await db.deliveryCase.findUnique({
-      where: { id: caseId },
-      include: {
-        requester: {
-          select: {
-            id: true,
-            fullName: true,
-            position: true,
-            department: true
-          }
-        },
-        handler: {
-          select: {
-            id: true,
-            fullName: true,
-            position: true,
-            department: true
-          }
-        },
-        customer: {
-          select: {
-            id: true,
-            shortName: true,
-            fullCompanyName: true,
-            contactPerson: true,
-            contactPhone: true
-          }
-        },
-        products: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            quantity: true,
-            serialNumber: true,
-            inProgressAt: true
-          }
-        }
-      }
+      where: { id },
+      select: { id: true, status: true }
     });
 
     if (!existingCase) {
       return NextResponse.json({ error: 'Delivery case not found' }, { status: 404 });
     }
 
-    // Check if case is already completed
-    if (existingCase.status === 'COMPLETED') {
-      return NextResponse.json({ error: 'Case is already completed' }, { status: 400 });
-    }
-
-    // Update case status to COMPLETED
+    // Update delivery case to IN_PROGRESS with current timestamp
     const updatedCase = await db.deliveryCase.update({
-      where: { id: caseId },
+      where: { id },
       data: {
-        status: 'COMPLETED',
-        endDate: new Date(),
-        updatedAt: new Date()
+        status: 'IN_PROGRESS',
+        inProgressAt: new Date(),
+        updatedAt: new Date(),
       },
       include: {
         requester: {
@@ -80,7 +39,8 @@ export async function PUT(
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         handler: {
@@ -88,7 +48,8 @@ export async function PUT(
             id: true,
             fullName: true,
             position: true,
-            department: true
+            department: true,
+            avatar: true
           }
         },
         customer: {
@@ -109,17 +70,23 @@ export async function PUT(
             serialNumber: true,
             inProgressAt: true
           }
+        },
+        _count: {
+          select: {
+            comments: true,
+            worklogs: true,
+            products: true
+          }
         }
       }
     });
 
     return NextResponse.json({
-      message: 'Delivery case closed successfully',
+      message: 'Delivery case set to in progress successfully',
       data: updatedCase
     });
 
   } catch (error) {
-    console.error('Error closing delivery case:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

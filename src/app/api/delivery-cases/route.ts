@@ -93,7 +93,8 @@ export async function GET(request: NextRequest) {
             name: true,
             code: true,
             quantity: true,
-            serialNumber: true
+            serialNumber: true,
+            inProgressAt: true
           }
         }
       },
@@ -280,7 +281,8 @@ export async function POST(request: NextRequest) {
             name: true,
             code: true,
             quantity: true,
-            serialNumber: true
+            serialNumber: true,
+            inProgressAt: true
           }
         }
       }

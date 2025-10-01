@@ -52,6 +52,7 @@ interface ReceivingCase {
   adminUrgencyLevel: number | null;
   adminAssessmentDate: string | null;
   adminAssessmentNotes: string | null;
+  inProgressAt: string | null;
   createdAt: string;
   updatedAt: string;
   requester: Employee;
@@ -76,6 +77,7 @@ export default function ReceivingCasePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [closingCaseId, setClosingCaseId] = useState<string | null>(null);
+  const [inProgressCaseId, setInProgressCaseId] = useState<string | null>(null);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -127,13 +129,10 @@ export default function ReceivingCasePage() {
     try {
       setLoading(true);
       setError(null);
-      console.log('Fetching cases from API...');
       const response = await fetch('/api/receiving-cases?page=1&limit=100', {
         credentials: 'include' // Ensure cookies are sent
       });
       
-      console.log('API response status:', response.status);
-      console.log('API response ok:', response.ok);
       
       if (response.ok) {
         const data = await response.json();
@@ -145,18 +144,14 @@ export default function ReceivingCasePage() {
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
-          console.error('API Error:', errorData);
         } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
           errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
         
-        console.error('Failed to fetch cases:', errorMessage);
         setCases([]);
         setError(errorMessage);
       }
     } catch (error) {
-      console.error('Network error fetching cases:', error);
       setCases([]);
       setError('Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.');
     } finally {
@@ -170,7 +165,6 @@ export default function ReceivingCasePage() {
       setRefreshing(true);
       await fetchCases();
     } catch (error) {
-      console.error('Error refreshing cases:', error);
     } finally {
       setRefreshing(false);
     }
@@ -232,7 +226,6 @@ export default function ReceivingCasePage() {
         throw new Error(errorData.error || 'Failed to close case');
       }
     } catch (error) {
-      console.error('Error closing case:', error);
       
       // Show error toast
       toast.error('Có lỗi xảy ra khi đóng case. Vui lòng thử lại!', {
@@ -243,6 +236,56 @@ export default function ReceivingCasePage() {
       throw error;
     } finally {
       setClosingCaseId(null);
+    }
+  };
+
+  const handleSetInProgress = async (caseId: string) => {
+    try {
+      setInProgressCaseId(caseId);
+      const response = await fetch(`/api/receiving-cases/${caseId}/set-in-progress`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Update the case in the list
+        setCases(prevCases => 
+          prevCases.map(case_ => 
+            case_.id === caseId 
+              ? { ...case_, ...result.data }
+              : case_
+          )
+        );
+        
+        // Show success toast
+        toast.success('Case đã được chuyển sang trạng thái đang xử lý!', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#F59E0B',
+            color: '#fff',
+          },
+        });
+        
+        return result;
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to set case in progress');
+      }
+    } catch (error) {
+      
+      // Show error toast
+      toast.error('Có lỗi xảy ra khi chuyển trạng thái case. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
+      
+      throw error;
+    } finally {
+      setInProgressCaseId(null);
     }
   };
 
@@ -378,11 +421,28 @@ export default function ReceivingCasePage() {
                       caseItem.status === 'IN_PROGRESS' ? 2 : 3;
 
     // Determine timestamps for each step
-    const receivedTime = caseItem.createdAt; // Case được tạo = tiếp nhận
-    const inProgressTime = caseItem.status === 'IN_PROGRESS' || caseItem.status === 'COMPLETED' ? 
-                          caseItem.updatedAt : null; // Có thể cần thêm field riêng
-    const completedTime = caseItem.status === 'COMPLETED' ? 
-                         caseItem.endDate || caseItem.updatedAt : null;
+    const receivedTime = caseItem.startDate; // Lấy từ startDate của DB
+    const inProgressTime = caseItem.inProgressAt; // Lấy từ inProgressAt của DB
+    
+    // Validation: Thời gian hoàn thành phải lớn hơn thời gian tiếp nhận và đang xử lý
+    let completedTime = null;
+    if (caseItem.status === 'COMPLETED' && caseItem.endDate) {
+      const endDate = new Date(caseItem.endDate);
+      const startDate = new Date(caseItem.startDate);
+      
+      // Kiểm tra nếu endDate hợp lệ (lớn hơn startDate)
+      if (endDate > startDate) {
+        // Nếu có inProgressTime, cũng kiểm tra endDate > inProgressTime
+        if (inProgressTime) {
+          const inProgressDate = new Date(inProgressTime);
+          if (endDate > inProgressDate) {
+            completedTime = caseItem.endDate;
+          }
+        } else {
+          completedTime = caseItem.endDate;
+        }
+      }
+    }
 
     return (
       <div className="py-1">
@@ -940,6 +1000,34 @@ export default function ReceivingCasePage() {
                               <Edit className="h-4 w-4" />
                             </button>
                           )}
+
+                          {case_.status !== 'COMPLETED' && case_.status !== 'IN_PROGRESS' && (
+                            <button 
+                              onClick={async () => {
+                                if (case_.status === 'IN_PROGRESS') {
+                                  toast.error('Case này đã đang được xử lý!', {
+                                    duration: 3000,
+                                    position: 'top-right',
+                                  });
+                                  return;
+                                }
+
+                                if (!confirm(`Bạn có chắc chắn muốn chuyển case "${case_.title}" sang trạng thái đang xử lý?`)) {
+                                  return;
+                                }
+
+                                try {
+                                  await handleSetInProgress(case_.id);
+                                } catch (error) {
+                                }
+                              }}
+                              disabled={inProgressCaseId === case_.id}
+                              className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Chuyển sang đang xử lý"
+                            >
+                              <Clock className={`h-4 w-4 ${inProgressCaseId === case_.id ? 'animate-pulse' : ''}`} />
+                            </button>
+                          )}
                           
                           {case_.status !== 'COMPLETED' && (
                             <button 
@@ -959,7 +1047,6 @@ export default function ReceivingCasePage() {
                                 try {
                                   await handleCloseCase(case_.id);
                                 } catch (error) {
-                                  console.error('Error closing case:', error);
                                 }
                               }}
                               disabled={closingCaseId === case_.id}

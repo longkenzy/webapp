@@ -57,6 +57,7 @@ interface DeliveryCase {
   adminUrgencyLevel: number | null;
   adminAssessmentDate: string | null;
   adminAssessmentNotes: string | null;
+  inProgressAt: string | null;
   createdAt: string;
   updatedAt: string;
   requester: Employee;
@@ -183,6 +184,20 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
           setLoading(false);
           return;
         }
+
+        // Validate end date with case status timeline
+        // If case has inProgressAt, end date should be after the time it was set to IN_PROGRESS
+        if (caseData.inProgressAt) {
+          const inProgressTime = new Date(caseData.inProgressAt);
+          if (endDate <= inProgressTime) {
+            toast.error('Ngày kết thúc phải lớn hơn thời gian đang xử lý!', {
+              duration: 3000,
+              position: 'top-right',
+            });
+            setLoading(false);
+            return;
+          }
+        }
       }
 
       // Validate required fields
@@ -200,16 +215,50 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
         serialNumber: product.serialNumber.trim() || null
       }));
 
+      // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED
+      let finalStatus = formData.status;
+      let inProgressAt = caseData.inProgressAt; // Giữ nguyên giá trị hiện tại
+      
+      if (formData.endDate && formData.status !== 'COMPLETED') {
+        finalStatus = 'COMPLETED';
+        
+        // Show notification about auto-status change
+        toast('Trạng thái đã được tự động chuyển thành "Hoàn thành" vì đã có ngày kết thúc', {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#F59E0B',
+            color: '#fff',
+          },
+          icon: 'ℹ️',
+        });
+      }
+      
+      // Auto-set inProgressAt if status is changed to IN_PROGRESS
+      if (formData.status === 'IN_PROGRESS' && caseData.status !== 'IN_PROGRESS') {
+        inProgressAt = new Date().toISOString();
+        
+        // Show notification about auto-time setting
+        toast('Thời gian đang xử lý đã được tự động cập nhật', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#3B82F6',
+            color: '#fff',
+          },
+          icon: '🕐',
+        });
+      }
+      
       // Prepare update data
       const updateData = {
-        status: formData.status,
+        status: finalStatus,
         endDate: formData.endDate || null,
+        inProgressAt: inProgressAt,
         crmReferenceCode: formData.crmReferenceCode || null,
         description: JSON.stringify(productData),
         products: productData
       };
-
-      console.log('Updating delivery case:', updateData);
 
       const response = await fetch(`/api/delivery-cases/${caseData.id}`, {
         method: 'PUT',
@@ -221,7 +270,6 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
 
       if (response.ok) {
         const updatedCase = await response.json();
-        console.log('Delivery case updated successfully:', updatedCase);
         
         // Show success notification
         toast.success('Cập nhật case giao hàng thành công!', {
@@ -237,7 +285,6 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
         onClose();
       } else {
         const errorData = await response.json();
-        console.error('Error updating delivery case:', errorData);
         
         // Show error notification
         toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
@@ -252,8 +299,6 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
         setError(errorData.error || 'Có lỗi xảy ra khi cập nhật case giao hàng');
       }
     } catch (error) {
-      console.error('Error updating delivery case:', error);
-      
       // Show error notification
       toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
         duration: 4000,

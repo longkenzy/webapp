@@ -80,7 +80,6 @@ export async function GET(
 
     return NextResponse.json(receivingCase);
   } catch (error) {
-    console.error("Error fetching receiving case:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -101,10 +100,6 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
-    console.log('=== PUT /api/receiving-cases/[id] ===');
-    console.log('ID:', id);
-    console.log('Body:', body);
-    console.log('Session user:', session.user?.email);
     const {
       title,
       description,
@@ -127,8 +122,10 @@ export async function PUT(
       adminImpactLevel,
       adminUrgencyLevel,
       adminAssessmentNotes,
+      inProgressAt,
       products
     } = body;
+
 
     // Check if receiving case exists
     const existingCase = await db.receivingCase.findUnique({
@@ -136,11 +133,9 @@ export async function PUT(
     });
 
     if (!existingCase) {
-      console.log('Receiving case not found for ID:', id);
       return NextResponse.json({ error: "Receiving case not found" }, { status: 404 });
     }
 
-    console.log('Existing case found:', existingCase.id);
 
     // Validate requesterId if provided
     if (requesterId && requesterId !== existingCase.requesterId) {
@@ -148,7 +143,6 @@ export async function PUT(
         where: { id: requesterId }
       });
       if (!employee) {
-        console.log('Requester not found:', requesterId);
         return NextResponse.json({ error: "Requester not found" }, { status: 400 });
       }
     }
@@ -159,7 +153,6 @@ export async function PUT(
         where: { id: handlerId }
       });
       if (!employee) {
-        console.log('Handler not found:', handlerId);
         return NextResponse.json({ error: "Handler not found" }, { status: 400 });
       }
     }
@@ -170,7 +163,6 @@ export async function PUT(
         where: { id: supplierId }
       });
       if (!supplier) {
-        console.log('Supplier not found:', supplierId);
         return NextResponse.json({ error: "Supplier not found" }, { status: 400 });
       }
     }
@@ -186,7 +178,26 @@ export async function PUT(
     if (form !== undefined) updateData.form = form;
     if (startDate !== undefined) updateData.startDate = new Date(startDate);
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
-    if (status !== undefined) updateData.status = status;
+    
+    // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED
+    let finalStatus = status;
+    if (endDate && status !== 'COMPLETED' && status !== undefined) {
+      finalStatus = 'COMPLETED';
+    }
+    
+    if (finalStatus !== undefined) updateData.status = finalStatus;
+    
+    // Handle inProgressAt field
+    if (body.inProgressAt !== undefined && body.inProgressAt !== null) {
+      try {
+        updateData.inProgressAt = new Date(body.inProgressAt);
+      } catch (error) {
+        // Skip this field if there's an error
+      }
+    } else if (body.inProgressAt === null) {
+      // Only set to null if explicitly passed as null
+      updateData.inProgressAt = null;
+    }
     if (notes !== undefined) updateData.notes = notes;
     if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
 
@@ -218,7 +229,6 @@ export async function PUT(
 
     // Handle products update
     if (products !== undefined) {
-      console.log('Updating products:', products);
       
       // Delete existing products
       await db.receivingCaseProduct.deleteMany({
@@ -232,14 +242,13 @@ export async function PUT(
             name: product.name,
             code: product.code || null,
             quantity: Math.max(1, parseInt(String(product.quantity)) || 1), // Convert to integer, minimum 1
-            serialNumber: product.serialNumber || null
+            serialNumber: product.serialNumber || null,
+            inProgressAt: product.inProgressAt ? new Date(product.inProgressAt) : null
           }))
         };
-        console.log('Products to create:', updateData.products);
       }
     }
 
-    console.log('Update data:', updateData);
 
     try {
       const updatedCase = await db.receivingCase.update({
@@ -277,23 +286,21 @@ export async function PUT(
               name: true,
               code: true,
               quantity: true,
-              serialNumber: true
+              serialNumber: true,
+              inProgressAt: true
             }
           }
         }
       });
 
-      console.log('Updated case successfully:', updatedCase.id);
       return NextResponse.json(updatedCase);
     } catch (dbError) {
-      console.error('Database update error:', dbError);
       return NextResponse.json({ 
         error: "Database update failed", 
         details: dbError instanceof Error ? dbError.message : 'Unknown database error' 
       }, { status: 500 });
     }
   } catch (error) {
-    console.error("Error updating receiving case:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -328,7 +335,6 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Receiving case deleted successfully" });
   } catch (error) {
-    console.error("Error deleting receiving case:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

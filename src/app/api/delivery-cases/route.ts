@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
       supplier: c.customer,
     }));
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       deliveryCases: mappedCases,
       pagination: {
         page,
@@ -126,6 +126,12 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit)
       }
     });
+    
+    // Disable caching to ensure fresh data after updates
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
 
   } catch (error) {
     console.error('Error fetching delivery cases:', error);
@@ -172,6 +178,23 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    // Validate end date (only if both dates exist) - allow any past/future dates
+    if (startDate && endDate) {
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(endDate);
+      
+      console.log("=== API Delivery Date Validation (Create) ===");
+      console.log("Start Date:", startDateObj);
+      console.log("End Date:", endDateObj);
+      console.log("End <= Start?", endDateObj <= startDateObj);
+      
+      if (endDateObj <= startDateObj) {
+        return NextResponse.json({ 
+          error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
+        }, { status: 400 });
+      }
     }
 
     // Validate employees and partner existence
@@ -263,43 +286,51 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Create notifications for admin users
-    try {
-      const adminUsers = await getAdminUsers();
-      const requesterName = employee.fullName;
+    // Send notifications in parallel (non-blocking)
+    Promise.all([
+      // Create notifications for admin users
+      (async () => {
+        try {
+          const adminUsers = await getAdminUsers();
+          const requesterName = employee.fullName;
+          
+          // Create all notifications in parallel
+          await Promise.all(
+            adminUsers.map(admin =>
+              createCaseCreatedNotification(
+                'delivery',
+                deliveryCase.id,
+                deliveryCase.title,
+                requesterName,
+                admin.id
+              )
+            )
+          );
+          console.log(`Notifications sent to ${adminUsers.length} admin users`);
+        } catch (notificationError) {
+          console.error('Error creating notifications:', notificationError);
+        }
+      })(),
       
-      for (const admin of adminUsers) {
-        await createCaseCreatedNotification(
-          'delivery',
-          deliveryCase.id,
-          deliveryCase.title,
-          requesterName,
-          admin.id
-        );
-      }
-      console.log(`Notifications sent to ${adminUsers.length} admin users`);
-    } catch (notificationError) {
-      console.error('Error creating notifications:', notificationError);
-      // Don't fail the case creation if notifications fail
-    }
-
-    // Send Telegram notification to admin
-    try {
-      await sendCaseCreatedTelegram({
-        caseId: deliveryCase.id,
-        caseType: 'Case giao hàng',
-        caseTitle: deliveryCase.title,
-        caseDescription: deliveryCase.description,
-        requesterName: employee.fullName,
-        requesterEmail: employee.companyEmail,
-        handlerName: deliveryCase.handler.fullName,
-        createdAt: new Date().toLocaleString('vi-VN')
-      });
-      console.log('✅ Telegram notification sent successfully');
-    } catch (telegramError) {
-      console.error('❌ Error sending Telegram notification:', telegramError);
-      // Don't fail the case creation if Telegram fails
-    }
+      // Send Telegram notification to admin
+      (async () => {
+        try {
+          await sendCaseCreatedTelegram({
+            caseId: deliveryCase.id,
+            caseType: 'Case giao hàng',
+            caseTitle: deliveryCase.title,
+            caseDescription: deliveryCase.description,
+            requesterName: employee.fullName,
+            requesterEmail: employee.companyEmail,
+            handlerName: deliveryCase.handler.fullName,
+            createdAt: new Date().toLocaleString('vi-VN')
+          });
+          console.log('✅ Telegram notification sent successfully');
+        } catch (telegramError) {
+          console.error('❌ Error sending Telegram notification:', telegramError);
+        }
+      })()
+    ]).catch(err => console.error('Background notification error:', err));
 
     return NextResponse.json(deliveryCase, { status: 201 });
 

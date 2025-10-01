@@ -96,11 +96,16 @@ export default function DeliveryCasesPage() {
 
   // Fetch all data function
   const fetchAllData = useCallback(async () => {
+    console.log('🔄🔄🔄 fetchAllData called - THIS WILL OVERWRITE STATE!');
+    console.trace('Call stack:');
+    
     try {
       // Fetch all cases for stats
       const casesResponse = await fetch('/api/delivery-cases?limit=1000');
       if (casesResponse.ok) {
         const casesData = await casesResponse.json();
+        console.log('🔄 Fetched from API:', casesData.deliveryCases.length, 'cases');
+        console.log('🔄 First case handler from API:', casesData.deliveryCases[0]?.handler?.fullName);
         setAllCases(casesData.deliveryCases);
       }
 
@@ -189,10 +194,64 @@ export default function DeliveryCasesPage() {
   };
 
   const handleCreateSuccess = (newCase: any) => {
-    // Refresh the cases list
-    fetchAllData();
+    console.log('✅ handleCreateSuccess called with:', newCase);
+    console.log('✅ New status:', newCase.status);
+    console.log('✅ New endDate:', newCase.endDate);
+    console.log('✅ New handler:', newCase.handler?.fullName);
+    console.log('✅ Full newCase data:', JSON.stringify(newCase, null, 2));
+    
+    if (editingCase) {
+      // EDIT mode: Update the case in the list immediately (optimistic update)
+      const updatedCases = allCases.map(c => {
+        if (c.id === newCase.id) {
+          console.log('🔄 FOUND case to update! ID:', c.id);
+          console.log('🔄 OLD handler:', c.handler?.fullName, '(', c.handler?.id, ')');
+          console.log('🔄 NEW handler:', newCase.handler?.fullName, '(', newCase.handler?.id, ')');
+          
+          const updated = {
+            ...c,  // Keep existing data
+            ...newCase,  // Override with new data
+            // Ensure all fields are properly formatted
+            handler: newCase.handler || c.handler,
+            requester: newCase.requester || c.requester,
+            customer: newCase.customer || c.customer,
+            products: newCase.products || c.products,
+            // Explicitly update critical fields
+            status: newCase.status || c.status,
+            endDate: newCase.endDate !== undefined ? newCase.endDate : c.endDate,
+            startDate: newCase.startDate || c.startDate
+          };
+          
+          console.log('🔄 FINAL updated object handler:', updated.handler?.fullName, '(', updated.handler?.id, ')');
+          return updated;
+        }
+        return c;
+      });
+      
+      console.log('✅ Setting new allCases array with', updatedCases.length, 'items');
+      console.log('✅ Updated case in new array:', updatedCases.find(c => c.id === newCase.id)?.handler?.fullName);
+      setAllCases(updatedCases);
+      console.log('✅ Updated case in list (optimistic):', newCase.id);
+      
+      // Fetch fresh data from server after a short delay to ensure consistency
+      setTimeout(() => {
+        console.log('🔄 Fetching fresh data from server after edit...');
+        fetchAllData();
+      }, 500);
+    } else {
+      // CREATE mode: Add new case to the list
+      setAllCases(prev => [newCase, ...prev]);
+      console.log('✅ Added new case to list:', newCase.id);
+      
+      // Also fetch for create to get complete data
+      setTimeout(() => {
+        console.log('🔄 Fetching fresh data from server after create...');
+        fetchAllData();
+      }, 500);
+    }
+    
     setShowCreateModal(false);
-    setEditingCase(null); // Reset editing case
+    setEditingCase(null);
   };
 
   // Export to Excel function

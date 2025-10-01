@@ -79,6 +79,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   const { data: session } = useSession();
   const [formData, setFormData] = useState({
     supplierId: '',
+    handler: '', // Handler ID
     productDetails: '',
     deliveryDateTime: '',
     completionDateTime: '',
@@ -97,6 +98,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loadingPartners, setLoadingPartners] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -120,11 +122,35 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   // Populate form data when in edit mode
   useEffect(() => {
     if (editData && isOpen) {
+      // Convert datetime to local timezone for datetime-local input
+      let deliveryDateTimeLocal = '';
+      if (editData.startDate) {
+        const startDateObj = new Date(editData.startDate);
+        const year = startDateObj.getFullYear();
+        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(startDateObj.getDate()).padStart(2, '0');
+        const hours = String(startDateObj.getHours()).padStart(2, '0');
+        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
+        deliveryDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      let completionDateTimeLocal = '';
+      if (editData.endDate) {
+        const endDateObj = new Date(editData.endDate);
+        const year = endDateObj.getFullYear();
+        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(endDateObj.getDate()).padStart(2, '0');
+        const hours = String(endDateObj.getHours()).padStart(2, '0');
+        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
+        completionDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
       setFormData({
         supplierId: editData.supplier?.id || '',
+        handler: editData.handler?.id || '', // Set handler from editData
         productDetails: editData.description || '',
-        deliveryDateTime: editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : '',
-        completionDateTime: editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : '',
+        deliveryDateTime: deliveryDateTimeLocal,
+        completionDateTime: completionDateTimeLocal,
         status: editData.status || 'RECEIVED',
         crmReferenceCode: editData.crmReferenceCode || '',
         difficultyLevel: editData.userDifficultyLevel?.toString() || '',
@@ -134,6 +160,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         form: editData.form || 'Onsite',
         formScore: editData.userFormScore?.toString() || '2'
       });
+
+      console.log('✅ Edit Mode - Handler ID from editData:', editData.handler?.id);
 
       // Set selected partner
       if (editData.supplier) {
@@ -163,6 +191,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
       // Reset form when creating new case
       setFormData({
         supplierId: '',
+        handler: '', // Will be auto-filled with currentEmployee
         productDetails: '',
         deliveryDateTime: '',
         completionDateTime: '',
@@ -188,10 +217,11 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     { value: 'CANCELLED', label: 'Hủy' }
   ];
 
-  // Fetch partners and current employee when modal opens
+  // Fetch partners, employees and current employee when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchPartners();
+      fetchEmployees();
       fetchCurrentEmployee();
     }
   }, [isOpen, session?.user?.email]);
@@ -252,6 +282,21 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch('/api/employees/list');
+      if (response.ok) {
+        const data = await response.json();
+        setEmployees(data);
+        console.log('✅ Fetched employees:', data.length);
+      } else {
+        console.error('Failed to fetch employees');
+      }
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
   const fetchCurrentEmployee = async () => {
     if (!session?.user?.email) return;
     
@@ -264,6 +309,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         );
         if (employee) {
           setCurrentEmployee(employee);
+          console.log('✅ Current employee found:', employee.fullName);
         } else {
           console.error('Current user employee not found');
         }
@@ -301,99 +347,128 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   };
 
   const validateForm = () => {
-    console.log('🔍 Validating form...');
-    console.log('🔍 Current employee:', currentEmployee);
+    console.log('🔍 Starting validation...');
     console.log('🔍 Form data:', formData);
     console.log('🔍 Products:', products);
     
     const newErrors: Record<string, string> = {};
 
-    if (!currentEmployee) {
-      newErrors.employee = 'Không tìm thấy thông tin nhân viên';
+    if (!formData.handler) {
+      newErrors.handler = 'Người nhận hàng là bắt buộc';
+      console.log('❌ Missing handler');
     }
 
     if (!formData.supplierId) {
       newErrors.supplierId = 'Nhà cung cấp là bắt buộc';
+      console.log('❌ Missing supplierId');
     }
 
     if (products.length === 0) {
       newErrors.products = 'Cần ít nhất một sản phẩm';
+      console.log('❌ No products');
     } else {
       products.forEach((product, index) => {
         if (!product.name.trim()) {
           newErrors[`product_${index}_name`] = 'Tên sản phẩm là bắt buộc';
+          console.log(`❌ Product ${index} missing name`);
         }
         if (!product.quantity.trim()) {
           newErrors[`product_${index}_quantity`] = 'Số lượng là bắt buộc';
+          console.log(`❌ Product ${index} missing quantity`);
         }
         if (product.quantity && isNaN(Number(product.quantity))) {
           newErrors[`product_${index}_quantity`] = 'Số lượng phải là số';
+          console.log(`❌ Product ${index} quantity not a number`);
         }
       });
     }
 
     if (!formData.deliveryDateTime) {
       newErrors.deliveryDateTime = 'Ngày giờ giao là bắt buộc';
+      console.log('❌ Missing deliveryDateTime');
     }
 
     // Validate evaluation fields
     if (!formData.difficultyLevel) {
       newErrors.difficultyLevel = 'Mức độ khó là bắt buộc';
+      console.log('❌ Missing difficultyLevel');
     }
 
     if (!formData.estimatedTime) {
       newErrors.estimatedTime = 'Thời gian ước tính là bắt buộc';
+      console.log('❌ Missing estimatedTime');
     }
 
     if (!formData.impactLevel) {
       newErrors.impactLevel = 'Mức độ ảnh hưởng là bắt buộc';
+      console.log('❌ Missing impactLevel');
     }
 
     if (!formData.urgencyLevel) {
       newErrors.urgencyLevel = 'Mức độ khẩn cấp là bắt buộc';
+      console.log('❌ Missing urgencyLevel');
     }
 
     if (!formData.form) {
       newErrors.form = 'Hình thức làm việc là bắt buộc';
+      console.log('❌ Missing form');
     }
 
     setErrors(newErrors);
-    console.log('🔍 Validation result:', Object.keys(newErrors).length === 0 ? 'PASSED' : 'FAILED');
-    console.log('🔍 Errors:', newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+    console.log('🔍 Validation result:', isValid ? 'PASSED ✅' : 'FAILED ❌');
+    console.log('🔍 Total errors:', Object.keys(newErrors).length);
+    
+    return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    console.log('🔍 handleSubmit called');
+    console.log('🔍 Current loading state:', loading);
+    
+    // Prevent double submission
+    if (loading) {
+      console.log('⚠️ Already submitting, ignoring...');
       return;
     }
-
+    
+    console.log('🔍 Validating form...');
+    const isValid = validateForm();
+    
+    if (!isValid) {
+      console.log('❌ Form validation failed. Errors:', errors);
+      toast.error('Vui lòng điền đầy đủ thông tin bắt buộc!', {
+        duration: 3000,
+        position: 'top-right',
+      });
+      return;
+    }
+    
+    console.log('✅ Form validation passed');
     setLoading(true);
     
     console.log('🔍 Current session:', session);
     console.log('🔍 Session user email:', session?.user?.email);
 
     try {
-      if (!currentEmployee) {
-        toast.error('Không tìm thấy thông tin nhân viên. Vui lòng thử lại.', {
-          duration: 4000,
-          position: 'top-right',
-        });
-        return;
-      }
+      // Use handler from formData (selected from dropdown)
+      const handlerId = formData.handler;
+      
+      // Use currentEmployee as reporter, or fallback to handler if not available
+      const reporterId = currentEmployee?.id || handlerId;
 
       const caseData = {
         title: `Nhận hàng từ ${selectedPartner?.shortName || 'Nhà cung cấp'}`,
         description: 'Danh sách sản phẩm nhận hàng',
-        requesterId: currentEmployee.id,
-        handlerId: currentEmployee.id,
+        requesterId: reporterId,
+        handlerId: handlerId, // Use handler selected from dropdown
         supplierId: formData.supplierId,
         form: formData.form,
         startDate: formData.deliveryDateTime,
         endDate: formData.completionDateTime || null,
-        status: ReceivingCaseStatus.RECEIVED,
+        status: formData.status || ReceivingCaseStatus.RECEIVED, // Use status from form
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null,
         userDifficultyLevel: formData.difficultyLevel,
@@ -403,6 +478,11 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         userFormScore: formData.formScore,
         products: products
       };
+
+      console.log('🔍 Handler ID being sent:', handlerId);
+      console.log('🔍 Status being sent:', formData.status);
+      console.log('🔍 End Date being sent:', formData.completionDateTime);
+      console.log('🔍 Is Edit Mode:', !!editData);
 
       console.log('=== Submitting Receiving Case ===');
       console.log('Form data:', formData);
@@ -429,6 +509,9 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
       if (response.ok) {
         const result = await response.json();
         
+        console.log('✅ API Response successful:', result);
+        console.log('✅ Handler in response:', result.handler);
+        
         toast.success(editData ? 'Cập nhật case nhận hàng thành công!' : 'Tạo case nhận hàng thành công!', {
           duration: 4000,
           position: 'top-right',
@@ -440,6 +523,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         
         window.dispatchEvent(new CustomEvent('case-created'));
         
+        console.log('✅ Calling onSuccess with result:', result.id);
         onSuccess(result);
         handleClose();
       } else {
@@ -509,6 +593,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   const handleClose = () => {
     setFormData({
       supplierId: '',
+      handler: '',
       productDetails: '',
       deliveryDateTime: '',
       completionDateTime: '',
@@ -588,27 +673,37 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
-            {/* Section 1: Người thực hiện */}
+            {/* Section 1: Người nhận hàng */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
               <div className="flex items-center space-x-2 mb-4">
                 <div className="p-1.5 bg-blue-100 rounded-md">
                   <User className="h-4 w-4 text-blue-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Người thực hiện</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Người nhận hàng</h3>
               </div>
-              <div className="text-sm text-gray-600">
-                <span className="font-medium text-gray-900">
-                  {currentEmployee ? currentEmployee.fullName : 'Đang tải...'}
-                </span>
-                {currentEmployee && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {currentEmployee.position} - {currentEmployee.department}
-                  </div>
-                )}
-                {errors.employee && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-600 flex items-center">
+                  <span>Người nhận hàng</span>
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <select
+                  value={formData.handler}
+                  onChange={(e) => handleInputChange('handler', e.target.value)}
+                  className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.handler ? 'border-red-300' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">-- Chọn người nhận hàng --</option>
+                  {employees.map(employee => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.fullName} - {employee.position} ({employee.department})
+                    </option>
+                  ))}
+                </select>
+                {errors.handler && (
                   <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
                     <AlertCircle className="h-3 w-3" />
-                    <span>{errors.employee}</span>
+                    <span>{errors.handler}</span>
                   </p>
                 )}
               </div>

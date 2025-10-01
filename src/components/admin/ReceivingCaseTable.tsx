@@ -152,6 +152,12 @@ export default function ReceivingCaseTable({
   
   const { getFieldOptions } = useEvaluationForm(EvaluationType.ADMIN, adminCategories);
 
+  // Sync internal state with props when props change
+  useEffect(() => {
+    console.log('📊 ReceivingCaseTable - Props allCases changed:', propAllCases.length);
+    setAllCases(propAllCases);
+  }, [propAllCases]);
+
   // Helper functions for evaluation text
   const getDifficultyText = (level: number) => {
     switch (level) {
@@ -705,10 +711,10 @@ export default function ReceivingCaseTable({
                 <td className="px-2 py-1 whitespace-nowrap">
                   <div>
                     <div className="text-xs font-medium text-gray-900">
-                      {caseItem.requester.fullName}
+                      {caseItem.handler?.fullName || 'N/A'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {caseItem.requester.position}
+                      {caseItem.handler?.position || ''}
                     </div>
                   </div>
                 </td>

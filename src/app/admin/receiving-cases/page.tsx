@@ -170,10 +170,40 @@ export default function ReceivingCasesPage() {
   };
 
   const handleCreateSuccess = (newCase: any) => {
-    // Refresh the cases list
+    console.log('✅ handleCreateSuccess called with:', newCase);
+    console.log('✅ New status:', newCase.status);
+    console.log('✅ New endDate:', newCase.endDate);
+    console.log('✅ New handler:', newCase.handler?.fullName);
+    
+    if (editingCase) {
+      // EDIT mode: Update the case in the list immediately (optimistic update)
+      setAllCases(prev => prev.map(c => 
+        c.id === newCase.id ? {
+          ...c,  // Keep existing data
+          ...newCase,  // Override with new data
+          // Ensure all fields are properly formatted
+          handler: newCase.handler || c.handler,
+          requester: newCase.requester || c.requester,
+          supplier: newCase.supplier || c.supplier,
+          products: newCase.products || c.products,
+          // Explicitly update status and endDate
+          status: newCase.status || c.status,
+          endDate: newCase.endDate !== undefined ? newCase.endDate : c.endDate,
+          startDate: newCase.startDate || c.startDate
+        } : c
+      ));
+      console.log('✅ Updated case in list (optimistic):', newCase.id);
+    } else {
+      // CREATE mode: Add new case to the list
+      setAllCases(prev => [newCase, ...prev]);
+      console.log('✅ Added new case to list:', newCase.id);
+    }
+    
+    // Also refresh to ensure consistency
     fetchAllData();
+    
     setShowCreateModal(false);
-    setEditingCase(null); // Reset editing case
+    setEditingCase(null);
   };
 
   const handleDeleteCase = async () => {

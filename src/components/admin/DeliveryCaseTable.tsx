@@ -150,6 +150,13 @@ export default function DeliveryCaseTable({
   
   const { getFieldOptions } = useEvaluationForm(EvaluationType.ADMIN, adminCategories);
 
+  // Sync internal state with props when props change
+  useEffect(() => {
+    console.log('📊 DeliveryCaseTable - Props allCases changed:', propAllCases.length);
+    console.log('📊 First case handler:', propAllCases[0]?.handler?.fullName);
+    setAllCases(propAllCases);
+  }, [propAllCases]);
+
   // Helper function to check if case is evaluated by admin
   const isDeliveryCaseEvaluatedByAdmin = (caseItem: DeliveryCase) => {
     return caseItem.adminDifficultyLevel !== null &&
@@ -384,7 +391,14 @@ export default function DeliveryCaseTable({
 
   // Apply filters and pagination
   useEffect(() => {
+    console.log('🔄 Filtering cases... allCases length:', allCases.length);
+    console.log('🔄 First case in allCases:', allCases[0]?.id, allCases[0]?.handler?.fullName);
+    
     const filtered = filterCases(allCases);
+    
+    console.log('🔄 Filtered cases length:', filtered.length);
+    console.log('🔄 First filtered case:', filtered[0]?.id, filtered[0]?.handler?.fullName);
+    
     setFilteredCases(filtered);
     
     // Reset to page 1 when filters change
@@ -399,13 +413,16 @@ export default function DeliveryCaseTable({
   const getCurrentPageData = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return filteredCases.slice(startIndex, endIndex);
+    const pageData = filteredCases.slice(startIndex, endIndex);
+    
+    console.log('📄 Getting page', currentPage, '- Total filtered:', filteredCases.length);
+    console.log('📄 Page data (items', startIndex, '-', endIndex, '):', pageData.length);
+    if (pageData[0]) {
+      console.log('📄 First item on page:', pageData[0].id, pageData[0].handler?.fullName);
+    }
+    
+    return pageData;
   };
-
-  // Sync with props
-  useEffect(() => {
-    setAllCases(propAllCases);
-  }, [propAllCases]);
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -678,6 +695,10 @@ export default function DeliveryCaseTable({
           <tbody className="bg-white divide-y divide-gray-200">
             {getCurrentPageData().map((caseItem, index) => {
               const isEvaluated = isDeliveryCaseEvaluatedByAdmin(caseItem);
+              
+              // Debug log with FULL ID
+              console.log(`🎨 Row ${index}: ${caseItem.id} → Handler: ${caseItem.handler?.fullName} (ID: ${caseItem.handler?.id})`);
+              
               return (
                 <tr key={caseItem.id} className={`hover:bg-gray-50 ${
                   !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
@@ -690,10 +711,10 @@ export default function DeliveryCaseTable({
                 <td className="px-2 py-1 whitespace-nowrap">
                   <div>
                     <div className="text-xs font-medium text-gray-900">
-                      {caseItem.requester.fullName}
+                      {caseItem.handler?.fullName || 'N/A'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {caseItem.requester.position}
+                      {caseItem.handler?.position || ''}
                     </div>
                   </div>
                 </td>

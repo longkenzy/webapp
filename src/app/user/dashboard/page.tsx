@@ -921,7 +921,7 @@ export default function UserDashboardPage() {
               )}
               {filters.startDate && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Từ: {new Date(filters.startDate).toLocaleDateString('vi-VN')}
+                  Từ: {new Date(filters.startDate + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                   <button
                     onClick={() => handleFilterChange('startDate', '')}
                     className="ml-2 text-indigo-600 hover:text-indigo-800"
@@ -932,7 +932,7 @@ export default function UserDashboardPage() {
               )}
               {filters.endDate && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Đến: {new Date(filters.endDate).toLocaleDateString('vi-VN')}
+                  Đến: {new Date(filters.endDate + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                   <button
                     onClick={() => handleFilterChange('endDate', '')}
                     className="ml-2 text-indigo-600 hover:text-indigo-800"
@@ -1077,8 +1077,9 @@ export default function UserDashboardPage() {
                         {new Date(case_.startDate).toLocaleTimeString('vi-VN', { 
                           hour: '2-digit', 
                           minute: '2-digit',
-                          hour12: false
-                        }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN')}
+                          hour12: false,
+                          timeZone: 'Asia/Ho_Chi_Minh'
+                        }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                       </div>
                       {case_.endDate && (
                         <>
@@ -1090,8 +1091,9 @@ export default function UserDashboardPage() {
                             {new Date(case_.endDate).toLocaleTimeString('vi-VN', { 
                               hour: '2-digit', 
                               minute: '2-digit',
-                              hour12: false
-                            }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN')}
+                              hour12: false,
+                              timeZone: 'Asia/Ho_Chi_Minh'
+                            }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
               </div>
                         </>
             )}

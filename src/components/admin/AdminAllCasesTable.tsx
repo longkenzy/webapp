@@ -144,8 +144,9 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
           {new Date(case_.startDate).toLocaleTimeString('vi-VN', { 
             hour: '2-digit', 
             minute: '2-digit',
-            hour12: false
-          }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN')}
+            hour12: false,
+            timeZone: 'Asia/Ho_Chi_Minh'
+          }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
         </div>
         {case_.endDate && (
           <>
@@ -157,8 +158,9 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
               {new Date(case_.endDate).toLocaleTimeString('vi-VN', { 
                 hour: '2-digit', 
                 minute: '2-digit',
-                hour12: false
-              }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN')}
+                hour12: false,
+                timeZone: 'Asia/Ho_Chi_Minh'
+              }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
             </div>
           </>
         )}
@@ -1000,7 +1002,7 @@ function AdminAllCasesTable() {
               )}
               {filters.dateFrom && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  Từ: {new Date(filters.dateFrom).toLocaleDateString('vi-VN')}
+                  Từ: {new Date(filters.dateFrom + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                   <button
                     onClick={() => handleFilterChange('dateFrom', '')}
                     className="ml-2 text-purple-600 hover:text-purple-800"
@@ -1011,7 +1013,7 @@ function AdminAllCasesTable() {
               )}
               {filters.dateTo && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  Đến: {new Date(filters.dateTo).toLocaleDateString('vi-VN')}
+                  Đến: {new Date(filters.dateTo + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                   <button
                     onClick={() => handleFilterChange('dateTo', '')}
                     className="ml-2 text-purple-600 hover:text-purple-800"

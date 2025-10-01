@@ -144,7 +144,7 @@ const CaseRow = React.memo(({
           </span>
         </td>
         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
-          {new Date(case_.startDate).toLocaleDateString('vi-VN')}
+          {new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
         </td>
         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900">
           {grandTotal}

@@ -164,7 +164,8 @@ export default function DashboardCasesTable() {
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Asia/Ho_Chi_Minh'
     });
   };
 
@@ -213,7 +214,7 @@ export default function DashboardCasesTable() {
           </span>
           {lastUpdate && (
             <span className="text-xs text-gray-500">
-              • Cập nhật: {lastUpdate.toLocaleTimeString('vi-VN')}
+              • Cập nhật: {lastUpdate.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
             </span>
           )}
         </div>

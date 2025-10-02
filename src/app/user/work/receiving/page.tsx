@@ -802,13 +802,13 @@ export default function ReceivingCasePage() {
                         {filters.startDate && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
-                            Từ: {new Date(filters.startDate).toLocaleDateString('vi-VN')}
+                            Từ: {new Date(filters.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                           </span>
                         )}
                         {filters.endDate && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
-                            Đến: {new Date(filters.endDate).toLocaleDateString('vi-VN')}
+                            Đến: {new Date(filters.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                           </span>
                         )}
                       </div>

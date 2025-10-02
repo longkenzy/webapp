@@ -252,7 +252,7 @@ export async function testTelegramConfiguration() {
 🧪 <b>Test Telegram Bot</b>
 
 ✅ Telegram configuration is working!
-⏰ <b>Test time:</b> ${new Date().toLocaleString('vi-VN')}
+⏰ <b>Test time:</b> ${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
 🤖 <b>Bot:</b> SmartServices Bot
 💬 <b>Admin:</b> ${TELEGRAM_CHAT_ID}
 

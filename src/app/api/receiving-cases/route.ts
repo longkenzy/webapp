@@ -374,7 +374,7 @@ export async function POST(request: NextRequest) {
         requesterName: employee.fullName,
         requesterEmail: employee.companyEmail,
         handlerName: receivingCase.handler.fullName,
-        createdAt: new Date().toLocaleString('vi-VN')
+        createdAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
       });
       console.log('✅ Telegram notification sent successfully');
     } catch (telegramError) {

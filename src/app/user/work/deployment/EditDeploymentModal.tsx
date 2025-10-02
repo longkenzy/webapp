@@ -300,7 +300,7 @@ export default function EditDeploymentModal({
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ngày bắt đầu</label>
                   <p className="text-sm text-gray-900 mt-1">
-                    {new Date(caseData.startDate).toLocaleDateString('vi-VN')}
+                    {new Date(caseData.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                   </p>
                 </div>
               </div>

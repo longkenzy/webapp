@@ -440,9 +440,9 @@ export default function AdminDeploymentWorkPage() {
       'Loại bảo hành': typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType?.name || 'Unknown',
       'Khách hàng': deployment.customer?.fullCompanyName || 'N/A',
       'Trạng thái': deployment.status,
-      'Ngày bắt đầu': new Date(deployment.startDate).toLocaleDateString('vi-VN'),
-      'Ngày kết thúc': deployment.endDate ? new Date(deployment.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
-      'Ngày tạo': new Date(deployment.createdAt).toLocaleDateString('vi-VN'),
+      'Ngày bắt đầu': new Date(deployment.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      'Ngày kết thúc': deployment.endDate ? new Date(deployment.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa hoàn thành',
+      'Ngày tạo': new Date(deployment.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
       'Độ khó (User)': deployment.userDifficultyLevel || 'N/A',
       'Thời gian ước tính (User)': deployment.userEstimatedTime || 'N/A',
       'Tác động (User)': deployment.userImpactLevel || 'N/A',
@@ -1140,13 +1140,13 @@ export default function AdminDeploymentWorkPage() {
                           {dateFrom && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
                               <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
-                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
+                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                             </span>
                           )}
                           {dateTo && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
                               <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
-                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
+                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                             </span>
                           )}
                         </div>
@@ -1256,7 +1256,7 @@ export default function AdminDeploymentWorkPage() {
                                 {deployment.title}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Tạo: {new Date(deployment.createdAt).toLocaleString('vi-VN')}
+                                Tạo: {new Date(deployment.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
                               </div>
                             </div>
                           </td>

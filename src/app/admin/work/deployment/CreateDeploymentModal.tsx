@@ -338,22 +338,23 @@ export default function CreateDeploymentModal({
     setShowCustomerDropdown(false);
   }, [currentEmployee?.id]);
 
-  // Reset form when modal opens
+  // Reset form when modal opens (only for creating new case, not editing)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !editData) {
       resetForm();
     }
-  }, [isOpen, resetForm]);
+  }, [isOpen, editData, resetForm]);
 
   // Auto-select current employee when both currentEmployee and employees are loaded
+  // But only when creating a new case, not editing
   useEffect(() => {
-    if (currentEmployee && employees.length > 0 && formData.handler === '') {
+    if (!editData && currentEmployee && employees.length > 0 && formData.handler === '') {
       setFormData(prev => ({
         ...prev,
         handler: currentEmployee.id
       }));
     }
-  }, [currentEmployee, employees, formData.handler]);
+  }, [editData, currentEmployee, employees, formData.handler]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

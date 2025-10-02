@@ -9,6 +9,7 @@ interface NotificationContextType {
   loading: boolean;
   error: string | null;
   forceRefresh: () => void;
+  refreshIfNeeded: () => void;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;

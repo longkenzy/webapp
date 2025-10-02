@@ -18,8 +18,9 @@ interface UseNotificationsReturn {
   unreadCount: number;
   loading: boolean;
   error: string | null;
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: (showLoading?: boolean) => Promise<void>;
   forceRefresh: () => void;
+  refreshIfNeeded: () => void;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
@@ -33,14 +34,20 @@ export function useNotifications(): UseNotificationsReturn {
   const [error, setError] = useState<string | null>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isUserInteractingRef = useRef(false);
+  const lastFetchTimeRef = useRef<number>(0);
+  const CACHE_DURATION = 15000; // 15 seconds cache
 
-  const fetchNotifications = useCallback(async () => {
+  const fetchNotifications = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       setError(null);
       
       // Track last fetch time
-      (window as any).lastNotificationFetch = Date.now();
+      const now = Date.now();
+      lastFetchTimeRef.current = now;
+      (window as any).lastNotificationFetch = now;
       
       const response = await fetch('/api/notifications?limit=50', {
         headers: {
@@ -59,7 +66,9 @@ export function useNotifications(): UseNotificationsReturn {
       setError(err instanceof Error ? err.message : 'Unknown error');
       console.error('Error fetching notifications:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -209,11 +218,29 @@ export function useNotifications(): UseNotificationsReturn {
     
     // Set a new timeout to debounce rapid calls
     debounceTimeoutRef.current = setTimeout(() => {
-      fetchNotifications().catch(error => {
+      fetchNotifications(true).catch(error => {
         console.error('Error in force refresh:', error);
       });
     }, 500); // 500ms debounce
   }, [fetchNotifications]);
+
+  // Smart refresh - only fetch if cache expired
+  const refreshIfNeeded = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetchTimeRef.current;
+    
+    // If data is fresh (< 15 seconds), don't fetch
+    if (timeSinceLastFetch < CACHE_DURATION) {
+      console.log(`Using cached notifications (${Math.round(timeSinceLastFetch / 1000)}s old)`);
+      return;
+    }
+    
+    // Data is stale, fetch in background without showing loader
+    console.log(`Refreshing notifications in background (${Math.round(timeSinceLastFetch / 1000)}s old)`);
+    fetchNotifications(false).catch(error => {
+      console.error('Error in background refresh:', error);
+    });
+  }, [fetchNotifications, CACHE_DURATION]);
 
   // Function to manage user interaction state
   const setUserInteracting = useCallback((interacting: boolean) => {
@@ -227,6 +254,7 @@ export function useNotifications(): UseNotificationsReturn {
     error,
     fetchNotifications,
     forceRefresh,
+    refreshIfNeeded,
     markAsRead,
     markAllAsRead,
     deleteNotification,

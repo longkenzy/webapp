@@ -7,9 +7,9 @@ import { ArrowLeft, Edit, Calendar, Phone, Mail, MapPin, User, Building, FileTex
 import Link from "next/link";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EmployeeViewPage({ params }: PageProps) {
@@ -17,10 +17,12 @@ export default async function EmployeeViewPage({ params }: PageProps) {
   if (!session) redirect("/login");
   if (!atLeast(session.user.role, Role.IT_STAFF)) redirect("/user/dashboard");
 
+  const { id } = await params;
+
   // Fetch employee data
   const employee = await db.employee.findUnique({
     where: {
-      id: params.id,
+      id: id,
     },
   });
 
@@ -104,7 +106,7 @@ export default async function EmployeeViewPage({ params }: PageProps) {
           </div>
           
           <Link
-            href={`/admin/personnel/edit/${employee.id}`}
+            href={`/admin/personnel/edit/${id}`}
             className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
           >
             <Edit className="h-4 w-4 mr-2" />
@@ -306,7 +308,7 @@ export default async function EmployeeViewPage({ params }: PageProps) {
               
               <div className="space-y-3">
                 <Link
-                  href={`/admin/personnel/edit/${employee.id}`}
+                  href={`/admin/personnel/edit/${id}`}
                   className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <Edit className="h-4 w-4 mr-2" />

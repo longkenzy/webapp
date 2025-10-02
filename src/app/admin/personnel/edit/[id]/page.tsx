@@ -8,9 +8,9 @@ import Link from "next/link";
 import EmployeeEditForm from "./EmployeeEditForm";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function EmployeeEditPage({ params }: PageProps) {
@@ -18,10 +18,12 @@ export default async function EmployeeEditPage({ params }: PageProps) {
   if (!session) redirect("/login");
   if (!atLeast(session.user.role, Role.IT_STAFF)) redirect("/user/dashboard");
 
+  const { id } = await params;
+
   // Fetch employee data
   const employee = await db.employee.findUnique({
     where: {
-      id: params.id,
+      id: id,
     },
   });
 
@@ -51,7 +53,7 @@ export default async function EmployeeEditPage({ params }: PageProps) {
             </div>
             
             <Link
-              href={`/admin/personnel/view/${employee.id}`}
+              href={`/admin/personnel/view/${id}`}
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white text-sm font-medium rounded-xl hover:from-gray-700 hover:to-gray-800 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               <User className="h-4 w-4 mr-2" />

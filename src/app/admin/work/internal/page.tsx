@@ -531,7 +531,7 @@ export default function AdminInternalWorkPage() {
     }
     
     return matchesSearch && matchesHandler && matchesRequester && matchesCaseType && matchesStatus && matchesDateRange;
-  }).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
   // Pagination logic
   const totalItems = filteredInternalCases.length;
@@ -1507,7 +1507,7 @@ export default function AdminInternalWorkPage() {
                               >
                                 <td className="px-3 py-2 text-center">
                           <span className="text-xs font-medium text-gray-600">
-                            {filteredInternalCases.length - index}
+                            {totalItems - startIndex - index}
                           </span>
                         </td>
                                 <td className="px-3 py-2">

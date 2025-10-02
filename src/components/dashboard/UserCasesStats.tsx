@@ -498,7 +498,7 @@ export default function UserCasesStats() {
               {/* User Details Table */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-gray-900">Chi tiết từng User</h4>
-                <div className="max-h-64 overflow-y-auto">
+                <div className="space-y-2">
                   {stats.users.map((user, index) => (
                     <div key={user.userId} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow duration-200">
                       <div className="flex items-center space-x-3">

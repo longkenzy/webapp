@@ -100,6 +100,10 @@ export default function AdminDeploymentWorkPage() {
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage] = useState<number>(10);
+  
   // States for evaluation form
   const [evaluationForm, setEvaluationForm] = useState({
     adminDifficultyLevel: '',
@@ -177,7 +181,7 @@ export default function AdminDeploymentWorkPage() {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/deployment-cases?limit=100', {
+      const response = await fetch('/api/deployment-cases?limit=1000', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
@@ -211,7 +215,7 @@ export default function AdminDeploymentWorkPage() {
   const refreshDeployments = useCallback(async () => {
     setRefreshing(true);
     try {
-      const response = await fetch('/api/deployment-cases?limit=100', {
+      const response = await fetch('/api/deployment-cases?limit=1000', {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache',
@@ -330,7 +334,36 @@ export default function AdminDeploymentWorkPage() {
 
     return matchesSearch && matchesHandler && matchesStatus && matchesDeploymentType && 
            matchesCustomer && matchesDateFrom && matchesDateTo;
-  }), [deployments, debouncedSearchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo]);
+  }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()), [deployments, debouncedSearchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo]);
+
+  // Pagination logic
+  const totalItems = filteredWarranties.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDeployments = filteredWarranties.slice(startIndex, endIndex);
+
+  // Pagination functions
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo]);
 
   // Get unique values for filters (memoized for performance)
   const uniqueHandlers = useMemo(() => 
@@ -1163,8 +1196,9 @@ export default function AdminDeploymentWorkPage() {
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
@@ -1200,7 +1234,7 @@ export default function AdminDeploymentWorkPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredWarranties.map((deployment, index) => (
+                    {paginatedDeployments.map((deployment, index) => (
                           <React.Fragment key={deployment.id}>
                         <tr 
                           className={`hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer ${
@@ -1211,7 +1245,7 @@ export default function AdminDeploymentWorkPage() {
                           {/* STT */}
                           <td className="px-2 py-4 whitespace-nowrap text-center w-16">
                             <span className="text-xs font-medium text-gray-600">
-                              {filteredWarranties.length - index}
+                              {totalItems - startIndex - index}
                             </span>
                           </td>
                           
@@ -1434,9 +1468,100 @@ export default function AdminDeploymentWorkPage() {
                         )}
                       </React.Fragment>
                     ))}
-                  </tbody>
-                  </table>
-                </div>
+                    </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                      <div className="flex-1 flex justify-between sm:hidden">
+                        <button
+                          onClick={goToPrevPage}
+                          disabled={currentPage === 1}
+                          className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Trước
+                        </button>
+                        <button
+                          onClick={goToNextPage}
+                          disabled={currentPage === totalPages}
+                          className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Sau
+                        </button>
+                      </div>
+                      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm text-gray-700">
+                            Hiển thị{' '}
+                            <span className="font-medium">{startIndex + 1}</span>
+                            {' '}đến{' '}
+                            <span className="font-medium">
+                              {Math.min(endIndex, totalItems)}
+                            </span>
+                            {' '}của{' '}
+                            <span className="font-medium">{totalItems}</span>
+                            {' '}kết quả
+                          </p>
+                        </div>
+                        <div>
+                          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                            <button
+                              onClick={goToPrevPage}
+                              disabled={currentPage === 1}
+                              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <span className="sr-only">Trước</span>
+                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            
+                            {/* Page numbers */}
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum;
+                              if (totalPages <= 5) {
+                                pageNum = i + 1;
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1;
+                              } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                              } else {
+                                pageNum = currentPage - 2 + i;
+                              }
+                              
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => goToPage(pageNum)}
+                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                    pageNum === currentPage
+                                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            })}
+                            
+                            <button
+                              onClick={goToNextPage}
+                              disabled={currentPage === totalPages}
+                              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <span className="sr-only">Sau</span>
+                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </nav>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

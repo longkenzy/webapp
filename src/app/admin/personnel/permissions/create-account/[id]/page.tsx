@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Save, User, Lock, Mail, Shield } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +14,8 @@ interface Employee {
   department: string | null;
 }
 
-export default function CreateAccountPage({ params }: { params: { id: string } }) {
+export default function CreateAccountPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,11 +30,11 @@ export default function CreateAccountPage({ params }: { params: { id: string } }
 
   useEffect(() => {
     fetchEmployee();
-  }, [params.id]);
+  }, [id]);
 
   const fetchEmployee = async () => {
     try {
-      const response = await fetch(`/api/employees/${params.id}`);
+      const response = await fetch(`/api/employees/${id}`);
       if (response.ok) {
         const data = await response.json();
         setEmployee(data);
@@ -86,7 +87,7 @@ export default function CreateAccountPage({ params }: { params: { id: string } }
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          employeeId: params.id,
+          employeeId: id,
           username: formData.username,
           password: formData.password,
           role: formData.role,

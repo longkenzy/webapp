@@ -6,6 +6,12 @@ import AdminSidebar from "@/components/shared/layout/AdminSidebar";
 import AdminTopbar from "@/components/shared/layout/AdminTopbar";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import AdminLayoutClient from "@/components/shared/layout/AdminLayoutClient";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "IT Services Management - Admin",
+  description: "Hệ thống quản lý dịch vụ IT toàn diện",
+};
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();

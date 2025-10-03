@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Users } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Users, ChevronDown, Phone, Mail, Briefcase } from "lucide-react";
 import Link from "next/link";
 import DeleteConfirmationModal from '@/components/shared/common/DeleteConfirmationModal';
 
@@ -46,6 +46,7 @@ export default function PersonnelListPage() {
   const [genderFilter, setGenderFilter] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [positionFilter, setPositionFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
   
   // Sort states
   const [sortBy, setSortBy] = useState<'startDate' | 'name' | 'department' | 'position'>('startDate');
@@ -261,10 +262,10 @@ export default function PersonnelListPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Đang tải...</p>
+          <div className="animate-spin rounded-full h-10 w-10 md:h-12 md:w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-3 md:mt-4 text-sm md:text-base text-gray-600">Đang tải...</p>
         </div>
       </div>
     );
@@ -272,21 +273,35 @@ export default function PersonnelListPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* iOS Safari input fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, select::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9CA3AF !important;
+          opacity: 1 !important;
+          color: #9CA3AF !important;
+        }
+      ` }} />
+      
       {/* Notifications */}
       {error && (
-        <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+        <div className="fixed top-4 right-4 z-50 bg-red-100 border border-red-400 text-red-700 px-3 md:px-4 py-2 md:py-3 rounded-md text-xs md:text-sm max-w-xs md:max-w-md">
           <div className="flex items-center space-x-2">
             <span>⚠️ {error}</span>
-            <button onClick={() => setError('')} className="text-red-500 hover:text-red-700">×</button>
+            <button onClick={() => setError('')} className="text-red-500 hover:text-red-700 text-lg">×</button>
           </div>
         </div>
       )}
       
       {success && (
-        <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
+        <div className="fixed top-4 right-4 z-50 bg-green-100 border border-green-400 text-green-700 px-3 md:px-4 py-2 md:py-3 rounded-md text-xs md:text-sm max-w-xs md:max-w-md">
           <div className="flex items-center space-x-2">
             <span>✅ {success}</span>
-            <button onClick={() => setSuccess('')} className="text-green-500 hover:text-green-700">×</button>
+            <button onClick={() => setSuccess('')} className="text-green-500 hover:text-green-700 text-lg">×</button>
           </div>
         </div>
       )}
@@ -308,27 +323,42 @@ export default function PersonnelListPage() {
       />
 
       {/* Main Content */}
-      <div className="p-6">
+      <div className="p-3 md:p-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between gap-2 mb-4 md:mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Danh sách nhân sự</h1>
-            <p className="text-gray-600 mt-1">Quản lý thông tin nhân sự trong hệ thống</p>
+            <h1 className="text-base md:text-2xl font-bold text-gray-900">Danh sách nhân sự</h1>
+            <p className="text-[10px] md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">Quản lý thông tin nhân sự trong hệ thống</p>
           </div>
           
           <Link
             href="/admin/personnel/add"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white text-xs md:text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Thêm nhân sự
+            <Plus className="h-3.5 w-3.5 md:h-4 md:w-4 md:mr-2" />
+            <span className="hidden md:inline">Thêm nhân sự</span>
           </Link>
         </div>
 
         {/* Search and Filter Bar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden mb-4 md:mb-6">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="md:hidden w-full bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-2.5 border-b border-gray-100 flex items-center justify-between"
+          >
+            <div className="flex items-center space-x-2">
+              <div className="p-1 bg-blue-100 rounded">
+                <Search className="h-3.5 w-3.5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
+              </div>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+          
+          <div className="hidden md:block bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
             <div className="flex items-center space-x-2">
               <div className="p-1.5 bg-blue-100 rounded-md">
                 <Search className="h-4 w-4 text-blue-600" />
@@ -341,42 +371,44 @@ export default function PersonnelListPage() {
           </div>
 
           {/* Content */}
-          <div className="p-4">
-            <div className="space-y-4">
+          <div className={`p-3 md:p-4 ${showFilters ? 'block' : 'hidden md:block'}`}>
+            <div className="space-y-3 md:space-y-4">
               {/* Search Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
                   Tìm kiếm
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2.5 md:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tên, email công ty, email cá nhân..."
+                    placeholder="Tìm kiếm theo tên, email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    className="w-full pl-9 md:pl-10 pr-2.5 md:pr-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                    style={{ WebkitAppearance: 'none' }}
                   />
                 </div>
               </div>
 
               {/* Sort Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
                   Sắp xếp
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-blue-500 rounded-full"></div>
                         <span>Sắp xếp theo</span>
                       </div>
                     </label>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as 'startDate' | 'name' | 'department' | 'position')}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="startDate">Ngày vào làm</option>
                       <option value="name">Tên nhân sự</option>
@@ -386,16 +418,17 @@ export default function PersonnelListPage() {
                   </div>
                   
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-indigo-500 rounded-full"></div>
                         <span>Thứ tự</span>
                       </div>
                     </label>
                     <select
                       value={sortDirection}
                       onChange={(e) => setSortDirection(e.target.value as 'asc' | 'desc')}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="asc">Cũ nhất trước</option>
                       <option value="desc">Mới nhất trước</option>
@@ -406,22 +439,23 @@ export default function PersonnelListPage() {
 
               {/* Filters Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
                   Bộ lọc
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-4">
                   {/* Gender Filter */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-pink-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-pink-500 rounded-full"></div>
                         <span>Giới tính</span>
                       </div>
                     </label>
                     <select
                       value={genderFilter}
                       onChange={(e) => setGenderFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả giới tính</option>
                       <option value="Nam">Nam</option>
@@ -431,16 +465,17 @@ export default function PersonnelListPage() {
 
                   {/* Department Filter */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-green-500 rounded-full"></div>
                         <span>Phòng ban</span>
                       </div>
                     </label>
                     <select
                       value={departmentFilter}
                       onChange={(e) => setDepartmentFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả phòng ban</option>
                       {getUniqueDepartments().map(dept => (
@@ -451,16 +486,17 @@ export default function PersonnelListPage() {
 
                   {/* Position Filter */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-purple-500 rounded-full"></div>
                         <span>Chức vụ</span>
                       </div>
                     </label>
                     <select
                       value={positionFilter}
                       onChange={(e) => setPositionFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả chức vụ</option>
                       {getUniquePositions().map(pos => (
@@ -543,9 +579,10 @@ export default function PersonnelListPage() {
           </div>
         </div>
 
-        {/* Employees Table */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+        {/* Employees List */}
+        <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
+          {/* Desktop: Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -621,7 +658,7 @@ export default function PersonnelListPage() {
                           <Eye className="h-4 w-4" />
                         </Link>
                         <Link
-                          href={`/admin/personnel/edit/${employee.id}`}
+                          href={`/admin/personnel/view/${employee.id}`}
                           className="p-1 text-gray-400 hover:text-green-600 transition-colors"
                           title="Sửa"
                         >
@@ -641,33 +678,103 @@ export default function PersonnelListPage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile: Card View */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {filteredEmployees.map((employee, index) => (
+              <div key={employee.id} className="p-3 hover:bg-gray-50 transition-colors">
+                <div className="space-y-2">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[9px] font-bold text-gray-500">#{index + 1}</span>
+                        <h4 className="text-xs font-semibold text-gray-900 truncate">{employee.fullName}</h4>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] text-gray-500">{getYearOfBirth(employee.dateOfBirth)}</span>
+                        {getGenderBadge(employee.gender)}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Link
+                        href={`/admin/personnel/view/${employee.id}`}
+                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Link>
+                      <Link
+                        href={`/admin/personnel/edit/${employee.id}`}
+                        className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteClick(employee)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Job Info */}
+                  <div className="flex items-start gap-1.5 pt-1 border-t border-gray-100">
+                    <Briefcase className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] text-gray-600">{employee.position || 'Chưa phân công'}</div>
+                      <div className="text-[10px] text-gray-500">{employee.department || 'Chưa phân công'}</div>
+                    </div>
+                  </div>
+
+                  {/* Contact Info */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                      <span className="text-[10px] text-gray-600 truncate">{employee.primaryPhone}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Mail className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                      <span className="text-[10px] text-gray-600 truncate">{employee.companyEmail}</span>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {getStatusBadge(employee.status)}
+                    {getContractTypeBadge(employee.contractType)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
           
           {/* Empty State */}
           {filteredEmployees.length === 0 && employees.length > 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <Search className="h-16 w-16 mx-auto" />
+            <div className="text-center py-8 md:py-12 px-4">
+              <div className="text-gray-400 mb-3 md:mb-4">
+                <Search className="h-12 w-12 md:h-16 md:w-16 mx-auto" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy nhân sự nào</h3>
-              <p className="text-gray-500">Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</p>
+              <h3 className="text-sm md:text-lg font-medium text-gray-900 mb-1 md:mb-2">Không tìm thấy nhân sự nào</h3>
+              <p className="text-xs md:text-sm text-gray-500">Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</p>
             </div>
           )}
 
           {employees.length === 0 && (
-            <div className="text-center py-12">
-              <div className="mx-auto h-12 w-12 text-gray-400">
-                <Users className="h-12 w-12" />
+            <div className="text-center py-8 md:py-12 px-4">
+              <div className="mx-auto h-10 w-10 md:h-12 md:w-12 text-gray-400">
+                <Users className="h-10 w-10 md:h-12 md:w-12" />
               </div>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Chưa có nhân sự</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="mt-2 text-xs md:text-sm font-medium text-gray-900">Chưa có nhân sự</h3>
+              <p className="mt-1 text-xs md:text-sm text-gray-500">
                 Bắt đầu bằng cách thêm nhân sự đầu tiên.
               </p>
-              <div className="mt-6">
+              <div className="mt-4 md:mt-6">
                 <Link
                   href="/admin/personnel/add"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center px-3 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white text-xs md:text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                   Thêm nhân sự
                 </Link>
               </div>

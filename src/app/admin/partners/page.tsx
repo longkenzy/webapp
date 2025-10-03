@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Building2, Phone, MapPin, User, Edit, Trash2, Save, X, Search, Plus } from "lucide-react";
+import { Building2, Phone, MapPin, User, Edit, Trash2, Save, X, Search, Plus, ChevronDown } from "lucide-react";
 import toast from 'react-hot-toast';
 
 interface Partner {
@@ -264,71 +264,86 @@ export default function PartnersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-3 md:p-4">
+      {/* iOS Safari input fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, select::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9CA3AF !important;
+          opacity: 1 !important;
+          color: #9CA3AF !important;
+        }
+      ` }} />
+      
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-4">
+        <div className="mb-3 md:mb-4">
           <div className="flex items-center space-x-2 mb-1">
-            <div className="p-1.5 bg-blue-100 rounded-lg">
-              <Building2 className="h-5 w-5 text-blue-600" />
+            <div className="p-1.5 bg-blue-100 rounded-md">
+              <Building2 className="h-4 w-4 md:h-5 md:w-5 text-blue-600" />
             </div>
-            <h1 className="text-xl font-bold text-gray-900">Nhà cung cấp</h1>
+            <h1 className="text-lg md:text-xl font-bold text-gray-900">Nhà cung cấp</h1>
           </div>
-          <p className="text-sm text-gray-600">Quản lý thông tin các nhà cung cấp và đối tác</p>
+          <p className="text-xs md:text-sm text-gray-600">Quản lý thông tin các nhà cung cấp và đối tác</p>
         </div>
 
         {/* Search Bar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-gray-400" />
+        <div className="bg-white rounded-md shadow-sm border border-gray-200 p-3 md:p-4 mb-3 md:mb-4">
+          <div className="relative flex items-center">
+            <div className="absolute left-2.5 md:left-3 flex items-center justify-center pointer-events-none">
+              <Search className="h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
             </div>
             <input
               type="text"
               placeholder="Tìm kiếm theo tên công ty hoặc tên viết tắt..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              className="block w-full pl-9 md:pl-10 pr-3 py-1.5 md:py-2 border border-gray-300 rounded-md bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-xs md:text-sm"
+              style={{ WebkitAppearance: 'none', lineHeight: 'normal' }}
             />
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-            <div className="flex items-center">
-              <div className="p-1.5 bg-green-100 rounded-lg">
-                <Building2 className="h-4 w-4 text-green-600" />
+        <div className="grid grid-cols-3 gap-2 md:gap-3 mb-3 md:mb-4">
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-2 md:p-3">
+            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-0">
+              <div className="p-1 md:p-1.5 bg-green-100 rounded-md w-fit">
+                <Building2 className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
               </div>
-              <div className="ml-2">
-                <p className="text-xs font-medium text-gray-600">
-                  {searchTerm ? 'Kết quả tìm kiếm' : 'Tổng số nhà cung cấp'}
+              <div className="md:ml-2">
+                <p className="text-[9px] md:text-xs font-medium text-gray-600 leading-tight">
+                  {searchTerm ? 'Kết quả' : 'Tổng'}
                 </p>
-                <p className="text-lg font-bold text-gray-900">{filteredPartners.length}</p>
+                <p className="text-sm md:text-lg font-bold text-gray-900">{filteredPartners.length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-            <div className="flex items-center">
-              <div className="p-1.5 bg-blue-100 rounded-lg">
-                <User className="h-4 w-4 text-blue-600" />
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-2 md:p-3">
+            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-0">
+              <div className="p-1 md:p-1.5 bg-blue-100 rounded-md w-fit">
+                <User className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
               </div>
-              <div className="ml-2">
-                <p className="text-xs font-medium text-gray-600">Có người liên hệ</p>
-                <p className="text-lg font-bold text-gray-900">
+              <div className="md:ml-2">
+                <p className="text-[9px] md:text-xs font-medium text-gray-600 leading-tight">Liên hệ</p>
+                <p className="text-sm md:text-lg font-bold text-gray-900">
                   {filteredPartners.filter(p => p.contactPerson).length}
                 </p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-            <div className="flex items-center">
-              <div className="p-1.5 bg-purple-100 rounded-lg">
-                <Phone className="h-4 w-4 text-purple-600" />
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-2 md:p-3">
+            <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-0">
+              <div className="p-1 md:p-1.5 bg-purple-100 rounded-md w-fit">
+                <Phone className="h-3 w-3 md:h-4 md:w-4 text-purple-600" />
               </div>
-              <div className="ml-2">
-                <p className="text-xs font-medium text-gray-600">Có số điện thoại</p>
-                <p className="text-lg font-bold text-gray-900">
+              <div className="md:ml-2">
+                <p className="text-[9px] md:text-xs font-medium text-gray-600 leading-tight">Có SĐT</p>
+                <p className="text-sm md:text-lg font-bold text-gray-900">
                   {filteredPartners.filter(p => p.contactPhone).length}
                 </p>
               </div>
@@ -336,21 +351,298 @@ export default function PartnersPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900">Danh sách nhà cung cấp</h3>
+        {/* Partners List */}
+        <div className="bg-white rounded-md shadow-sm border border-gray-200">
+          {/* Header */}
+          <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-gray-200 flex items-center justify-between">
+            <h3 className="text-sm md:text-base font-semibold text-gray-900">Danh sách nhà cung cấp</h3>
             <button
               onClick={startAddingNew}
               disabled={isAddingNew}
-              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-2.5 md:px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <Plus className="h-3 w-3 mr-1" />
-              Thêm nhà cung cấp
+              <Plus className="h-3 w-3 md:mr-1" />
+              <span className="hidden md:inline">Thêm nhà cung cấp</span>
             </button>
           </div>
           
-          <div className="overflow-x-auto">
+          {/* Mobile: Card View */}
+          <div className="md:hidden">
+            {/* Add New Partner Card (Mobile) */}
+            {isAddingNew && (
+              <div className="p-2.5 bg-blue-50 border-b-2 border-blue-200">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-semibold text-blue-700">Thêm mới</span>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[9px] font-medium text-gray-700 mb-0.5">
+                      Tên công ty <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newPartnerData.fullCompanyName || ''}
+                      onChange={(e) => updateNewPartnerData('fullCompanyName', e.target.value)}
+                      placeholder="Tên công ty đầy đủ"
+                      className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                      style={{ WebkitAppearance: 'none' }}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[9px] font-medium text-gray-700 mb-0.5">
+                        Viết tắt <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newPartnerData.shortName || ''}
+                        onChange={(e) => updateNewPartnerData('shortName', e.target.value)}
+                        placeholder="Viết tắt"
+                        className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                        style={{ WebkitAppearance: 'none' }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-[9px] font-medium text-gray-700 mb-0.5">
+                        SĐT
+                      </label>
+                      <input
+                        type="text"
+                        value={newPartnerData.contactPhone || ''}
+                        onChange={(e) => updateNewPartnerData('contactPhone', e.target.value)}
+                        placeholder="SĐT"
+                        className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                        style={{ WebkitAppearance: 'none' }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[9px] font-medium text-gray-700 mb-0.5">
+                      Địa chỉ <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={newPartnerData.address || ''}
+                      onChange={(e) => updateNewPartnerData('address', e.target.value)}
+                      placeholder="Địa chỉ"
+                      className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white resize-none"
+                      rows={2}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[9px] font-medium text-gray-700 mb-0.5">
+                      Người liên hệ
+                    </label>
+                    <input
+                      type="text"
+                      value={newPartnerData.contactPerson || ''}
+                      onChange={(e) => updateNewPartnerData('contactPerson', e.target.value)}
+                      placeholder="Người liên hệ"
+                      className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                      style={{ WebkitAppearance: 'none' }}
+                    />
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex gap-1.5 pt-1">
+                    <button
+                      onClick={saveNewPartner}
+                      disabled={saving === 'new'}
+                      className="flex-1 inline-flex items-center justify-center px-2 py-1.5 bg-green-600 text-white text-[10px] font-medium rounded hover:bg-green-700 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 transition-colors"
+                    >
+                      {saving === 'new' ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
+                      ) : (
+                        <>
+                          <Save className="h-3 w-3 mr-1" />
+                          Lưu
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={cancelAddingNew}
+                      disabled={saving === 'new'}
+                      className="flex-1 inline-flex items-center justify-center px-2 py-1.5 bg-gray-600 text-white text-[10px] font-medium rounded hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 disabled:opacity-50 transition-colors"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Hủy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Partner Cards */}
+            <div className="divide-y divide-gray-100">
+              {filteredPartners.map((partner, index) => {
+                const isEditing = editingState[partner.id]?.isEditing;
+                const editingData = editingState[partner.id]?.data || partner;
+                
+                return (
+                  <div key={partner.id} className="p-2.5 hover:bg-gray-50 transition-colors">
+                    {isEditing ? (
+                      // Edit Mode
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-semibold text-blue-700">Chỉnh sửa</span>
+                          <span className="text-[9px] font-medium text-gray-500">#{index + 1}</span>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-[9px] font-medium text-gray-700 mb-0.5">Tên công ty</label>
+                          <input
+                            type="text"
+                            value={editingData.fullCompanyName || ''}
+                            onChange={(e) => updateEditingData(partner.id, 'fullCompanyName', e.target.value)}
+                            className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                            style={{ WebkitAppearance: 'none' }}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[9px] font-medium text-gray-700 mb-0.5">Viết tắt</label>
+                            <input
+                              type="text"
+                              value={editingData.shortName || ''}
+                              onChange={(e) => updateEditingData(partner.id, 'shortName', e.target.value)}
+                              className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                              style={{ WebkitAppearance: 'none' }}
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-[9px] font-medium text-gray-700 mb-0.5">SĐT</label>
+                            <input
+                              type="text"
+                              value={editingData.contactPhone || ''}
+                              onChange={(e) => updateEditingData(partner.id, 'contactPhone', e.target.value)}
+                              placeholder="SĐT"
+                              className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                              style={{ WebkitAppearance: 'none' }}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-[9px] font-medium text-gray-700 mb-0.5">Địa chỉ</label>
+                          <textarea
+                            value={editingData.address || ''}
+                            onChange={(e) => updateEditingData(partner.id, 'address', e.target.value)}
+                            className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white resize-none"
+                            rows={2}
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-[9px] font-medium text-gray-700 mb-0.5">Người liên hệ</label>
+                          <input
+                            type="text"
+                            value={editingData.contactPerson || ''}
+                            onChange={(e) => updateEditingData(partner.id, 'contactPerson', e.target.value)}
+                            placeholder="Người liên hệ"
+                            className="w-full text-[11px] border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                            style={{ WebkitAppearance: 'none' }}
+                          />
+                        </div>
+                        
+                        {/* Actions */}
+                        <div className="flex gap-1.5 pt-1">
+                          <button
+                            onClick={() => saveChanges(partner.id)}
+                            disabled={saving === partner.id}
+                            className="flex-1 inline-flex items-center justify-center px-2 py-1.5 bg-green-600 text-white text-[10px] font-medium rounded hover:bg-green-700 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-50 transition-colors"
+                          >
+                            {saving === partner.id ? (
+                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
+                            ) : (
+                              <>
+                                <Save className="h-3 w-3 mr-1" />
+                                Lưu
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => cancelEditing(partner.id)}
+                            disabled={saving === partner.id}
+                            className="flex-1 inline-flex items-center justify-center px-2 py-1.5 bg-gray-600 text-white text-[10px] font-medium rounded hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-500 disabled:opacity-50 transition-colors"
+                          >
+                            <X className="h-3 w-3 mr-1" />
+                            Hủy
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // View Mode
+                      <div className="space-y-1.5">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <h4 className="text-xs font-semibold text-gray-900 line-clamp-1 leading-tight">
+                                {partner.fullCompanyName}
+                              </h4>
+                            </div>
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-100 text-blue-800">
+                              {partner.shortName}
+                            </span>
+                          </div>
+                          <span className="text-[9px] font-medium text-gray-500">#{index + 1}</span>
+                        </div>
+                        
+                        {/* Address */}
+                        <div className="flex items-start gap-1.5">
+                          <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                          <p className="text-[10px] text-gray-600 leading-snug line-clamp-2">{partner.address}</p>
+                        </div>
+                        
+                        {/* Contact Info */}
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-[10px] text-gray-600 truncate">
+                              {partner.contactPerson || '-'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-[10px] text-gray-600 truncate">
+                              {partner.contactPhone || '-'}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Actions */}
+                        <div className="flex gap-1.5 pt-1.5">
+                          <button
+                            onClick={() => startEditing(partner)}
+                            className="flex-1 inline-flex items-center justify-center px-2 py-1.5 bg-blue-600 text-white text-[10px] font-medium rounded hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors"
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => deletePartner(partner.id)}
+                            className="flex-1 inline-flex items-center justify-center px-2 py-1.5 bg-red-600 text-white text-[10px] font-medium rounded hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Xóa
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Desktop: Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -608,13 +900,14 @@ export default function PartnersPage() {
             </table>
           </div>
           
+          {/* Empty State */}
           {filteredPartners.length === 0 && (
-            <div className="text-center py-12">
-              <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">
+            <div className="text-center py-8 md:py-12 px-4">
+              <Building2 className="mx-auto h-10 w-10 md:h-12 md:w-12 text-gray-400" />
+              <h3 className="mt-2 text-xs md:text-sm font-medium text-gray-900">
                 {searchTerm ? 'Không tìm thấy kết quả' : 'Chưa có nhà cung cấp'}
               </h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-xs md:text-sm text-gray-500">
                 {searchTerm ? `Không có nhà cung cấp nào phù hợp với "${searchTerm}"` : 'Bắt đầu thêm nhà cung cấp đầu tiên.'}
               </p>
             </div>

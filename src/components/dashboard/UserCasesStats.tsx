@@ -346,22 +346,23 @@ export default function UserCasesStats() {
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center space-x-2">
-            <div className="p-1.5 bg-gradient-to-r from-purple-100 to-pink-100 rounded-md">
-              <BarChart3 className="h-4 w-4 text-purple-600" />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <div className="p-1 md:p-1.5 bg-gradient-to-r from-purple-100 to-pink-100 rounded-md">
+              <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-600" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">Thống kê User xử lý Case</h3>
-              <p className="text-xs text-gray-600">Hiệu suất xử lý case của từng user</p>
+              <h3 className="text-xs md:text-sm font-semibold text-gray-900">Thống kê User xử lý Case</h3>
+              <p className="text-[10px] md:text-xs text-gray-600 hidden sm:block">Hiệu suất xử lý case của từng user</p>
             </div>
           </div>
           {lastUpdate && (
-            <p className="text-xs text-gray-500 flex items-center space-x-1 mt-1">
-              <span>Cập nhật lần cuối: {lastUpdate.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+            <p className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1 mt-1 ml-8 md:ml-9">
+              <span className="hidden sm:inline">Cập nhật lần cuối: </span>
+              <span>{lastUpdate.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
               {isAutoRefreshing && (
                 <RefreshCw className="h-3 w-3 animate-spin text-purple-500" />
               )}
@@ -371,17 +372,17 @@ export default function UserCasesStats() {
         <button
           onClick={refreshStats}
           disabled={refreshing}
-          className="flex items-center space-x-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-md hover:from-purple-700 hover:to-pink-700 transition-all duration-200 disabled:opacity-50 shadow-sm"
+          className="flex items-center gap-1 px-2 md:px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-md hover:from-purple-700 hover:to-pink-700 transition-all duration-200 disabled:opacity-50 shadow-sm"
         >
           <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="text-xs font-medium">Làm mới</span>
+          <span className="text-xs font-medium hidden sm:inline">Làm mới</span>
         </button>
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-md border border-gray-100 shadow-sm">
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-4 px-4" aria-label="Tabs">
+          <nav className="flex gap-3 md:gap-4 px-3 md:px-4" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('current')}
               className={`py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200 ${
@@ -412,44 +413,44 @@ export default function UserCasesStats() {
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-3 md:p-4">
           {stats.users.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {/* Summary Stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
+              <div className="grid grid-cols-3 gap-2 md:gap-4">
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-md p-2 md:p-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                     <div>
-                      <p className="text-xs font-medium text-blue-700">Tổng User</p>
-                      <p className="text-lg font-bold text-blue-900">{stats.totalUsers}</p>
+                      <p className="text-[10px] md:text-xs font-medium text-blue-700">Tổng User</p>
+                      <p className="text-base md:text-lg font-bold text-blue-900">{stats.totalUsers}</p>
                     </div>
-                    <Users className="h-5 w-5 text-blue-600" />
+                    <Users className="h-4 w-4 md:h-5 md:w-5 text-blue-600 self-end sm:self-auto" />
                   </div>
                 </div>
-                <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
+                <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-md p-2 md:p-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                     <div>
-                      <p className="text-xs font-medium text-green-700">Tổng Cases</p>
-                      <p className="text-lg font-bold text-green-900">{stats.totalCases}</p>
+                      <p className="text-[10px] md:text-xs font-medium text-green-700">Tổng Cases</p>
+                      <p className="text-base md:text-lg font-bold text-green-900">{stats.totalCases}</p>
                     </div>
-                    <BarChart3 className="h-5 w-5 text-green-600" />
+                    <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-green-600 self-end sm:self-auto" />
                   </div>
                 </div>
-                <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg p-3">
-                  <div className="flex items-center justify-between">
+                <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-md p-2 md:p-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                     <div>
-                      <p className="text-xs font-medium text-purple-700">Tỷ lệ hoàn thành TB</p>
-                      <p className="text-lg font-bold text-purple-900">{stats.averageCompletionRate}%</p>
+                      <p className="text-[10px] md:text-xs font-medium text-purple-700">TB Hoàn thành</p>
+                      <p className="text-base md:text-lg font-bold text-purple-900">{stats.averageCompletionRate}%</p>
                     </div>
-                    <Award className="h-5 w-5 text-purple-600" />
+                    <Award className="h-4 w-4 md:h-5 md:w-5 text-purple-600 self-end sm:self-auto" />
                   </div>
                 </div>
               </div>
 
               {/* Bar Chart */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">Top 10 User xử lý nhiều nhất</h4>
-                <div className="h-80">
+              <div className="bg-gray-50 rounded-md p-3 md:p-4">
+                <h4 className="text-xs md:text-sm font-semibold text-gray-900 mb-2 md:mb-3">Top 10 User xử lý nhiều nhất</h4>
+                <div className="h-64 md:h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -495,14 +496,14 @@ export default function UserCasesStats() {
                 </div>
               </div>
 
-              {/* User Details Table */}
+              {/* User Details Table - Responsive */}
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-gray-900">Chi tiết từng User</h4>
+                <h4 className="text-xs md:text-sm font-semibold text-gray-900">Chi tiết từng User</h4>
                 <div className="space-y-2">
-                  {stats.users.map((user, index) => (
-                    <div key={user.userId} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-sm transition-shadow duration-200">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
+                  {stats.users.slice(0, 5).map((user, index) => (
+                    <div key={user.userId} className="flex items-center justify-between p-2 md:p-3 bg-white rounded-md border border-gray-200 hover:shadow-sm transition-shadow duration-200">
+                      <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                        <div className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex-shrink-0">
                           {user.avatar ? (
                             <img 
                               src={user.avatar.startsWith('/avatars/') ? user.avatar : `/avatars/${user.avatar}`} 
@@ -510,30 +511,30 @@ export default function UserCasesStats() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <User className="h-4 w-4 text-purple-600" />
+                            <User className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-600" />
                           )}
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{user.userName}</p>
-                          <p className="text-xs text-gray-500">{user.department} • {user.position}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs md:text-sm font-medium text-gray-900 truncate">{user.userName}</p>
+                          <p className="text-[10px] md:text-xs text-gray-500 truncate hidden sm:block">{user.department} • {user.position}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4 text-xs">
+                      <div className="flex items-center gap-2 md:gap-4 text-xs flex-shrink-0">
                         <div className="text-center">
-                          <p className="font-bold text-gray-900">{user.totalCases}</p>
-                          <p className="text-gray-500">Tổng</p>
+                          <p className="font-bold text-gray-900 text-xs md:text-sm">{user.totalCases}</p>
+                          <p className="text-gray-500 text-[10px]">Tổng</p>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center hidden sm:block">
                           <p className="font-bold text-green-600">{user.completedCases}</p>
                           <p className="text-gray-500">Hoàn thành</p>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center hidden md:block">
                           <p className="font-bold text-yellow-600">{user.inProgressCases}</p>
                           <p className="text-gray-500">Đang xử lý</p>
                         </div>
                         <div className="text-center">
-                          <p className="font-bold text-blue-600">{user.completionRate}%</p>
-                          <p className="text-gray-500">Tỷ lệ</p>
+                          <p className="font-bold text-purple-600 text-xs md:text-sm">{user.completionRate}%</p>
+                          <p className="text-gray-500 text-[10px]">Hoàn thành</p>
                         </div>
                       </div>
                     </div>

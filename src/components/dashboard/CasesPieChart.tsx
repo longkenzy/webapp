@@ -218,22 +218,23 @@ export default function CasesPieChart() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 md:space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center space-x-2">
-            <div className="p-1.5 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-md">
-              <PieChartIcon className="h-4 w-4 text-blue-600" />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <div className="p-1 md:p-1.5 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-md">
+              <PieChartIcon className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-gray-900">Thống kê loại Case</h3>
-              <p className="text-xs text-gray-600">Phân bố các loại case trong hệ thống</p>
+              <h3 className="text-xs md:text-sm font-semibold text-gray-900">Thống kê loại Case</h3>
+              <p className="text-[10px] md:text-xs text-gray-600 hidden sm:block">Phân bố các loại case trong hệ thống</p>
             </div>
           </div>
           {lastUpdate && (
-            <p className="text-xs text-gray-500 flex items-center space-x-1 mt-1">
-              <span>Cập nhật lần cuối: {lastUpdate.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
+            <p className="text-[10px] md:text-xs text-gray-500 flex items-center gap-1 mt-1 ml-8 md:ml-9">
+              <span className="hidden sm:inline">Cập nhật lần cuối: </span>
+              <span>{lastUpdate.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}</span>
               {isAutoRefreshing && (
                 <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />
               )}
@@ -243,17 +244,17 @@ export default function CasesPieChart() {
         <button
           onClick={refreshStats}
           disabled={refreshing}
-          className="flex items-center space-x-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 shadow-sm"
+          className="flex items-center gap-1 px-2 md:px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 shadow-sm"
         >
           <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="text-xs font-medium">Làm mới</span>
+          <span className="text-xs font-medium hidden sm:inline">Làm mới</span>
         </button>
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white rounded-lg border border-gray-100 shadow-sm">
+      <div className="bg-white rounded-md border border-gray-100 shadow-sm">
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-4 px-4" aria-label="Tabs">
+          <nav className="flex gap-3 md:gap-4 px-3 md:px-4" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('current')}
               className={`py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200 ${
@@ -284,12 +285,12 @@ export default function CasesPieChart() {
         </div>
 
         {/* Pie Chart */}
-        <div className="p-4">
+        <div className="p-3 md:p-4">
         {stats && stats.caseTypes.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4 items-center">
             {/* Chart */}
             <div className="relative">
-              <div className="h-60">
+              <div className="h-48 md:h-60">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -343,8 +344,8 @@ export default function CasesPieChart() {
             </div>
 
             {/* Legend */}
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">Chi tiết</h4>
+            <div className="space-y-1.5 md:space-y-2">
+              <h4 className="text-xs md:text-sm font-semibold text-gray-900 mb-2 md:mb-3">Chi tiết</h4>
               {[...stats.caseTypes]
                 .sort((a, b) => b.value - a.value)
                 .map((item, index) => {
@@ -352,19 +353,19 @@ export default function CasesPieChart() {
                   const percentage = stats.totalCases > 0 ? Math.round((item.value / stats.totalCases) * 100) : 0;
                   
                   return (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors duration-200">
-                      <div className="flex items-center space-x-2">
+                    <div key={index} className="flex items-center justify-between p-1.5 md:p-2 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors duration-200">
+                      <div className="flex items-center gap-1.5 md:gap-2">
                         <div 
-                          className="p-1.5 rounded-md shadow-sm"
+                          className="p-1 md:p-1.5 rounded-md shadow-sm"
                           style={{ backgroundColor: `${item.color}20`, color: item.color }}
                         >
                           <Icon className="h-3 w-3" />
                         </div>
-                        <span className="text-xs font-medium text-gray-900">{item.label}</span>
+                        <span className="text-[10px] md:text-xs font-medium text-gray-900">{item.label}</span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-sm font-bold text-gray-900">{item.value}</span>
-                        <span className="text-xs text-gray-500 bg-white px-1.5 py-0.5 rounded-full shadow-sm">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs md:text-sm font-bold text-gray-900">{item.value}</span>
+                        <span className="text-[10px] md:text-xs text-gray-500 bg-white px-1 md:px-1.5 py-0.5 rounded-full shadow-sm">
                           {percentage}%
                         </span>
                       </div>

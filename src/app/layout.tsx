@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "IT Work Manager",
-  description: "Internal IT ticketing and work management",
+  title: "IT Services Management",
+  description: "Hệ thống quản lý dịch vụ IT toàn diện",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -20,7 +20,9 @@ import {
   Shield,
   AlertTriangle,
   RefreshCw,
-  Rocket
+  Rocket,
+  ChevronDown,
+  Search
 } from "lucide-react";
 import Link from "next/link";
 
@@ -174,7 +176,7 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
     <td className="px-2 py-2 whitespace-nowrap text-center">
       <Link
         href={getActionLink(case_.type, case_.id)}
-        className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+        className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors duration-200 shadow-sm hover:shadow-md"
       >
         <Eye className="h-2.5 w-2.5" />
         <span>Xem</span>
@@ -191,6 +193,7 @@ function AdminAllCasesTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
+  const [showFilters, setShowFilters] = useState(false);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -676,7 +679,7 @@ function AdminAllCasesTable() {
     return (
       <div className="space-y-6">
         {/* Skeleton for tabs */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-white rounded-md shadow-sm border border-gray-100">
           <div className="border-b border-gray-200">
             <div className="flex space-x-8 px-6">
               <div className="py-4 px-1 border-b-2 border-blue-500">
@@ -762,39 +765,54 @@ function AdminAllCasesTable() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+    <div className="space-y-4 md:space-y-6">
+      {/* iOS Safari text color fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9ca3af !important;
+          opacity: 0.6 !important;
+          color: #9ca3af !important;
+        }
+      `}} />
+
+      {/* Tab Navigation - Responsive */}
+      <div className="bg-white rounded-md shadow-sm border border-gray-100">
         <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6" aria-label="Tabs">
+          <nav className="flex gap-4 md:gap-8 px-3 md:px-6" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('today')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+              className={`py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${
                 activeTab === 'today'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4" />
-                <span>Hôm nay</span>
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Hôm nay</span>
+                <span className="sm:hidden">Nay</span>
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 md:px-2 py-0.5 rounded-full">
                   {todayCases.length}
                 </span>
               </div>
             </button>
             <button
               onClick={() => setActiveTab('all')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+              className={`py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${
                 activeTab === 'all'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" />
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <FileText className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 <span>Tất cả</span>
-                <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                <span className="bg-gray-100 text-gray-800 text-xs font-medium px-1.5 md:px-2 py-0.5 rounded-full">
                   {allCases.length}
                 </span>
               </div>
@@ -803,8 +821,38 @@ function AdminAllCasesTable() {
         </div>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+      {/* Statistics - Mobile: Horizontal Scroll, Desktop: Grid */}
+      <div className="md:hidden overflow-x-auto scrollbar-hide">
+        <div className="flex gap-2 pb-2">
+          {[
+            { type: 'internal', label: 'Nội bộ', icon: FileText, color: 'bg-blue-500' },
+            { type: 'delivery', label: 'Giao hàng', icon: Truck, color: 'bg-green-500' },
+            { type: 'receiving', label: 'Nhận hàng', icon: Package, color: 'bg-yellow-500' },
+            { type: 'maintenance', label: 'Bảo trì', icon: Wrench, color: 'bg-purple-500' },
+            { type: 'incident', label: 'Sự cố', icon: AlertTriangle, color: 'bg-red-500' },
+            { type: 'warranty', label: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' },
+            { type: 'deployment', label: 'Triển khai', icon: Rocket, color: 'bg-cyan-500' }
+          ].map(({ type, label, icon: Icon, color }) => {
+            const count = filteredCases.filter(c => c.type === type).length;
+            return (
+              <div key={type} className="flex-shrink-0 bg-white rounded-md border border-gray-200 px-2.5 py-1.5 shadow-sm">
+                <div className="flex items-center gap-1.5">
+                  <div className={`p-1 rounded ${color} text-white`}>
+                    <Icon className="h-3 w-3" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 leading-tight">{label}</p>
+                    <p className="text-sm font-bold text-gray-900">{count}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Statistics - Desktop: Grid */}
+      <div className="hidden md:grid grid-cols-4 lg:grid-cols-7 gap-2">
         {[
           { type: 'internal', label: 'Nội bộ', icon: FileText, color: 'bg-blue-500' },
           { type: 'delivery', label: 'Giao hàng', icon: Truck, color: 'bg-green-500' },
@@ -816,7 +864,7 @@ function AdminAllCasesTable() {
         ].map(({ type, label, icon: Icon, color }) => {
           const count = filteredCases.filter(c => c.type === type).length;
           return (
-            <div key={type} className="bg-white rounded-lg shadow-sm border border-gray-200 p-2">
+            <div key={type} className="bg-white rounded-md shadow-sm border border-gray-200 p-2.5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-medium text-gray-600">{label}</p>
@@ -831,10 +879,23 @@ function AdminAllCasesTable() {
         })}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
+      {/* Filters - Collapsible on Mobile */}
+      <div className="bg-white rounded-md shadow-sm border border-gray-100">
+        {/* Mobile: Collapsible Header */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="md:hidden w-full flex items-center justify-between px-3 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors rounded-t-md"
+        >
+          <div className="flex items-center gap-2">
+            <Settings className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-semibold text-gray-800">Bộ lọc</span>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Desktop: Static Header */}
+        <div className="hidden md:flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
               <Settings className="h-5 w-5 text-blue-600" />
             </div>
@@ -847,18 +908,20 @@ function AdminAllCasesTable() {
             <span>Xóa tất cả</span>
           </button>
         </div>
+
+        {/* Filter Content */}
+        <div className={`p-3 md:p-6 ${showFilters ? 'block' : 'hidden md:block'}`}>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 md:gap-4">
           {/* Case Type Filter */}
           <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <FileText className="h-3 w-3 text-blue-600" />
-              <span>Loại Case</span>
+            <label className="text-xs font-medium text-gray-700">
+              Loại Case
             </label>
             <select
               value={filters.caseType}
               onChange={(e) => handleFilterChange('caseType', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
             >
               <option value="">Tất cả loại case</option>
               <option value="internal">Case nội bộ</option>
@@ -873,29 +936,27 @@ function AdminAllCasesTable() {
 
           {/* Handler Filter */}
           <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <User className="h-3 w-3 text-green-600" />
-              <span>Người xử lý</span>
+            <label className="text-xs font-medium text-gray-700">
+              Người xử lý
             </label>
             <input
               type="text"
               placeholder="Tìm người xử lý..."
               value={filters.handler}
               onChange={(e) => handleFilterChange('handler', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm placeholder-gray-400"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm placeholder-gray-400"
             />
           </div>
 
           {/* Status Filter */}
           <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <CheckCircle className="h-3 w-3 text-purple-600" />
-              <span>Trạng thái</span>
+            <label className="text-xs font-medium text-gray-700">
+              Trạng thái
             </label>
             <select
               value={filters.status}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="RECEIVED">Tiếp nhận</option>
@@ -907,46 +968,54 @@ function AdminAllCasesTable() {
 
           {/* Customer Filter */}
           <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <AlertCircle className="h-3 w-3 text-orange-600" />
-              <span>Khách hàng</span>
+            <label className="text-xs font-medium text-gray-700">
+              Khách hàng
             </label>
             <input
               type="text"
               placeholder="Tìm khách hàng..."
               value={filters.customer}
               onChange={(e) => handleFilterChange('customer', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm placeholder-gray-400"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm placeholder-gray-400"
             />
           </div>
 
           {/* Date From Filter */}
           <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <Calendar className="h-3 w-3 text-purple-600" />
-              <span>Từ ngày</span>
+            <label className="text-xs font-medium text-gray-700">
+              Từ ngày
             </label>
             <input
               type="date"
               value={filters.dateFrom}
               onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
             />
           </div>
 
           {/* Date To Filter */}
           <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <Calendar className="h-3 w-3 text-purple-600" />
-              <span>Đến ngày</span>
+            <label className="text-xs font-medium text-gray-700">
+              Đến ngày
             </label>
             <input
               type="date"
               value={filters.dateTo}
               onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
+              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
             />
           </div>
+        </div>
+
+        {/* Mobile: Clear Filters Button */}
+        <div className="md:hidden mt-3 pt-3 border-t border-gray-200">
+          <button
+            onClick={clearFilters}
+            className="w-full inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+          >
+            <span>Xóa tất cả bộ lọc</span>
+          </button>
+        </div>
         </div>
 
         {/* Active Filters Display */}
@@ -1028,15 +1097,18 @@ function AdminAllCasesTable() {
       </div>
 
       {/* Cases Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+      <div className="bg-white rounded-md shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 md:px-6 py-3 md:py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
              <div>
-               <h2 className="text-xl font-bold text-gray-900">
-                 {activeTab === 'today' ? 'Cases cần xử lý & hôm nay' : 'Tất cả cases'}
+               <h2 className="text-base md:text-xl font-bold text-gray-900">
+                 {activeTab === 'today' ? 'Cases hôm nay' : 'Tất cả cases'}
                </h2>
-               <p className="text-sm text-gray-600 mt-1">
-                 Hiển thị: <span className="font-semibold text-blue-600">{startIndex + 1}-{Math.min(endIndex, filteredCases.length)}</span> / <span className="font-semibold text-gray-600">{filteredCases.length}</span> cases (trang {currentPage}/{totalPages})
+               <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1">
+                 <span className="md:hidden">{filteredCases.length} cases</span>
+                 <span className="hidden md:inline">
+                   Hiển thị: <span className="font-semibold text-blue-600">{startIndex + 1}-{Math.min(endIndex, filteredCases.length)}</span> / <span className="font-semibold text-gray-600">{filteredCases.length}</span> cases (trang {currentPage}/{totalPages})
+                 </span>
                </p>
              </div>
             <button
@@ -1044,17 +1116,126 @@ function AdminAllCasesTable() {
                 setLoading(true);
                 fetchAllCases();
               }}
-              className="flex items-center space-x-2 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 md:gap-2 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 md:px-3 py-1.5 md:py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
               title="Làm mới dữ liệu"
             >
               <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-              <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
+              <span className="hidden sm:inline">{loading ? 'Đang tải...' : 'Làm mới'}</span>
             </button>
           </div>
         </div>
         
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="md:hidden space-y-3">
+          {currentCases.length > 0 ? (
+            currentCases.map((case_, index) => {
+              const stt = filteredCases.length - (startIndex + index);
+              return (
+                <div key={case_.id} className="bg-white rounded-md border border-gray-200 p-3 hover:shadow-md transition-all">
+                  {/* Header: STT & Status */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xs font-bold text-gray-500">#{stt}</span>
+                    <span className={`inline-flex px-2 py-0.5 text-[10px] font-medium rounded border ${getStatusColor(case_.status)}`}>
+                      {getStatusLabel(case_.status)}
+                    </span>
+                  </div>
+
+                  {/* Case Type */}
+                  <div className="mb-2 pb-2 border-b border-gray-100">
+                    <span className="text-xs font-medium text-blue-600">
+                      {getCaseTypeLabel(case_.type)}
+                    </span>
+                  </div>
+
+                  {/* Form (if exists) */}
+                  {case_.title.includes('Hình thức:') && (
+                    <div className="mb-2">
+                      <span className="text-xs font-medium text-gray-700">
+                        {case_.title.split('\n')[0]}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Title */}
+                  <h4 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 leading-relaxed">
+                    {case_.title.includes('Hình thức:') ? case_.title.split('\n')[1] : case_.title}
+                  </h4>
+
+                  {/* Description */}
+                  <p className="text-xs text-gray-600 mb-3 pb-3 border-b border-gray-100 line-clamp-2 leading-relaxed">
+                    {case_.description}
+                  </p>
+
+                  {/* Info Grid */}
+                  <div className="space-y-2 mb-3 pb-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <User className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="text-xs text-gray-500">Người xử lý:</span>
+                      <span className="text-xs font-medium text-gray-900">{case_.handlerName}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="text-xs text-gray-500">Khách hàng:</span>
+                      <span className="text-xs font-medium text-gray-900">{case_.customerName || 'Nội bộ'}</span>
+                    </div>
+                  </div>
+
+                  {/* Time Info */}
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
+                      <span className="text-xs text-gray-500">Bắt đầu:</span>
+                      <span className="text-xs font-medium text-gray-900">
+                        {new Date(case_.startDate).toLocaleString('vi-VN', { 
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          timeZone: 'Asia/Ho_Chi_Minh' 
+                        })}
+                      </span>
+                    </div>
+                    {case_.endDate && (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
+                        <span className="text-xs text-gray-500">Kết thúc:</span>
+                        <span className="text-xs font-medium text-gray-900">
+                          {new Date(case_.endDate).toLocaleString('vi-VN', { 
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            timeZone: 'Asia/Ho_Chi_Minh' 
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Button */}
+                  <Link 
+                    href={getActionLink(case_.type, case_.id)}
+                    className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Xem chi tiết
+                  </Link>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-12 bg-gray-50">
+              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500">Không có case nào</p>
+            </div>
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full text-xs">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
@@ -1115,27 +1296,11 @@ function AdminAllCasesTable() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination - Desktop style on both mobile and desktop */}
         {totalPages > 1 && (
-          <div className="bg-white px-2 sm:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={goToPreviousPage}
-                disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Trước
-              </button>
-              <button
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Sau
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
+          <div className="bg-white px-2 md:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex-1 flex items-center justify-between md:justify-between">
+              <div className="hidden md:block">
                 <p className="text-sm text-gray-700">
                   Hiển thị{' '}
                   <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
@@ -1153,10 +1318,10 @@ function AdminAllCasesTable() {
                   <button
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Trước</span>
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
@@ -1178,7 +1343,7 @@ function AdminAllCasesTable() {
                       <button
                         key={pageNum}
                         onClick={() => goToPage(pageNum)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                        className={`relative inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 border text-xs md:text-sm font-medium ${
                           pageNum === currentPage
                             ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                             : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
@@ -1192,10 +1357,10 @@ function AdminAllCasesTable() {
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span className="sr-only">Sau</span>
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>

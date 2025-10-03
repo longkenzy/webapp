@@ -18,7 +18,8 @@ import {
   ChevronDown,
   BarChart3,
   Building2,
-  Rocket
+  Rocket,
+  X
 } from "lucide-react";
 
 interface NavLinkProps {
@@ -45,10 +46,11 @@ interface NavLinkWithDropdownProps {
   onToggle?: () => void;
 }
 
-function NavLink({ href, label, icon: Icon, isActive }: NavLinkProps) {
+function NavLink({ href, label, icon: Icon, isActive, onClick }: NavLinkProps & { onClick?: () => void }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={`flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
         isActive 
           ? 'bg-blue-50 text-blue-700' 
@@ -82,10 +84,11 @@ function NavLinkWithDropdown({ href, label, icon: Icon, isActive, hasSubItems, i
   );
 }
 
-function SubNavLink({ href, label, icon: Icon, isActive }: SubNavLinkProps) {
+function SubNavLink({ href, label, icon: Icon, isActive, onClick }: SubNavLinkProps & { onClick?: () => void }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={`flex items-center space-x-3 px-6 py-2 text-sm rounded-lg transition-colors ${
         isActive 
           ? 'bg-blue-50 text-blue-700 font-medium' 
@@ -101,9 +104,11 @@ function SubNavLink({ href, label, icon: Icon, isActive }: SubNavLinkProps) {
 interface AdminSidebarProps {
   userName: string;
   userEmail: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps) {
+export default function AdminSidebar({ userName, userEmail, isOpen = false, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<string[]>([]);
 
@@ -113,6 +118,13 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
         ? prev.filter(item => item !== href)
         : [...prev, href]
     );
+  };
+
+  const handleLinkClick = () => {
+    // Auto-close sidebar on mobile when clicking a link
+    if (window.innerWidth < 768 && onClose) {
+      onClose();
+    }
   };
 
   const menuItems = [
@@ -155,22 +167,33 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-white shadow-sm border-r border-gray-200 z-50 overflow-y-auto">
-      {/* Logo */}
+    <aside className={`fixed left-0 top-0 h-full w-64 bg-white shadow-lg border-r border-gray-200 z-50 overflow-y-auto transition-transform duration-300 ${
+      isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    }`}>
+      {/* Logo & Close Button */}
       <div className="p-2 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <Image
-            src="/logo/logo.png"
-            alt="IT Services Management Logo"
-            width={40}
-            height={40}
-            style={{ width: "auto", height: "auto" }}
-            className="rounded-lg"
-          />
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">IT Services</h1>
-            <p className="text-sm text-gray-500">Management</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo/logo.png"
+              alt="IT Services Management Logo"
+              width={40}
+              height={40}
+              style={{ width: "auto", height: "auto" }}
+              className="rounded-lg"
+            />
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">IT Services</h1>
+              <p className="text-sm text-gray-500">Management</p>
+            </div>
           </div>
+          {/* Mobile: Close Button */}
+          <button
+            onClick={onClose}
+            className="md:hidden p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
@@ -204,6 +227,7 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
                       label={item.label}
                       icon={item.icon}
                       isActive={pathname === item.href}
+                      onClick={handleLinkClick}
                     />
                   )}
                   
@@ -219,6 +243,7 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
                             label={subItem.label}
                             icon={subItem.icon}
                             isActive={pathname === subItem.href}
+                            onClick={handleLinkClick}
                           />
                         </li>
                       ))}
@@ -258,6 +283,7 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
                       label={item.label}
                       icon={item.icon}
                       isActive={pathname === item.href}
+                      onClick={handleLinkClick}
                     />
                   )}
                   
@@ -273,6 +299,7 @@ export default function AdminSidebar({ userName, userEmail }: AdminSidebarProps)
                             label={subItem.label}
                             icon={subItem.icon}
                             isActive={pathname === subItem.href}
+                            onClick={handleLinkClick}
                           />
                         </li>
                       ))}

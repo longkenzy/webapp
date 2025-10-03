@@ -1,12 +1,16 @@
 "use client";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Bell, Search, Settings, User, LogOut, ChevronDown } from "lucide-react";
+import { Bell, Search, Settings, User, LogOut, ChevronDown, Menu, X } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useAvatarRefresh } from "@/contexts/AvatarRefreshContext";
 import NotificationCenter from "@/components/shared/common/NotificationCenter";
 
-export default function AdminTopbar() {
+interface AdminTopbarProps {
+  onMenuClick?: () => void;
+}
+
+export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
   const { data } = useSession();
   const { registerRefreshCallback } = useAvatarRefresh();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -51,37 +55,46 @@ export default function AdminTopbar() {
   }, [data?.user?.id, fetchUserAvatar]);
 
   return (
-    <header className="fixed top-0 left-64 right-0 h-16 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-6 z-40 shadow-sm">
-      {/* Left Section - Search */}
-      <div className="flex items-center space-x-4">
-        <div className="relative">
+    <header className="fixed top-0 left-0 md:left-64 right-0 h-16 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-3 md:px-6 z-40 shadow-sm">
+      {/* Left Section */}
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Mobile: Hamburger Menu */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+
+        {/* Search - Hidden on small mobile */}
+        <div className="relative hidden sm:block">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <input
             type="text"
-            placeholder="Search anything..."
-            className="pl-10 pr-4 py-2 w-80 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50/50 backdrop-blur-sm text-sm"
+            placeholder="Search..."
+            className="pl-10 pr-4 py-2 w-48 md:w-80 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50/50 backdrop-blur-sm text-sm"
           />
         </div>
       </div>
 
       {/* Right Section - Actions & User */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Notifications */}
         <NotificationCenter />
 
-        {/* Settings */}
-        <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200">
+        {/* Settings - Hidden on mobile */}
+        <button className="hidden md:block p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200">
           <Settings className="h-5 w-5" />
         </button>
 
-        {/* Divider */}
-        <div className="w-px h-6 bg-gray-200"></div>
+        {/* Divider - Hidden on mobile */}
+        <div className="hidden md:block w-px h-6 bg-gray-200"></div>
 
         {/* User Menu */}
         <div className="relative">
           <button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
+            className="flex items-center gap-2 md:gap-3 p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
           >
             <div className="w-8 h-8 rounded-full overflow-hidden">
               {userAvatar ? (
@@ -98,7 +111,7 @@ export default function AdminTopbar() {
                 </div>
               )}
             </div>
-            <div className="hidden md:block text-left">
+            <div className="hidden lg:block text-left">
               <p className="text-sm font-medium text-gray-900">
                 {data?.user?.name || 'User'}
               </p>
@@ -106,7 +119,7 @@ export default function AdminTopbar() {
                 {data?.user?.email}
               </p>
             </div>
-            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform duration-200 hidden sm:block ${showUserMenu ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Dropdown Menu */}

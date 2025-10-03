@@ -7,6 +7,7 @@ import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import toast from 'react-hot-toast';
+import { getCurrentVietnamDateTime } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -42,7 +43,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     customerTitle: 'Anh', // Default title
     customerName: '',
     handler: '',
@@ -50,7 +51,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
     customer: '',
     title: '',
     description: '',
-    startDate: new Date().toISOString().slice(0, 16),
+    startDate: getCurrentVietnamDateTime(),
     endDate: '',
     status: 'RECEIVED',
     notes: '',
@@ -62,7 +63,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
     urgencyLevel: '',
     form: 'Onsite',
     formScore: '2' // Default for Onsite
-  });
+  }));
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -118,10 +119,10 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       if (response.ok) {
         const data = await response.json();
         console.log('Warranty types API response:', data);
-        // Convert to array of strings for backward compatibility
-        const typeNames = data.data?.map((type: any) => type.name) || [];
-        console.log('Processed warranty types:', typeNames);
-        setWarrantyTypes(typeNames);
+        // Store full warranty type objects to get IDs
+        const types = data.data || [];
+        console.log('Processed warranty types:', types);
+        setWarrantyTypes(types);
       } else {
         console.error('Failed to fetch warranty types:', response.status, response.statusText);
         setWarrantyTypes([]);
@@ -141,7 +142,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       customer: '',
       title: '',
       description: '',
-      startDate: new Date().toISOString().slice(0, 16),
+      startDate: getCurrentVietnamDateTime(),
       endDate: '',
       status: 'RECEIVED',
       notes: '',
@@ -355,6 +356,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
       console.log('=== Submitting Warranty ===');
       console.log('Form data:', formData);
       console.log('Warranty data to send:', warrantyData);
+      console.log('WarrantyTypeId value:', formData.warrantyType);
+      console.log('WarrantyTypeId in body:', warrantyData.warrantyTypeId);
 
       // Send to API
       const response = await fetch('/api/warranties', {
@@ -417,31 +420,45 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-8">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4 overflow-y-auto">
+      {/* iOS Safari text color fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9ca3af !important;
+          opacity: 0.6 !important;
+          color: #9ca3af !important;
+        }
+      `}} />
+
+      <div className="bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full max-w-7xl h-[95vh] md:max-h-[90vh] overflow-y-auto md:my-8">
         {/* Compact Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-lg">
+        <div className="sticky top-0 z-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-t-2xl md:rounded-t-lg">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-md">
-                <Shield className="h-5 w-5" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-white/20 rounded-md">
+                <Shield className="h-4 w-4 md:h-5 md:w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Tạo Case Bảo Hành</h2>
-                <p className="text-blue-100 text-sm">Hệ thống quản lý bảo hành</p>
+                <h2 className="text-base md:text-lg font-semibold">Tạo Case Bảo Hành</h2>
+                <p className="text-blue-100 text-xs md:text-sm hidden md:block">Hệ thống quản lý bảo hành</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
+              className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 md:h-5 md:w-5" />
             </button>
           </div>
         </div>
 
         {/* Compact Form */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-3 md:p-6 pb-20 md:pb-6">
           <div className="space-y-6">
             {/* Section 1: Thông tin cơ bản */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
@@ -557,13 +574,14 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
                                 key={partner.id}
                                 onClick={() => handleCustomerSelect(partner.id)}
                                 className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                style={{ WebkitTextFillColor: '#111827', opacity: 1 }}
                               >
-                                <div className="font-medium">{partner.shortName}</div>
-                                <div className="text-gray-500 text-xs">{partner.fullCompanyName}</div>
+                                <div className="font-medium" style={{ WebkitTextFillColor: '#111827', opacity: 1, color: '#111827' }}>{partner.shortName}</div>
+                                <div className="text-gray-500 text-xs" style={{ WebkitTextFillColor: '#6b7280', opacity: 1, color: '#6b7280' }}>{partner.fullCompanyName}</div>
                               </div>
                             ))
                           ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">
+                            <div className="px-3 py-2 text-sm text-gray-500" style={{ WebkitTextFillColor: '#6b7280', opacity: 1 }}>
                               Không tìm thấy khách hàng
                             </div>
                           )}
@@ -644,31 +662,32 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
                 <h3 className="text-sm font-semibold text-gray-700">Thời gian</h3>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-32">Thời gian bắt đầu</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="space-y-1 min-w-0 overflow-hidden">
+                  <label className="text-xs font-medium text-gray-600 flex items-center">
+                    <span>Thời gian bắt đầu</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.startDate}
                     onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors min-h-[38px]"
+                    className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    style={{ minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none' }}
                     required
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                    <span className="w-32">Thời gian kết thúc</span>
-                    <span className="ml-1 w-2"></span>
+                <div className="space-y-1 min-w-0 overflow-hidden">
+                  <label className="text-xs font-medium text-gray-600 flex items-center">
+                    <span>Thời gian kết thúc</span>
                   </label>
                   <input
                     type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors min-h-[38px]"
+                    className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    style={{ minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none' }}
                   />
                 </div>
               </div>
@@ -857,28 +876,29 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end pt-4 border-t border-gray-200 mt-6">
+          <div className="fixed md:static bottom-0 left-0 right-0 flex items-center gap-2 md:gap-3 md:justify-end px-3 py-3 md:pt-4 md:mt-6 bg-white md:bg-transparent border-t border-gray-200 z-10">
             <button
               type="button"
               onClick={onClose}
-              className="mr-3 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+              className="flex-1 md:flex-none px-4 md:px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
             >
               Hủy
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center"
+              className="flex-1 md:flex-none px-4 md:px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <RefreshCw className="animate-spin h-4 w-4 mr-2" />
-                  Đang tạo...
+                  <RefreshCw className="animate-spin h-4 w-4" />
+                  <span className="hidden md:inline">Đang tạo...</span>
                 </>
               ) : (
                 <>
-                  <Shield className="h-4 w-4 mr-2" />
-                  Tạo Case
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden md:inline">Tạo Case</span>
+                  <span className="md:hidden">Tạo</span>
                 </>
               )}
             </button>

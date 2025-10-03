@@ -161,35 +161,42 @@ const InternalCaseCard = memo(function InternalCaseCard({
         )}
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+      {/* Footer - Date */}
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100 mb-2">
         <div className="text-xs text-slate-500">
           Tạo: {formatDate(case_.createdAt)}
         </div>
-        
-        {/* Actions */}
-        <div className="flex items-center space-x-1">
-          {case_.status !== 'COMPLETED' && (
-            <>
-              <button
-                onClick={() => onEdit(case_)}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
-                title="Chỉnh sửa"
-              >
-                <Edit className="h-4 w-4" />
-              </button>
-              <button
-                onClick={handleCloseCase}
-                disabled={isClosing}
-                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Đóng case"
-              >
-                <Check className={`h-4 w-4 ${isClosing ? 'animate-pulse' : ''}`} />
-              </button>
-            </>
-          )}
-        </div>
       </div>
+
+      {/* Actions */}
+      {case_.status !== 'COMPLETED' && (
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => onEdit(case_)}
+            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+          >
+            <Edit className="h-3.5 w-3.5" />
+            Sửa
+          </button>
+          <button
+            onClick={handleCloseCase}
+            disabled={isClosing}
+            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50"
+          >
+            {isClosing ? (
+              <>
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
+                Đang xử lý...
+              </>
+            ) : (
+              <>
+                <Check className="h-3.5 w-3.5" />
+                Hoàn thành
+              </>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 });

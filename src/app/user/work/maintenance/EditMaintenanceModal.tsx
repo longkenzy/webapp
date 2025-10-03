@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Wrench, AlertCircle, CheckCircle, Calendar } from 'lucide-react';
+import { X, Wrench, AlertCircle, CheckCircle, Calendar, FileText, User, Building2, Clock, StickyNote } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { getCurrentVietnamDateTime } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -127,10 +128,19 @@ export default function EditMaintenanceModal({
   }, [isOpen]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [field]: value
+      };
+      
+      // Auto-fill endDate when status is set to COMPLETED
+      if (field === 'status' && value === 'COMPLETED' && !prev.endDate) {
+        newData.endDate = getCurrentVietnamDateTime();
+      }
+      
+      return newData;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -263,184 +273,222 @@ export default function EditMaintenanceModal({
   if (!isOpen || !maintenanceData) return null;
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm bg-black/50 flex items-center justify-center z-[9999] p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 backdrop-blur-sm bg-black/50 flex items-end md:items-center justify-center z-[9999] md:p-4">
+      {/* iOS Safari text color fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9ca3af !important;
+          opacity: 0.6 !important;
+          color: #9ca3af !important;
+        }
+      `}} />
+
+      <div className="bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full max-w-4xl h-[95vh] md:max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50">
-          <div className="flex items-center space-x-2">
-            <div className="p-1.5 bg-orange-100 rounded-md">
-              <Wrench className="h-4 w-4 text-orange-600" />
+        <div className="flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50 rounded-t-2xl md:rounded-t-lg">
+          <div className="flex items-center gap-2">
+            <div className="p-1 md:p-1.5 bg-orange-100 rounded-md">
+              <Wrench className="h-3.5 w-3.5 md:h-4 md:w-4 text-orange-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Chỉnh sửa Case Bảo Trì</h2>
-              <p className="text-xs text-gray-600">Cập nhật thông tin case bảo trì</p>
+              <h2 className="text-base md:text-lg font-semibold text-gray-900">Chỉnh sửa Case Bảo Trì</h2>
+              <p className="text-xs text-gray-600 hidden md:block">Cập nhật thông tin case bảo trì</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1 md:p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="h-4 w-4 md:h-5 md:w-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-4 py-3 space-y-4">
-          {/* Maintenance Info (Read-only) */}
-          <div className="bg-gray-50 rounded-lg px-3 py-2">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Thông tin Case Bảo Trì</h3>
-            <div className="grid grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tiêu đề</label>
-                  <p className="text-sm text-gray-900 mt-1 font-medium">{maintenanceData.title}</p>
-                </div>
+        <form onSubmit={handleSubmit} className="px-3 md:px-4 py-2.5 md:py-3 space-y-3 pb-20 md:pb-3">
+          {/* Section 1: Thông tin cơ bản (Read-only) */}
+          <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1 md:p-1.5 bg-orange-100 rounded-md">
+                <FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-orange-600" />
               </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Loại bảo trì</label>
-                  <p className="text-sm text-gray-900 mt-1">{formatMaintenanceType(maintenanceData.maintenanceType)}</p>
-                </div>
+              <h3 className="text-xs md:text-sm font-semibold text-gray-700">Thông tin cơ bản</h3>
+            </div>
+            
+            <div className="space-y-2">
+              {/* Tiêu đề */}
+              <div className="bg-white p-2 md:p-2.5 rounded border border-gray-200">
+                <label className="text-xs font-medium text-gray-500">Tiêu đề</label>
+                <p className="text-sm md:text-base text-gray-900 font-medium mt-0.5">{maintenanceData.title}</p>
               </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mã CRM</label>
-                  <p className="text-sm text-gray-900 mt-1 font-mono">
-                    {maintenanceData.crmReferenceCode || 'Chưa có'}
-                  </p>
+
+              {/* Grid 2 columns trên mobile, 4 trên desktop */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="bg-white p-2 md:p-2.5 rounded border border-gray-200">
+                  <label className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                    <Wrench className="h-3 w-3" />
+                    Loại bảo trì
+                  </label>
+                  <p className="text-sm text-gray-900 font-medium mt-0.5">{formatMaintenanceType(maintenanceData.maintenanceType)}</p>
                 </div>
-              </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Người xử lý</label>
-                  <p className="text-sm text-gray-900 mt-1">
+
+                <div className="bg-white p-2 md:p-2.5 rounded border border-gray-200">
+                  <label className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Người xử lý
+                  </label>
+                  <p className="text-sm text-gray-900 font-medium mt-0.5">
                     {maintenanceData.handler ? maintenanceData.handler.fullName : 'Chưa xác định'}
                   </p>
                 </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ngày bắt đầu</label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {new Date(maintenanceData.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+
+                <div className="bg-white p-2 md:p-2.5 rounded border border-gray-200">
+                  <label className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Ngày bắt đầu
+                  </label>
+                  <p className="text-sm text-gray-900 font-medium mt-0.5">
+                    {new Date(maintenanceData.startDate).toLocaleDateString('vi-VN', { 
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      timeZone: 'Asia/Ho_Chi_Minh' 
+                    })}
+                  </p>
+                </div>
+
+                <div className="bg-white p-2 md:p-2.5 rounded border border-gray-200">
+                  <label className="text-xs font-medium text-gray-500">Mã CRM</label>
+                  <p className="text-sm text-gray-900 font-medium font-mono mt-0.5">
+                    {maintenanceData.crmReferenceCode || <span className="text-gray-400 font-sans">Chưa có</span>}
                   </p>
                 </div>
               </div>
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Liên hệ</label>
-                  <p className="text-sm text-gray-900 mt-1 font-medium">
-                    {(() => {
-                      const customerName = maintenanceData.customerName;
-                      if (!customerName) return 'Chưa có';
-                      
-                      // Nếu đã có "Anh" hoặc "Chị" thì giữ nguyên
-                      if (customerName.toLowerCase().includes('anh') || customerName.toLowerCase().includes('chị')) {
-                        return customerName;
-                      }
-                      
-                      // Nếu chưa có thì thêm "Anh/Chị"
-                      return `Anh/Chị ${customerName}`;
-                    })()}
-                  </p>
-                </div>
+
+              {/* Mô tả */}
+              <div className="bg-white p-2 md:p-2.5 rounded border border-gray-200">
+                <label className="text-xs font-medium text-gray-500">Mô tả</label>
+                <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap">{maintenanceData.description}</p>
               </div>
-            </div>
-            <div className="grid grid-cols-1 gap-3 mt-2">
-              <div className="space-y-1">
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tên công ty</label>
-                  <div className="text-sm text-gray-900 mt-1">
-                    {maintenanceData.customer?.shortName && maintenanceData.customer?.fullCompanyName ? (
-                      <div>
-                        <div className="font-medium">{maintenanceData.customer.shortName}</div>
-                        <div className="text-gray-600 text-xs">{maintenanceData.customer.fullCompanyName}</div>
-                      </div>
-                    ) : maintenanceData.customer?.fullCompanyName ? (
-                      <div>{maintenanceData.customer.fullCompanyName}</div>
-                    ) : (
-                      <div>Chưa có</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mt-2">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mô tả</label>
-              <p className="text-sm text-gray-900 mt-1 bg-white p-2 rounded border">{maintenanceData.description}</p>
             </div>
           </div>
 
-          {/* Editable Fields */}
-          <div className="space-y-3">
-            {/* Notes Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ghi chú
-              </label>
-              <textarea
-                value={formData.notes || ''}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="Nhập ghi chú về case bảo trì (tùy chọn)"
-                rows={3}
-              />
+          {/* Section 2: Thông tin khách hàng (Read-only) */}
+          <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1 md:p-1.5 bg-purple-100 rounded-md">
+                <Building2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-600" />
+              </div>
+              <h3 className="text-xs md:text-sm font-semibold text-gray-700">Thông tin khách hàng</h3>
             </div>
 
-            {/* End Date, Status and CRM Code Row */}
-            <div className="grid grid-cols-3 gap-3">
-              {/* End Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Thời gian hoàn thành
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.endDate}
-                  onChange={(e) => handleInputChange('endDate', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="Chọn thời gian hoàn thành"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="bg-white p-2 md:p-2.5 rounded border border-gray-200">
+                <label className="text-xs font-medium text-gray-500">Liên hệ</label>
+                <p className="text-sm text-gray-900 font-medium mt-0.5">
+                  {maintenanceData.customerName || maintenanceData.customer?.contactPerson || 'Chưa có'}
+                </p>
               </div>
 
-              {/* Status */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Trạng thái
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                >
-                  <option value="RECEIVED">Tiếp nhận</option>
-                  <option value="PROCESSING">Đang xử lý</option>
-                  <option value="COMPLETED">Hoàn thành</option>
-                  <option value="CANCELLED">Hủy</option>
-                </select>
+              <div className="bg-white p-2 md:p-2.5 rounded border border-gray-200">
+                <label className="text-xs font-medium text-gray-500">Tên công ty</label>
+                <div className="text-sm text-gray-900 mt-0.5">
+                  {maintenanceData.customer?.shortName && maintenanceData.customer?.fullCompanyName ? (
+                    <div>
+                      <div className="font-semibold">{maintenanceData.customer.shortName}</div>
+                      <div className="text-gray-600 text-xs mt-0.5">{maintenanceData.customer.fullCompanyName}</div>
+                    </div>
+                  ) : maintenanceData.customer?.fullCompanyName ? (
+                    <div className="font-medium">{maintenanceData.customer.fullCompanyName}</div>
+                  ) : (
+                    <div className="text-gray-400">Chưa có</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Cập nhật thông tin (Editable) */}
+          <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1 md:p-1.5 bg-green-100 rounded-md">
+                <Clock className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-600" />
+              </div>
+              <h3 className="text-xs md:text-sm font-semibold text-gray-700">Cập nhật thông tin</h3>
+            </div>
+
+            <div className="space-y-2 md:space-y-3">
+              {/* Grid for time, status, CRM */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3">
+                {/* End Date */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Thời gian hoàn thành
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.endDate}
+                    onChange={(e) => handleInputChange('endDate', e.target.value)}
+                    className="w-full px-2.5 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    style={{ minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none' }}
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Trạng thái
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => handleInputChange('status', e.target.value)}
+                    className="w-full px-2.5 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="RECEIVED">Tiếp nhận</option>
+                    <option value="PROCESSING">Đang xử lý</option>
+                    <option value="COMPLETED">Hoàn thành</option>
+                    <option value="CANCELLED">Hủy</option>
+                  </select>
+                </div>
+
+                {/* CRM Reference Code */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Mã CRM
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.crmReferenceCode || ''}
+                    onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
+                    className="w-full px-2.5 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    placeholder="Nhập mã CRM"
+                  />
+                </div>
               </div>
 
-              {/* CRM Reference Code */}
+              {/* Notes Field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mã CRM
+                <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <StickyNote className="h-3 w-3" />
+                  Ghi chú
                 </label>
-                <input
-                  type="text"
-                  value={formData.crmReferenceCode || ''}
-                  onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="Nhập mã CRM (tùy chọn)"
+                <textarea
+                  value={formData.notes || ''}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  className="w-full px-2.5 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="Nhập ghi chú về case bảo trì (tùy chọn)"
+                  rows={3}
                 />
               </div>
             </div>
-
           </div>
 
           {/* Action Buttons */}
-          <div className="flex space-x-3 pt-3 border-t border-gray-200">
+          <div className="fixed md:static bottom-0 left-0 right-0 flex gap-2 md:gap-3 px-3 py-3 md:pt-3 bg-white md:bg-transparent border-t border-gray-200 z-10">
             <button
               type="button"
               onClick={onClose}
@@ -451,17 +499,17 @@ export default function EditMaintenanceModal({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+              className="flex-1 px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Đang cập nhật...
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="hidden md:inline">Đang cập nhật...</span>
                 </>
               ) : (
                 <>
-                  <Wrench className="h-4 w-4 mr-2" />
-                  Cập nhật
+                  <Wrench className="h-4 w-4" />
+                  <span>Cập nhật</span>
                 </>
               )}
             </button>

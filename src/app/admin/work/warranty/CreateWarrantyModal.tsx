@@ -6,6 +6,7 @@ import { X, User, Shield, FileText, Calendar, Settings, CheckCircle, RefreshCw }
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
+import { getCurrentVietnamDateTime } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -210,7 +211,7 @@ export default function CreateWarrantyModal({
       customer: '',
       title: '',
       description: '',
-      startDate: new Date().toISOString().slice(0, 16),
+      startDate: getCurrentVietnamDateTime(),
       endDate: '',
       status: 'RECEIVED',
       notes: '',

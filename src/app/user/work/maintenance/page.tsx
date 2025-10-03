@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Filter, MoreVertical, Edit, RefreshCw, X, Wrench, Check } from 'lucide-react';
+import { Plus, Search, Filter, MoreVertical, Edit, RefreshCw, X, Wrench, Check, ChevronDown, User, Building2, Calendar, Settings } from 'lucide-react';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import CreateMaintenanceModal from './CreateMaintenanceModal';
@@ -90,6 +90,22 @@ export default function MaintenancePage() {
     startDate: '',
     endDate: ''
   });
+
+  // Mobile states
+  const [showFilters, setShowFilters] = useState(false);
+  const [expandedCases, setExpandedCases] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (caseId: string) => {
+    setExpandedCases(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(caseId)) {
+        newSet.delete(caseId);
+      } else {
+        newSet.add(caseId);
+      }
+      return newSet;
+    });
+  };
 
   // Fetch maintenance cases from API with caching
   const fetchMaintenanceCases = useCallback(async () => {
@@ -398,6 +414,11 @@ export default function MaintenancePage() {
     return Object.values(filters).some(value => value !== '');
   };
 
+  // Count active filters
+  const getActiveFiltersCount = () => {
+    return Object.values(filters).filter(value => value !== '').length;
+  };
+
   // Validate date range
   const isDateRangeValid = () => {
     if (filters.startDate && filters.endDate) {
@@ -429,193 +450,219 @@ export default function MaintenancePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 p-6 pt-4">
-      <div className="max-w-full mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 p-3 md:p-6 pt-3 md:pt-4">
+      {/* iOS Safari text color fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9ca3af !important;
+          opacity: 0.6 !important;
+          color: #9ca3af !important;
+        }
+      `}} />
+
+      <div className="max-w-full mx-auto px-2 md:px-4">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4 md:mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Quản Lý Bảo Trì</h1>
-              <p className="text-slate-600">Theo dõi và thực hiện các công việc bảo trì thiết bị</p>
+              <h1 className="text-xl md:text-3xl font-bold text-slate-900 mb-1 md:mb-2 flex items-center">
+                <Wrench className="h-5 w-5 md:h-8 md:w-8 text-orange-600 mr-2 md:mr-3" />
+                Quản Lý Bảo Trì
+              </h1>
+              <p className="text-xs md:text-base text-slate-600 hidden md:block">Theo dõi và thực hiện các công việc bảo trì thiết bị</p>
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center space-x-2 bg-gradient-to-r from-orange-600 to-amber-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-orange-700 hover:to-amber-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-orange-600 to-amber-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-orange-700 hover:to-amber-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <Wrench className="h-4 w-4" />
-              <span>Tạo Case Bảo Trì</span>
+              <Wrench className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden md:inline">Tạo Case Bảo Trì</span>
+              <span className="md:hidden">Tạo</span>
             </button>
           </div>
         </div>
 
         {/* Search and Filter Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 md:mb-6">
           {/* Header */}
-          <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-6 py-4 border-b border-gray-200">
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 px-3 md:px-6 py-3 md:py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <Search className="h-5 w-5 text-orange-600" />
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 bg-orange-100 rounded-lg">
+                  <Search className="h-4 w-4 md:h-5 md:w-5 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
-                  <p className="text-xs text-gray-600">Tìm kiếm và lọc case bảo trì theo nhiều tiêu chí</p>
+                  <h3 className="text-sm md:text-lg font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
+                  <p className="text-xs text-gray-600 hidden md:block">Tìm kiếm và lọc case bảo trì theo nhiều tiêu chí</p>
                 </div>
               </div>
               <button 
                 onClick={refreshMaintenanceCases}
                 disabled={refreshing}
-                className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 text-xs md:text-sm"
               >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span>Làm mới</span>
+                <RefreshCw className={`h-3.5 w-3.5 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden md:inline">Làm mới</span>
               </button>
             </div>
           </div>
 
           {/* Content */}
-          <div className="p-4">
-            <div className="space-y-3">
+          <div className="p-3 md:p-4">
+            <div className="space-y-2 md:space-y-3">
               {/* Search Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-1.5">
                   Tìm kiếm
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2.5 md:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tên case, người xử lý, loại bảo trì..."
+                    placeholder="Tìm kiếm case..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    className="w-full pl-8 md:pl-10 pr-2.5 md:pr-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                   />
                 </div>
               </div>
 
               {/* Filters Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Bộ lọc
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
-                  {/* Người xử lý */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span>Xử lý</span>
-                      </div>
+                {/* Collapsible Filter Header */}
+                <div className="flex items-center justify-between mb-2">
+                  <div 
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 cursor-pointer flex-1"
+                  >
+                    <label className="text-xs md:text-sm font-medium text-gray-700 cursor-pointer flex-shrink-0">
+                      Bộ lọc
                     </label>
-                    <select
-                      value={filters.handler}
-                      onChange={(e) => setFilters(prev => ({ ...prev, handler: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả người xử lý</option>
-                      {getUniqueHandlers().map(handler => (
-                        <option key={handler} value={handler}>{handler}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Loại bảo trì */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                        <span>Loại</span>
-                      </div>
-                    </label>
-                    <select
-                      value={filters.maintenanceType}
-                      onChange={(e) => setFilters(prev => ({ ...prev, maintenanceType: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả loại bảo trì</option>
-                      {getUniqueMaintenanceTypes().map(maintenanceType => (
-                        <option key={maintenanceType} value={maintenanceType}>{formatMaintenanceType(maintenanceType)}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Khách hàng */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                        <span>Khách hàng</span>
-                      </div>
-                    </label>
-                    <select
-                      value={filters.customer}
-                      onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả khách hàng</option>
-                      {partners.map((partner) => (
-                        <option key={partner.id} value={partner.id}>
-                          {partner.shortName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Trạng thái */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                        <span>Trạng thái</span>
-                      </div>
-                    </label>
-                    <select
-                      value={filters.status}
-                      onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    >
-                      <option value="">Tất cả trạng thái</option>
-                      {getUniqueStatuses().map(status => (
-                        <option key={status} value={status}>{getStatusText(status)}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Từ ngày */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
-                        <span>Từ</span>
-                      </div>
-                    </label>
-                    <input
-                      type="date"
-                      value={filters.startDate}
-                      onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                    />
-                  </div>
-
-                  {/* Đến ngày */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
-                        <span>Đến</span>
-                      </div>
-                    </label>
-                    <input
-                      type="date"
-                      value={filters.endDate}
-                      onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm ${
-                        !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
-                      }`}
-                    />
-                    {!isDateRangeValid() && (
-                      <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
+                    {getActiveFiltersCount() > 0 && (
+                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-orange-100 text-orange-600 text-xs font-medium">
+                        {getActiveFiltersCount()}
+                      </span>
                     )}
+                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform md:hidden ${showFilters ? 'rotate-180' : ''}`} />
+                  </div>
+                  {hasActiveFilters() && (
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs text-gray-600 hover:text-gray-800 font-medium px-2 py-1 hover:bg-gray-100 rounded transition-colors"
+                    >
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+
+                {/* Filters Grid */}
+                <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
+                    {/* Người xử lý */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Xử lý
+                      </label>
+                      <select
+                        value={filters.handler}
+                        onChange={(e) => setFilters(prev => ({ ...prev, handler: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      >
+                        <option value="">Tất cả</option>
+                        {getUniqueHandlers().map(handler => (
+                          <option key={handler} value={handler}>{handler}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Loại bảo trì */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Loại
+                      </label>
+                      <select
+                        value={filters.maintenanceType}
+                        onChange={(e) => setFilters(prev => ({ ...prev, maintenanceType: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      >
+                        <option value="">Tất cả</option>
+                        {getUniqueMaintenanceTypes().map(maintenanceType => (
+                          <option key={maintenanceType} value={maintenanceType}>{formatMaintenanceType(maintenanceType)}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Khách hàng */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Khách hàng
+                      </label>
+                      <select
+                        value={filters.customer}
+                        onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      >
+                        <option value="">Tất cả</option>
+                        {partners.map((partner) => (
+                          <option key={partner.id} value={partner.id}>
+                            {partner.shortName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Trạng thái */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Trạng thái
+                      </label>
+                      <select
+                        value={filters.status}
+                        onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      >
+                        <option value="">Tất cả</option>
+                        {getUniqueStatuses().map(status => (
+                          <option key={status} value={status}>{getStatusText(status)}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Từ ngày */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Từ ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={filters.startDate}
+                        onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      />
+                    </div>
+
+                    {/* Đến ngày */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Đến ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={filters.endDate}
+                        onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                        className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${
+                          !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
+                        }`}
+                      />
+                      {!isDateRangeValid() && (
+                        <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -688,22 +735,17 @@ export default function MaintenancePage() {
               )}
 
               {/* Results Summary */}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                <div className="text-sm text-gray-600">
-                  Hiển thị <span className="font-medium text-gray-900">{startIndex + 1}-{Math.min(endIndex, totalCases)}</span> trong tổng số <span className="font-medium text-gray-900">{totalCases}</span> case bảo trì
-                  {hasActiveFilters() && (
-                    <span className="ml-2 text-orange-600 font-medium">
-                      (đã lọc từ {maintenanceCases.length} case)
-                    </span>
-                  )}
+              <div className="flex items-center justify-between pt-2 md:pt-3 border-t border-gray-200">
+                <div className="text-xs md:text-sm text-gray-600">
+                  <span className="font-medium text-gray-900">{filteredMaintenanceCases.length}</span> / <span className="font-medium text-gray-900">{maintenanceCases.length}</span> case
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Maintenance Cases Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200/50 overflow-hidden">
+        {/* Maintenance Cases Table - Desktop */}
+        <div className="hidden md:block bg-white rounded-lg shadow-sm border border-slate-200/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-orange-50">
@@ -907,34 +949,144 @@ export default function MaintenancePage() {
             </table>
           </div>
         </div>
+
+        {/* Maintenance Cases Cards - Mobile */}
+        <div className="md:hidden space-y-3 mb-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12 bg-white rounded-lg">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-5 w-5 animate-spin text-orange-600" />
+                <span className="text-sm text-slate-600">Đang tải...</span>
+              </div>
+            </div>
+          ) : paginatedMaintenanceCases.length > 0 ? (
+            paginatedMaintenanceCases.map((maintenanceCase, index) => (
+              <div key={maintenanceCase.id} className="bg-white rounded-lg border border-gray-200 shadow-sm p-3">
+                {/* Header: Status & CRM */}
+                <div className="flex items-start justify-between mb-2 pb-2 border-b border-gray-100">
+                  <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-md border ${getStatusColor(maintenanceCase.status)}`}>
+                    {getStatusText(maintenanceCase.status)}
+                  </span>
+                  {maintenanceCase.crmReferenceCode && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                      {maintenanceCase.crmReferenceCode}
+                    </span>
+                  )}
+                </div>
+
+                {/* Main Info */}
+                <div className="space-y-1.5 mb-2">
+                  {/* Title */}
+                  <div className="font-semibold text-sm text-gray-900 line-clamp-2">
+                    {maintenanceCase.title}
+                  </div>
+
+                  {/* Handler */}
+                  <div className="flex items-start gap-1.5 text-xs">
+                    <User className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-gray-600">Xử lý: </span>
+                      <span className="font-medium text-gray-900">{maintenanceCase.handler?.fullName || 'Không xác định'}</span>
+                    </div>
+                  </div>
+
+                  {/* Customer */}
+                  <div className="flex items-start gap-1.5 text-xs">
+                    <Building2 className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-gray-600">Khách hàng: </span>
+                      {maintenanceCase.customer ? (
+                        <span className="font-medium text-gray-900">{maintenanceCase.customer.shortName}</span>
+                      ) : (
+                        <span className="font-medium text-gray-900">{maintenanceCase.customerName || 'Không xác định'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Maintenance Type */}
+                  <div className="flex items-start gap-1.5 text-xs">
+                    <Wrench className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-gray-600">Loại: </span>
+                      <span className="font-medium text-gray-900">{formatMaintenanceType(maintenanceCase.maintenanceType)}</span>
+                    </div>
+                  </div>
+
+                  {/* Time */}
+                  <div className="flex items-start gap-1.5 text-xs">
+                    <Calendar className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <div>
+                        <span className="text-green-600">Bắt đầu: </span>
+                        <span className="text-green-600 font-medium">{formatDate(maintenanceCase.startDate)}</span>
+                      </div>
+                      {maintenanceCase.endDate && (
+                        <div>
+                          <span className="text-red-600">Kết thúc: </span>
+                          <span className="text-red-600 font-medium">{formatDate(maintenanceCase.endDate)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  {maintenanceCase.description && (
+                    <div className="pt-1 text-xs text-gray-600 line-clamp-2 bg-gray-50 rounded px-2 py-1.5">
+                      {maintenanceCase.description}
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {maintenanceCase.notes && (
+                    <div className="bg-green-50 border border-green-200 rounded px-2 py-1.5">
+                      <div className="text-xs font-medium text-green-800 mb-0.5">Ghi chú:</div>
+                      <div className="text-xs text-green-700 line-clamp-2">{maintenanceCase.notes}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                {maintenanceCase.status !== 'COMPLETED' && (
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                    <button 
+                      onClick={() => handleOpenEditModal(maintenanceCase)}
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded transition-colors"
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                      Sửa
+                    </button>
+                    <button
+                      onClick={() => handleCloseCase(maintenanceCase.id)}
+                      disabled={closingCaseId === maintenanceCase.id}
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50"
+                    >
+                      {closingCaseId === maintenanceCase.id ? (
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" />
+                      )}
+                      Đóng
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="bg-white rounded-lg p-8 text-center">
+              <Wrench className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <h3 className="text-sm font-medium text-gray-900 mb-1">Không tìm thấy case nào</h3>
+              <p className="text-xs text-gray-500">Thử thay đổi từ khóa tìm kiếm</p>
+            </div>
+          )}
         </div>
 
         {/* Pagination */}
         {totalCases > 0 && (
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={goToPrevPage}
-                disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Trước
-              </button>
-              <button
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Sau
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Hiển thị <span className="font-medium">{startIndex + 1}</span> đến{' '}
-                  <span className="font-medium">{Math.min(endIndex, totalCases)}</span> trong tổng số{' '}
-                  <span className="font-medium">{totalCases}</span> kết quả
-                </p>
+          <div className="bg-white px-3 md:px-6 py-3 rounded-lg border border-gray-200">
+            {/* Mobile & Desktop Pagination */}
+            <div className="flex items-center justify-between">
+              <div className="text-xs md:text-sm text-gray-700">
+                <span className="font-medium">{startIndex + 1}</span>-<span className="font-medium">{Math.min(endIndex, totalCases)}</span> / <span className="font-medium">{totalCases}</span>
               </div>
               <div>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
@@ -943,48 +1095,47 @@ export default function MaintenancePage() {
                     disabled={currentPage === 1}
                     className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="sr-only">Previous</span>
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <span className="sr-only">Trước</span>
+                    <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
                   
                   {/* Page numbers */}
-                  {(() => {
-                    const pages = [];
-                    const maxVisiblePages = 5;
-                    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-                    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-                    
-                    if (endPage - startPage + 1 < maxVisiblePages) {
-                      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
                     }
                     
-                    for (let i = startPage; i <= endPage; i++) {
-                      pages.push(
-                        <button
-                          key={i}
-                          onClick={() => goToPage(i)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            i === currentPage
-                              ? 'z-10 bg-orange-50 border-orange-500 text-orange-600'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {i}
-                        </button>
-                      );
-                    }
-                    return pages;
-                  })()}
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => goToPage(pageNum)}
+                        className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium ${
+                          currentPage === pageNum
+                            ? 'z-10 bg-orange-50 border-orange-500 text-orange-600'
+                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
                   
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
                     className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span className="sr-only">Next</span>
-                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <span className="sr-only">Sau</span>
+                    <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                       <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
@@ -1036,7 +1187,7 @@ export default function MaintenancePage() {
           },
         }}
       />
-
+      </div>
     </div>
   );
 }

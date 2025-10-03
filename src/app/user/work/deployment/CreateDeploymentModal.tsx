@@ -7,6 +7,7 @@ import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import toast from 'react-hot-toast';
+import { getCurrentVietnamDateTime } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -43,7 +44,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     customerTitle: 'Anh', // Default title
     customerName: '',
     handler: '',
@@ -51,7 +52,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
     customer: '',
     title: '',
     description: '',
-    startDate: new Date().toISOString().slice(0, 16),
+    startDate: getCurrentVietnamDateTime(),
     endDate: '',
     status: 'RECEIVED',
     notes: '',
@@ -63,7 +64,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
     urgencyLevel: '',
     form: 'Onsite',
     formScore: '2' // Default for Onsite
-  });
+  }));
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -175,7 +176,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
       customer: '',
       title: '',
       description: '',
-      startDate: new Date().toISOString().slice(0, 16),
+      startDate: getCurrentVietnamDateTime(),
       endDate: '',
       status: 'RECEIVED',
       notes: '',
@@ -442,31 +443,45 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-8">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4 overflow-y-auto">
+      {/* iOS Safari text color fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9ca3af !important;
+          opacity: 0.6 !important;
+          color: #9ca3af !important;
+        }
+      `}} />
+
+      <div className="bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full max-w-7xl h-[95vh] md:max-h-[90vh] overflow-y-auto md:my-8">
         {/* Compact Header */}
-        <div className="sticky top-0 z-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-lg">
+        <div className="sticky top-0 z-20 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-t-2xl md:rounded-t-lg">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-md">
-                <Rocket className="h-5 w-5" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-white/20 rounded-md">
+                <Rocket className="h-4 w-4 md:h-5 md:w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Tạo Case Triển Khai</h2>
-                <p className="text-blue-100 text-sm">Hệ thống quản lý triển khai</p>
+                <h2 className="text-base md:text-lg font-semibold">Tạo Case Triển Khai</h2>
+                <p className="text-blue-100 text-xs md:text-sm hidden md:block">Hệ thống quản lý triển khai</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
+              className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4 md:h-5 md:w-5" />
             </button>
           </div>
         </div>
 
         {/* Compact Form */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-3 md:p-6 pb-20 md:pb-6">
           <div className="space-y-6">
             {/* Section 1: Thông tin cơ bản */}
             <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
@@ -879,20 +894,21 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
           </div>
 
           {/* Compact Form Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+          <div className="fixed md:static bottom-0 left-0 right-0 flex items-center gap-2 md:gap-3 md:justify-end px-3 py-3 md:pt-6 md:mt-6 bg-white md:bg-transparent border-t border-gray-200 z-10">
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+              className="flex-1 md:flex-none px-4 md:px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
             >
               Hủy
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center"
+              className="flex-1 md:flex-none px-4 md:px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
             >
-              <Rocket className="h-4 w-4 mr-2" />
-              Tạo Case Triển Khai
+              <Rocket className="h-4 w-4" />
+              <span className="hidden md:inline">Tạo Case Triển Khai</span>
+              <span className="md:hidden">Tạo</span>
             </button>
           </div>
         </form>

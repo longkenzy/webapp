@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   RefreshCw,
   ChevronDown,
-  Search
+  Search,
+  Building2
 } from "lucide-react";
 import Link from "next/link";
 
@@ -97,6 +98,9 @@ export default function UserDashboardPage() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  
+  // Mobile filter visibility
+  const [showFilters, setShowFilters] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
@@ -603,9 +607,10 @@ export default function UserDashboardPage() {
 
   if (loading) {
     return (
-      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-6 md:py-8">
+        <div className="flex flex-col items-center justify-center h-48 md:h-64">
+          <div className="animate-spin rounded-full h-10 w-10 md:h-12 md:w-12 border-b-2 border-blue-600"></div>
+          <p className="text-sm text-gray-600 mt-3">Đang tải...</p>
         </div>
       </div>
     );
@@ -613,12 +618,12 @@ export default function UserDashboardPage() {
 
   if (error) {
     return (
-      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">{error}</p>
+      <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-6 md:py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4">
+          <p className="text-sm md:text-base text-red-800">{error}</p>
           <button 
             onClick={fetchAllCases}
-            className="mt-2 text-red-600 hover:text-red-700 font-medium"
+            className="mt-2 text-sm text-red-600 hover:text-red-700 font-medium"
           >
             Thử lại
           </button>
@@ -628,33 +633,34 @@ export default function UserDashboardPage() {
   }
 
   return (
-    <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-8">
+    <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-6 py-3 md:py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
+      <div className="mb-3 md:mb-8">
+        <h1 className="text-lg md:text-3xl font-bold text-gray-900">
           Dashboard Tổng Quan Cases
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-xs md:text-base text-gray-600 mt-1 md:mt-2 hidden sm:block">
           Tổng hợp tất cả các case: nội bộ, giao hàng, nhận hàng, bảo trì, sự cố, bảo hành. Tab "Cases hiện tại" hiển thị cases chưa hoàn thành/hủy và cases bắt đầu hôm nay.
         </p>
       </div>
 
       {/* Tab Navigation */}
-      <div className="mb-8">
+      <div className="mb-4 md:mb-8">
         <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+          <nav className="-mb-px flex space-x-4 md:space-x-8">
             <button
               onClick={() => setActiveTab('current')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+              className={`py-2 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${
                 activeTab === 'current'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <Clock className="h-4 w-4" />
-                <span>Cases hiện tại</span>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              <div className="flex items-center space-x-1 md:space-x-2">
+                <Clock className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Cases hiện tại</span>
+                <span className="sm:hidden">Hiện tại</span>
+                <span className={`inline-flex items-center px-1.5 md:px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   activeTab === 'current' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
                 }`}>
                   {cases.filter(c => {
@@ -670,16 +676,17 @@ export default function UserDashboardPage() {
             </button>
             <button
               onClick={() => setActiveTab('all')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+              className={`py-2 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${
                 activeTab === 'all'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              <div className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" />
-                <span>Tất cả cases</span>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              <div className="flex items-center space-x-1 md:space-x-2">
+                <FileText className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Tất cả cases</span>
+                <span className="sm:hidden">Tất cả</span>
+                <span className={`inline-flex items-center px-1.5 md:px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   activeTab === 'all' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'
                 }`}>
                   {cases.length}
@@ -691,24 +698,32 @@ export default function UserDashboardPage() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-1.5 md:gap-4 mb-3 md:mb-8">
         {[
-          { type: 'internal', label: 'Case nội bộ', icon: FileText, color: 'bg-blue-500' },
-          { type: 'delivery', label: 'Case giao hàng', icon: Truck, color: 'bg-green-500' },
-          { type: 'receiving', label: 'Case nhận hàng', icon: Package, color: 'bg-yellow-500' },
-          { type: 'maintenance', label: 'Case bảo trì', icon: Wrench, color: 'bg-purple-500' },
-          { type: 'incident', label: 'Case sự cố', icon: AlertTriangle, color: 'bg-red-500' },
-          { type: 'warranty', label: 'Case bảo hành', icon: Shield, color: 'bg-indigo-500' }
-        ].map(({ type, label, icon: Icon, color }) => {
+          { type: 'internal', label: 'Case nội bộ', shortLabel: 'Nội bộ', icon: FileText, color: 'bg-blue-500' },
+          { type: 'delivery', label: 'Case giao hàng', shortLabel: 'Giao', icon: Truck, color: 'bg-green-500' },
+          { type: 'receiving', label: 'Case nhận hàng', shortLabel: 'Nhận', icon: Package, color: 'bg-yellow-500' },
+          { type: 'maintenance', label: 'Case bảo trì', shortLabel: 'Bảo trì', icon: Wrench, color: 'bg-purple-500' },
+          { type: 'incident', label: 'Case sự cố', shortLabel: 'Sự cố', icon: AlertTriangle, color: 'bg-red-500' },
+          { type: 'warranty', label: 'Case bảo hành', shortLabel: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' }
+        ].map(({ type, label, shortLabel, icon: Icon, color }) => {
           const count = filteredCases.filter(c => c.type === type).length;
           return (
-            <div key={type} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">{label}</p>
-                  <p className="text-2xl font-bold text-gray-900">{count}</p>
+            <div key={type} className="bg-white rounded-lg shadow-sm border border-gray-200 p-2 md:p-4">
+              <div className="flex md:items-center md:justify-between flex-col md:flex-row">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-600 truncate mb-0.5 md:mb-0">
+                    <span className="hidden md:inline">{label}</span>
+                    <span className="md:hidden">{shortLabel}</span>
+                  </p>
+                  <div className="flex items-center justify-between md:block">
+                    <p className="text-lg md:text-2xl font-bold text-gray-900">{count}</p>
+                    <div className={`md:hidden p-1 rounded ${color} text-white`}>
+                      <Icon className="h-3 w-3" />
+                    </div>
+                  </div>
                 </div>
-                <div className={`p-2 rounded-lg ${color} text-white`}>
+                <div className={`hidden md:block p-2 rounded-lg ${color} text-white`}>
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
@@ -717,248 +732,232 @@ export default function UserDashboardPage() {
         })}
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Settings className="h-5 w-5 text-blue-600" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900">Bộ lọc tìm kiếm</h3>
-          </div>
-          <button
-            onClick={clearFilters}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+      {/* Filters - Minimal Design */}
+      <div className="bg-white rounded-lg border border-gray-200 mb-3 md:mb-6 overflow-hidden">
+        {/* Filter Header */}
+        <div className="flex items-center justify-between p-3 border-b border-gray-100">
+          <button 
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2 flex-1 md:pointer-events-none"
           >
-            <span>Xóa tất cả</span>
+            <div className="p-1 bg-blue-50 rounded">
+              <Settings className="h-3.5 w-3.5 text-blue-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-900">Bộ lọc</span>
+            {(filters.caseType || filters.handler || filters.status || filters.customer || filters.startDate || filters.endDate) && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-medium text-white">
+                {[filters.caseType, filters.handler, filters.status, filters.customer, filters.startDate, filters.endDate].filter(Boolean).length}
+              </span>
+            )}
+            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform md:hidden ml-auto ${showFilters ? 'rotate-180' : ''}`} />
           </button>
+          {(filters.caseType || filters.handler || filters.status || filters.customer || filters.startDate || filters.endDate) && (
+            <button
+              onClick={clearFilters}
+              className="text-xs font-medium text-blue-600 hover:text-blue-700 px-2 py-1"
+            >
+              Xóa hết
+            </button>
+          )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-          {/* Case Type Filter */}
-          <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <FileText className="h-3 w-3 text-blue-600" />
-              <span>Loại Case</span>
-            </label>
-            <select
-              value={filters.caseType}
-              onChange={(e) => handleFilterChange('caseType', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
-            >
-              <option value="">Tất cả loại case</option>
-              <option value="internal">Case nội bộ</option>
-              <option value="delivery">Case giao hàng</option>
-              <option value="receiving">Case nhận hàng</option>
-              <option value="maintenance">Case bảo trì</option>
-              <option value="incident">Case sự cố</option>
-              <option value="warranty">Case bảo hành</option>
-            </select>
-          </div>
+        {/* Filter Content */}
+        <div className={`${showFilters ? 'block' : 'hidden md:block'}`}>
+          {/* Filter Grid */}
+          <div className="p-3 space-y-2.5 md:space-y-0 md:grid md:grid-cols-3 lg:grid-cols-6 md:gap-3">
+            {/* Case Type */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Loại case</label>
+              <select
+                value={filters.caseType}
+                onChange={(e) => handleFilterChange('caseType', e.target.value)}
+                className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
+              >
+                <option value="">Tất cả</option>
+                <option value="internal">Nội bộ</option>
+                <option value="delivery">Giao hàng</option>
+                <option value="receiving">Nhận hàng</option>
+                <option value="maintenance">Bảo trì</option>
+                <option value="incident">Sự cố</option>
+                <option value="warranty">Bảo hành</option>
+              </select>
+            </div>
 
-          {/* Handler Filter */}
-          <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <User className="h-3 w-3 text-green-600" />
-              <span>Người xử lý</span>
-            </label>
-            <input
-              type="text"
-              placeholder="Tìm người xử lý..."
-              value={filters.handler}
-              onChange={(e) => handleFilterChange('handler', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm placeholder-gray-400"
-            />
-                  </div>
+            {/* Handler */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Người xử lý</label>
+              <input
+                type="text"
+                placeholder="Tên người xử lý"
+                value={filters.handler}
+                onChange={(e) => handleFilterChange('handler', e.target.value)}
+                className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow placeholder:text-gray-400"
+              />
+            </div>
 
-          {/* Status Filter */}
-          <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <CheckCircle className="h-3 w-3 text-purple-600" />
-              <span>Trạng thái</span>
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="RECEIVED">Tiếp nhận</option>
-              <option value="PROCESSING">Đang xử lý</option>
-              <option value="COMPLETED">Hoàn thành</option>
-              <option value="CANCELLED">Hủy</option>
-            </select>
-                  </div>
+            {/* Status */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Trạng thái</label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
+              >
+                <option value="">Tất cả</option>
+                <option value="RECEIVED">Tiếp nhận</option>
+                <option value="PROCESSING">Đang xử lý</option>
+                <option value="COMPLETED">Hoàn thành</option>
+                <option value="CANCELLED">Hủy</option>
+              </select>
+            </div>
 
-          {/* Customer Filter */}
-          <div className="space-y-1 relative">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <AlertCircle className="h-3 w-3 text-orange-600" />
-              <span>Khách hàng</span>
-            </label>
+            {/* Customer */}
             <div className="relative">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Khách hàng</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
                 <input
                   type="text"
-                  placeholder="Tìm khách hàng..."
+                  placeholder="Tên khách hàng"
                   value={customerSearch}
                   onChange={(e) => handleCustomerSearchChange(e.target.value)}
                   onFocus={() => setShowCustomerDropdown(true)}
                   onBlur={() => setTimeout(() => setShowCustomerDropdown(false), 200)}
-                  className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm placeholder-gray-400"
+                  className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow placeholder:text-gray-400"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showCustomerDropdown ? 'rotate-180' : ''}`} />
-                </button>
+                {showCustomerDropdown && filteredCustomers.length > 0 && (
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredCustomers.map((customer, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleCustomerSelect(customer.name)}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-900 truncate">{customer.name}</span>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded ml-2">
+                            {customer.count}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {showCustomerDropdown && filteredCustomers.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                  {filteredCustomers.map((customer, index) => (
-                    <div
-                      key={index}
-                      onClick={() => handleCustomerSelect(customer.name)}
-                      className="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+            </div>
+
+            {/* Start Date */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Từ ngày</label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
+              />
+            </div>
+
+            {/* End Date */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Đến ngày</label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow"
+              />
+            </div>
+          </div>
+
+          {/* Active Filters - Compact Chips */}
+          {(filters.caseType || filters.handler || filters.status || filters.customer || filters.startDate || filters.endDate) && (
+            <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+              <div className="flex flex-wrap gap-1.5">
+                {filters.caseType && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-white border border-gray-200 text-gray-700">
+                    {getCaseTypeLabel(filters.caseType)}
+                    <button
+                      onClick={() => handleFilterChange('caseType', '')}
+                      className="text-gray-400 hover:text-gray-600"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-900">{customer.name}</span>
-                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                          {customer.count} case{customer.count > 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.handler && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-white border border-gray-200 text-gray-700">
+                    {filters.handler}
+                    <button
+                      onClick={() => handleFilterChange('handler', '')}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.status && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-white border border-gray-200 text-gray-700">
+                    {getStatusLabel(filters.status)}
+                    <button
+                      onClick={() => handleFilterChange('status', '')}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.customer && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-white border border-gray-200 text-gray-700">
+                    {filters.customer}
+                    <button
+                      onClick={() => handleFilterChange('customer', '')}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.startDate && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-white border border-gray-200 text-gray-700">
+                    Từ: {new Date(filters.startDate + 'T00:00:00').toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}
+                    <button
+                      onClick={() => handleFilterChange('startDate', '')}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+                {filters.endDate && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-white border border-gray-200 text-gray-700">
+                    Đến: {new Date(filters.endDate + 'T00:00:00').toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}
+                    <button
+                      onClick={() => handleFilterChange('endDate', '')}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-
-          {/* Start Date Filter */}
-          <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <Calendar className="h-3 w-3 text-indigo-600" />
-              <span>Từ ngày</span>
-            </label>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
-            />
-          </div>
-
-          {/* End Date Filter */}
-          <div className="space-y-1">
-            <label className="flex items-center space-x-1 text-xs font-medium text-gray-700">
-              <Calendar className="h-3 w-3 text-indigo-600" />
-              <span>Đến ngày</span>
-            </label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-sm"
-            />
-          </div>
+          )}
         </div>
-
-        {/* Active Filters Display */}
-        {(filters.caseType || filters.handler || filters.status || filters.customer || filters.startDate || filters.endDate) && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex items-center space-x-2 mb-3">
-              <span className="text-sm font-medium text-gray-700">Bộ lọc đang áp dụng:</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {filters.caseType && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  Loại: {getCaseTypeLabel(filters.caseType)}
-                  <button
-                    onClick={() => handleFilterChange('caseType', '')}
-                    className="ml-2 text-blue-600 hover:text-blue-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.handler && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Xử lý: {filters.handler}
-                  <button
-                    onClick={() => handleFilterChange('handler', '')}
-                    className="ml-2 text-green-600 hover:text-green-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.status && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  Trạng thái: {getStatusLabel(filters.status)}
-                  <button
-                    onClick={() => handleFilterChange('status', '')}
-                    className="ml-2 text-purple-600 hover:text-purple-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.customer && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Khách hàng: {filters.customer}
-                  <button
-                    onClick={() => handleFilterChange('customer', '')}
-                    className="ml-2 text-orange-600 hover:text-orange-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.startDate && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Từ: {new Date(filters.startDate + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                  <button
-                    onClick={() => handleFilterChange('startDate', '')}
-                    className="ml-2 text-indigo-600 hover:text-indigo-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.endDate && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                  Đến: {new Date(filters.endDate + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                  <button
-                    onClick={() => handleFilterChange('endDate', '')}
-                    className="ml-2 text-indigo-600 hover:text-indigo-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Cases Table */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 md:px-6 py-3 md:py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base md:text-xl font-bold text-gray-900">
                 {activeTab === 'current' ? 'Danh sách cases hiện tại' : 'Danh sách tất cả cases'}
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs md:text-sm text-gray-600 mt-1">
                 Hiển thị: <span className="font-semibold text-blue-600">{startIndex + 1}-{Math.min(endIndex, filteredCases.length)}</span> / <span className="font-semibold text-gray-600">{filteredCases.length}</span> cases (trang {currentPage}/{totalPages})
                 {activeTab === 'current' && (
-                  <span className="ml-2 text-xs text-orange-600 bg-orange-100 px-2 py-1 rounded-full">
-                    Hiển thị cases chưa hoàn thành/hủy và cases bắt đầu hôm nay
+                  <span className="ml-1 md:ml-2 text-xs text-orange-600 bg-orange-100 px-1.5 md:px-2 py-0.5 md:py-1 rounded-full">
+                    <span className="hidden sm:inline">Hiển thị cases chưa hoàn thành/hủy và cases bắt đầu hôm nay</span>
+                    <span className="sm:hidden">Active cases</span>
                   </span>
                 )}
               </p>
@@ -968,16 +967,115 @@ export default function UserDashboardPage() {
                 setLoading(true);
                 fetchAllCases();
               }}
-              className="flex items-center space-x-2 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center space-x-1 md:space-x-2 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 md:px-3 py-1.5 md:py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
               <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-              <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
+              <span className="hidden md:inline">{loading ? 'Đang tải...' : 'Làm mới'}</span>
             </button>
           </div>
                       </div>
         
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-100">
+          {currentCases.map((case_, index) => (
+            <Link
+              key={case_.id}
+              href={getActionLink(case_.type, case_.id)}
+              className="block p-3 active:bg-blue-50 transition-colors"
+            >
+              {/* Header Row */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {/* Type Icon & Badge */}
+                  <div className={`p-1 rounded-md ${
+                    case_.type === 'internal' ? 'bg-blue-100 text-blue-600' :
+                    case_.type === 'delivery' ? 'bg-green-100 text-green-600' :
+                    case_.type === 'receiving' ? 'bg-yellow-100 text-yellow-600' :
+                    case_.type === 'maintenance' ? 'bg-purple-100 text-purple-600' :
+                    case_.type === 'incident' ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-600'
+                  }`}>
+                    {getCaseTypeIcon(case_.type)}
+                  </div>
+                  
+                  {/* Status Badge */}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(case_.status)}`}>
+                    {getStatusLabel(case_.status)}
+                  </span>
+                </div>
+                
+                {/* Case Number */}
+                <span className="text-xs font-mono text-gray-400 ml-2">#{filteredCases.length - (startIndex + index)}</span>
+              </div>
+
+              {/* Title - Prominent */}
+              <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2 leading-snug">{case_.title}</h3>
+
+              {/* Info Grid - Compact 2-column */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 mb-2 text-xs">
+                {/* Handler */}
+                <div className="flex items-center gap-1 text-gray-600 min-w-0">
+                  <User className="h-3 w-3 flex-shrink-0 text-gray-400" />
+                  <span className="truncate">{case_.handlerName}</span>
+                </div>
+                
+                {/* Customer */}
+                <div className="flex items-center gap-1 text-gray-600 min-w-0">
+                  <Building2 className="h-3 w-3 flex-shrink-0 text-gray-400" />
+                  <span className="truncate">
+                    {case_.type === 'internal' ? 'Smart Services' : case_.customerName}
+                  </span>
+                </div>
+                
+                {/* Time */}
+                <div className="col-span-2 flex items-center gap-1 text-gray-500 mt-0.5">
+                  <Clock className="h-3 w-3 flex-shrink-0 text-gray-400" />
+                  <span className="text-xs">
+                    {new Date(case_.startDate).toLocaleString('vi-VN', { 
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'Asia/Ho_Chi_Minh'
+                    })}
+                    {case_.endDate && (
+                      <span className="text-gray-400"> → </span>
+                    )}
+                    {case_.endDate && new Date(case_.endDate).toLocaleString('vi-VN', { 
+                      day: '2-digit',
+                      month: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'Asia/Ho_Chi_Minh'
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Description - Subtle */}
+              {case_.description && (
+                <p className="text-xs text-gray-500 line-clamp-1 mb-2 leading-relaxed">
+                  {case_.type === 'delivery' || case_.type === 'receiving' ? (
+                    <span dangerouslySetInnerHTML={{
+                      __html: case_.description.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, ' • ')
+                    }} />
+                  ) : (
+                    case_.description
+                  )}
+                </p>
+              )}
+
+              {/* Action Indicator */}
+              <div className="flex items-center justify-end text-blue-600 text-xs font-medium">
+                <span>Xem chi tiết</span>
+                <ChevronDown className="h-3 w-3 ml-1 -rotate-90" />
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="min-w-full">
             <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
@@ -1120,14 +1218,14 @@ export default function UserDashboardPage() {
       </div>
 
         {filteredCases.length === 0 && cases.length > 0 && (
-          <div className="text-center py-16 bg-gray-50">
-            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-8 w-8 text-gray-400" />
+          <div className="text-center py-12 md:py-16 bg-gray-50">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+              <FileText className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">
               {activeTab === 'current' ? 'Không có case hiện tại' : 'Không tìm thấy case nào'}
             </h3>
-            <p className="text-gray-500">
+            <p className="text-sm md:text-base text-gray-500 px-4">
               {activeTab === 'current' 
                 ? 'Không có case nào chưa hoàn thành/hủy hoặc bắt đầu hôm nay. Chuyển sang tab "Tất cả cases" để xem toàn bộ.'
                 : 'Thử thay đổi bộ lọc để xem thêm kết quả'
@@ -1138,19 +1236,22 @@ export default function UserDashboardPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="bg-white px-2 sm:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <div className="flex-1 flex justify-between sm:hidden">
+          <div className="bg-white px-2 sm:px-4 py-2 md:py-3 border-t border-gray-200 flex items-center justify-between">
+            <div className="flex-1 flex justify-between items-center sm:hidden">
               <button
                 onClick={goToPreviousPage}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white active:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Trước
               </button>
+              <span className="text-xs text-gray-600">
+                Trang {currentPage}/{totalPages}
+              </span>
               <button
                 onClick={goToNextPage}
                 disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white active:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Sau
               </button>
@@ -1227,12 +1328,12 @@ export default function UserDashboardPage() {
         )}
 
         {cases.length === 0 && (
-          <div className="text-center py-16 bg-gray-50">
-            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-8 w-8 text-gray-400" />
+          <div className="text-center py-12 md:py-16 bg-gray-50">
+            <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
+              <FileText className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Không có case nào</h3>
-            <p className="text-gray-500">Chưa có case nào được tạo trong hệ thống</p>
+            <h3 className="text-base md:text-lg font-medium text-gray-900 mb-2">Không có case nào</h3>
+            <p className="text-sm md:text-base text-gray-500">Chưa có case nào được tạo trong hệ thống</p>
           </div>
         )}
       </div>

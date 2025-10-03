@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, Filter, Eye, Edit, RefreshCw, Package, X, Clock, CheckCircle, Check } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, RefreshCw, Package, X, Clock, CheckCircle, Check, ChevronDown, User, Building2, Truck, Calendar, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CreateDeliveryCaseModal from './CreateDeliveryCaseModal';
 import EditDeliveryCaseModal from './EditDeliveryCaseModal';
@@ -93,6 +93,22 @@ export default function DeliveryCasePage() {
     startDate: '',
     endDate: ''
   });
+  
+  // Mobile states
+  const [showFilters, setShowFilters] = useState(false);
+  const [expandedCases, setExpandedCases] = useState<Set<string>>(new Set());
+  
+  const toggleExpand = (caseId: string) => {
+    setExpandedCases(prev => {
+      const next = new Set(prev);
+      if (next.has(caseId)) {
+        next.delete(caseId);
+      } else {
+        next.add(caseId);
+      }
+      return next;
+    });
+  };
 
   // Helper function to get products from case (either from products table or description JSON)
   const getCaseProducts = (case_: DeliveryCase): Product[] => {
@@ -595,90 +611,111 @@ export default function DeliveryCasePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6 pt-4">
-      <div className="max-w-full mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Case Giao Hàng</h1>
-              <p className="text-slate-600">Quản lý và theo dõi các case giao hàng của công ty</p>
-            </div>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Tạo Case Giao Hàng</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Search and Filter Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9ca3af !important;
+          opacity: 0.6 !important;
+          color: #9ca3af !important;
+        }
+      `}} />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-3 md:p-6 pt-3 md:pt-4">
+        <div className="max-w-full mx-auto px-2 md:px-4">
           {/* Header */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Search className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
-                  <p className="text-xs text-gray-600">Tìm kiếm và lọc case giao hàng theo nhiều tiêu chí</p>
+          <div className="mb-4 md:mb-8">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl md:text-3xl font-bold text-slate-900 mb-1 md:mb-2">Case Giao Hàng</h1>
+                <p className="text-xs md:text-base text-slate-600 hidden sm:block">Quản lý và theo dõi các case giao hàng của công ty</p>
               </div>
-            </div>
-              <button 
-                onClick={refreshCases}
-                disabled={refreshing}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-3 md:px-4 py-2 rounded-md text-xs md:text-sm font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg flex-shrink-0"
               >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span>Làm mới</span>
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Tạo Case Giao Hàng</span>
+                <span className="sm:hidden">Tạo</span>
               </button>
             </div>
           </div>
 
-           {/* Content */}
-           <div className="p-6">
-             <div className="space-y-4">
+        {/* Search and Filter Section */}
+        <div className="bg-white rounded-lg border border-gray-200 mb-4 md:mb-6 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-3 border-b border-gray-100">
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 flex-1 md:pointer-events-none"
+            >
+              <div className="p-1 bg-green-50 rounded">
+                <Search className="h-3.5 w-3.5 text-green-600" />
+              </div>
+              <span className="text-sm font-medium text-gray-900">Tìm kiếm & Lọc</span>
+              {(searchTerm || hasActiveFilters()) && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-medium text-white">
+                  {[searchTerm, ...Object.values(filters)].filter(Boolean).length}
+                </span>
+              )}
+              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform md:hidden ml-auto ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+            <div className="flex items-center gap-2">
+              {(searchTerm || hasActiveFilters()) && (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    clearFilters();
+                  }}
+                  className="text-xs font-medium text-green-600 hover:text-green-700 px-2 py-1"
+                >
+                  Xóa hết
+                </button>
+              )}
+              <button 
+                onClick={refreshCases}
+                disabled={refreshing}
+                className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 text-xs md:text-sm"
+              >
+                <RefreshCw className={`h-3 w-3 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Làm mới</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className={`${showFilters ? 'block' : 'hidden md:block'}`}>
+            <div className="p-3 space-y-2.5">
               {/* Search Section */}
               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                   Tìm kiếm
-                 </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Tìm kiếm</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tên case, người giao hàng, khách hàng..."
+                    placeholder="Tìm kiếm case..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow placeholder:text-gray-400"
                   />
                 </div>
               </div>
 
               {/* Filters Section */}
               <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                   Bộ lọc
-                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Bộ lọc</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2.5">
                   {/* Người giao hàng */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span>Người giao hàng</span>
-                      </div>
-                    </label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Người giao hàng</label>
                     <select
                       value={filters.deliveryPerson}
                       onChange={(e) => setFilters(prev => ({ ...prev, deliveryPerson: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow"
                     >
-                      <option value="">Tất cả người giao hàng</option>
+                      <option value="">Tất cả</option>
                       {getUniqueDeliveryPersons().map(person => (
                         <option key={person} value={person}>{person}</option>
                       ))}
@@ -687,18 +724,13 @@ export default function DeliveryCasePage() {
 
                   {/* Khách hàng */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                        <span>Khách hàng</span>
-                      </div>
-                    </label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Khách hàng</label>
                     <select
                       value={filters.customer}
                       onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow"
                     >
-                      <option value="">Tất cả khách hàng</option>
+                      <option value="">Tất cả</option>
                       {getUniqueCustomers().map(customer => (
                         <option key={customer} value={customer}>{customer}</option>
                       ))}
@@ -707,18 +739,13 @@ export default function DeliveryCasePage() {
 
                   {/* Trạng thái */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                        <span>Trạng thái</span>
-                      </div>
-                    </label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Trạng thái</label>
                     <select
                       value={filters.status}
                       onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow"
                     >
-                      <option value="">Tất cả trạng thái</option>
+                      <option value="">Tất cả</option>
                       {getUniqueStatuses().map(status => (
                         <option key={status} value={status}>{getStatusText(status)}</option>
                       ))}
@@ -727,33 +754,23 @@ export default function DeliveryCasePage() {
 
                   {/* Từ ngày */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <span>Từ ngày</span>
-                      </div>
-                    </label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Từ ngày</label>
                     <input
                       type="date"
                       value={filters.startDate}
                       onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow"
                     />
                   </div>
 
                   {/* Đến ngày */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                        <span>Đến ngày</span>
-                      </div>
-                    </label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Đến ngày</label>
                     <input
                       type="date"
                       value={filters.endDate}
                       onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm ${
+                      className={`w-full px-2.5 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow ${
                         !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
                       }`}
                     />
@@ -764,84 +781,136 @@ export default function DeliveryCasePage() {
                 </div>
               </div>
 
-              {/* Active Filters & Actions */}
-              {hasActiveFilters() && (
-                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-md p-2.5 border border-green-100">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-1.5 mb-1">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span className="text-xs font-semibold text-gray-800">Bộ lọc đang áp dụng</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {searchTerm && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                            <Search className="h-2.5 w-2.5 mr-1" />
-                            &quot;{searchTerm}&quot;
-                          </span>
-                        )}
-                        {filters.deliveryPerson && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
-                            Người giao: {filters.deliveryPerson}
-                          </span>
-                        )}
-                        {filters.customer && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
-                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
-                            Khách hàng: {filters.customer}
-                          </span>
-                        )}
-                        {filters.status && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
-                            Trạng thái: {getStatusText(filters.status)}
-                          </span>
-                        )}
-                        {filters.startDate && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></div>
-                            Từ: {new Date(filters.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                          </span>
-                        )}
-                        {filters.endDate && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
-                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
-                            Đến: {new Date(filters.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                     <div className="flex items-center space-x-1.5">
-                      <button
-                        onClick={clearFilters}
-                        className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors"
-                      >
-                        <X className="h-3 w-3" />
-                        <span>Xóa tất cả</span>
-              </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-               {/* Results Summary */}
-               <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                <div className="text-sm text-gray-600">
-                  Hiển thị <span className="font-medium text-gray-900">{filteredCases.length}</span> trong tổng số <span className="font-medium text-gray-900">{cases.length}</span> case
-                  {hasActiveFilters() && (
-                    <span className="ml-2 text-green-600 font-medium">
-                      (đã lọc)
-                    </span>
+              {/* Results Summary */}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <div className="text-xs text-gray-600">
+                  Hiển thị <span className="font-medium text-gray-900">{filteredCases.length}</span> case
+                  {(searchTerm || hasActiveFilters()) && (
+                    <span className="ml-1 text-green-600 font-medium">(đã lọc)</span>
                   )}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Trang {currentPage}/{totalPagesFiltered}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Cases Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200/50 overflow-hidden">
+        {/* Cases - Mobile Card View */}
+        <div className="md:hidden mb-4">
+          <div className="space-y-3">
+          {loading ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+              <RefreshCw className="h-8 w-8 animate-spin text-green-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-600">Đang tải...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
+              <div className="text-sm text-red-600 mb-3">{error}</div>
+              <button onClick={fetchCases} className="text-sm text-green-600 hover:text-green-700 font-medium">
+                Thử lại
+              </button>
+            </div>
+          ) : paginatedCases.length > 0 ? (
+            paginatedCases.map((case_, index) => {
+              const products = getCaseProducts(case_);
+              return (
+                <div key={case_.id} className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(case_.status)}`}>
+                        {getStatusText(case_.status)}
+                      </span>
+                      {case_.crmReferenceCode && (
+                        <span className="inline-flex px-1.5 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">{case_.crmReferenceCode}</span>
+                      )}
+                    </div>
+                    <span className="text-xs font-mono text-gray-400">#{filteredCases.length - ((currentPage - 1) * casesPerPage + index)}</span>
+                  </div>
+                  <div className="mb-1.5 flex items-start gap-1 text-xs">
+                    <User className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold text-gray-900">{case_.requester.fullName}</span>
+                      <span className="text-gray-500"> • {case_.requester.position}</span>
+                    </div>
+                  </div>
+                  <div className="mb-1.5 flex items-start gap-1 text-xs">
+                    <Building2 className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900">{case_.customer?.shortName || 'N/A'}</div>
+                      {case_.customer?.fullCompanyName && <div className="text-gray-500 text-xs">{case_.customer.fullCompanyName}</div>}
+                    </div>
+                  </div>
+                  {products.length > 0 && (
+                    <div className="mb-1.5">
+                      <div className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded">
+                        <div className="flex items-center gap-1.5 text-xs text-gray-700">
+                          <Package className="h-3 w-3 text-gray-500" />
+                          <span className="font-medium">{products.length} sản phẩm</span>
+                        </div>
+                        <button type="button" onClick={(e) => { e.preventDefault(); toggleExpand(case_.id); }} className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded">
+                          <span>{expandedCases.has(case_.id) ? 'Ẩn' : 'Xem'}</span>
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expandedCases.has(case_.id) ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+                      {expandedCases.has(case_.id) && (
+                        <div className="mt-2 pl-4 border-l-2 border-green-200 bg-green-50/30 py-2 rounded-r">
+                          {products.map((p, i) => (
+                            <div key={i} className="text-xs text-gray-700 mb-1">
+                              <span className="text-green-600 font-medium">{i+1}.</span> <span className="font-semibold">{p.name}</span>
+                              <div className="text-gray-600 text-xs"><span className="font-medium">SL: {p.quantity}</span>{p.code && <span> • Mã: {p.code}</span>}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="mb-2 text-xs text-gray-500">
+                    <div className="flex items-center gap-1"><Clock className="h-3 w-3" /><span>Bắt đầu: {formatDate(case_.startDate)}</span></div>
+                    {case_.endDate && <div className="flex items-center gap-1 mt-0.5"><CheckCircle className="h-3 w-3 text-green-500" /><span>KT: {formatDate(case_.endDate)}</span></div>}
+                  </div>
+                  <div className="flex gap-1 pt-1.5 border-t border-gray-100">
+                    {case_.status !== 'COMPLETED' && (
+                      <>
+                        <button onClick={() => handleOpenEditModal(case_)} className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-green-600 border border-green-200 hover:bg-green-50 rounded text-xs font-medium"><Edit className="h-3 w-3" /><span>Sửa</span></button>
+                        {case_.status !== 'IN_PROGRESS' && (
+                          <button onClick={async () => { if (!confirm('Chuyển?')) return; try { await handleSetInProgress(case_.id); } catch {} }} disabled={inProgressCaseId === case_.id} className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-yellow-700 border border-yellow-200 hover:bg-yellow-50 rounded text-xs font-medium disabled:opacity-50"><Clock className={`h-3 w-3 ${inProgressCaseId === case_.id ? 'animate-pulse' : ''}`} /><span>Xử lý</span></button>
+                        )}
+                        <button onClick={async () => { if (!confirm('Đóng?')) return; try { await handleCloseCase(case_.id); } catch {} }} disabled={closingCaseId === case_.id} className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-green-700 border border-green-200 hover:bg-green-50 rounded text-xs font-medium disabled:opacity-50"><Check className={`h-3 w-3 ${closingCaseId === case_.id ? 'animate-pulse' : ''}`} /><span>Đóng</span></button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+              <Truck className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm font-medium text-gray-900 mb-1">Không tìm thấy case nào</p>
+            </div>
+          )}
+          </div>
+          {totalPagesFiltered > 1 && !loading && !error && (
+            <div className="bg-white rounded-lg border border-gray-200 p-3 mt-3">
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px w-full justify-center">
+                <button onClick={goToPrevPage} disabled={currentPage === 1} className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                </button>
+                {Array.from({ length: Math.min(5, totalPagesFiltered) }, (_, i) => {
+                  let pageNum = totalPagesFiltered <= 5 ? i + 1 : currentPage <= 3 ? i + 1 : currentPage >= totalPagesFiltered - 2 ? totalPagesFiltered - 4 + i : currentPage - 2 + i;
+                  return <button key={pageNum} onClick={() => goToPage(pageNum)} className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${pageNum === currentPage ? 'z-10 bg-green-50 border-green-500 text-green-600' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'}`}>{pageNum}</button>;
+                })}
+                <button onClick={goToNextPage} disabled={currentPage === totalPagesFiltered} className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                </button>
+              </nav>
+            </div>
+          )}
+        </div>
+
+        {/* Cases Table - Desktop */}
+        <div className="hidden md:block bg-white rounded-lg shadow-sm border border-slate-200/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-slate-50 to-green-50">
@@ -1171,30 +1240,30 @@ export default function DeliveryCasePage() {
           )}
           
         </div>
+
+        {/* Create Case Modal */}
+        <CreateDeliveryCaseModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={(newCase) => {
+            const transformedCase = {
+              ...newCase,
+              customer: newCase.customer || null
+            };
+            setCases(prevCases => [transformedCase, ...prevCases]);
+            setIsCreateModalOpen(false);
+          }}
+        />
+
+        {/* Edit Case Modal */}
+        <EditDeliveryCaseModal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSuccess={handleEditSuccess}
+          caseData={selectedCase}
+        />
       </div>
-
-      {/* Create Case Modal */}
-      <CreateDeliveryCaseModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newCase) => {
-          // Transform the new case to match the expected format
-          const transformedCase = {
-            ...newCase,
-            customer: newCase.customer || null // Use customer field directly
-          };
-          setCases(prevCases => [transformedCase, ...prevCases]);
-          setIsCreateModalOpen(false);
-        }}
-      />
-
-      {/* Edit Case Modal */}
-      <EditDeliveryCaseModal
-        isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
-        onSuccess={handleEditSuccess}
-        caseData={selectedCase}
-      />
-    </div>
+      </div>
+    </>
   );
 }

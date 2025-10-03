@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
-import { Plus, Search, RefreshCw, X } from 'lucide-react';
+import { Plus, Search, RefreshCw, X, ChevronDown, User, Building2, Calendar, Settings } from 'lucide-react';
 import CreateInternalCaseModal from './CreateInternalCaseModal';
 import EditInternalCaseModal from './EditInternalCaseModal';
 import InternalCaseRow from './InternalCaseRow';
@@ -51,6 +51,7 @@ export default function InternalCasePage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<InternalCase | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   
   // Use optimized hook
   const {
@@ -94,10 +95,22 @@ export default function InternalCasePage() {
   } = useInternalCases();
 
   // Memoized filter summary
-  const filterSummary = useMemo(() => ({
-    hasActiveFilters: searchTerm || selectedHandler || selectedRequester || selectedCaseType || selectedStatus || dateFrom || dateTo,
-    isDateRangeValid: !dateFrom || !dateTo || new Date(dateFrom) <= new Date(dateTo)
-  }), [searchTerm, selectedHandler, selectedRequester, selectedCaseType, selectedStatus, dateFrom, dateTo]);
+  const filterSummary = useMemo(() => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (selectedHandler) count++;
+    if (selectedRequester) count++;
+    if (selectedCaseType) count++;
+    if (selectedStatus) count++;
+    if (dateFrom) count++;
+    if (dateTo) count++;
+    
+    return {
+      hasActiveFilters: count > 0,
+      filterCount: count,
+      isDateRangeValid: !dateFrom || !dateTo || new Date(dateFrom) <= new Date(dateTo)
+    };
+  }, [searchTerm, selectedHandler, selectedRequester, selectedCaseType, selectedStatus, dateFrom, dateTo]);
 
   // Handle edit modal
   const handleOpenEditModal = useCallback((caseData: InternalCase) => {
@@ -222,29 +235,61 @@ export default function InternalCasePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-3 sm:p-6 pt-4">
-      <div className="max-w-full mx-auto px-2 sm:px-4">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-2 md:p-6">
+      {/* iOS Safari text color fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9ca3af !important;
+          opacity: 0.6 !important;
+          color: #9ca3af !important;
+        }
+      `}} />
+
+      <div className="max-w-full mx-auto px-1 md:px-4">
+        {/* Header - Responsive */}
+        <div className="mb-3 md:mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">Case Nội Bộ</h1>
-              <p className="text-slate-600">Quản lý và theo dõi các case nội bộ của công ty</p>
+              <h1 className="text-xl md:text-3xl font-bold text-slate-900 mb-1 md:mb-2">Case Nội Bộ</h1>
+              <p className="text-xs md:text-sm text-slate-600 hidden md:block">Quản lý và theo dõi các case nội bộ của công ty</p>
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center space-x-1 sm:space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-1 md:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2.5 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
             >
-              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span>Tạo Case Nội Bộ</span>
+              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Tạo Case Nội Bộ</span>
+              <span className="sm:hidden">Tạo</span>
             </button>
           </div>
         </div>
 
         {/* Search and Filter Section */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-3 md:mb-4">
+          {/* Mobile: Collapsible Header */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="md:hidden w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors rounded-t-lg"
+          >
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-semibold text-gray-800">Tìm kiếm & Bộ lọc</span>
+              {filterSummary.filterCount > 0 && (
+                <span className="bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                  {filterSummary.filterCount}
+                </span>
+              )}
+            </div>
+            <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Desktop: Static Header */}
+          <div className="hidden md:block bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -267,8 +312,8 @@ export default function InternalCasePage() {
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-4">
+          {/* Content - Collapsible on mobile */}
+          <div className={`p-3 md:p-4 ${showFilters ? 'block' : 'hidden md:block'}`}>
             <div className="space-y-3">
               {/* Search Section */}
               <div>
@@ -296,17 +341,14 @@ export default function InternalCasePage() {
                   {/* Người yêu cầu */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <span>Yêu cầu</span>
-                      </div>
+                      Yêu cầu
                     </label>
                     <select
                       value={selectedRequester}
                       onChange={(e) => setSelectedRequester(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                     >
-                      <option value="">Tất cả người yêu cầu</option>
+                      <option value="">Tất cả</option>
                       {uniqueRequesters.map(requester => (
                         <option key={requester.id} value={requester.id}>{requester.fullName}</option>
                       ))}
@@ -316,17 +358,14 @@ export default function InternalCasePage() {
                   {/* Người xử lý */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span>Xử lý</span>
-                      </div>
+                      Xử lý
                     </label>
                     <select
                       value={selectedHandler}
                       onChange={(e) => setSelectedHandler(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                     >
-                      <option value="">Tất cả người xử lý</option>
+                      <option value="">Tất cả</option>
                       {uniqueHandlers.map(handler => (
                         <option key={handler.id} value={handler.id}>{handler.fullName}</option>
                       ))}
@@ -336,17 +375,14 @@ export default function InternalCasePage() {
                   {/* Loại case */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                        <span>Loại</span>
-                      </div>
+                      Loại
                     </label>
                     <select
                       value={selectedCaseType}
                       onChange={(e) => setSelectedCaseType(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                     >
-                      <option value="">Tất cả loại case</option>
+                      <option value="">Tất cả</option>
                       {uniqueCaseTypes.map(caseType => (
                         <option key={caseType} value={caseType}>{caseType}</option>
                       ))}
@@ -356,17 +392,14 @@ export default function InternalCasePage() {
                   {/* Trạng thái */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                        <span>Trạng thái</span>
-                      </div>
+                      Trạng thái
                     </label>
                     <select
                       value={selectedStatus}
                       onChange={(e) => setSelectedStatus(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                     >
-                      <option value="">Tất cả trạng thái</option>
+                      <option value="">Tất cả</option>
                       {uniqueStatuses.map(status => (
                         <option key={status} value={status}>{getStatusText(status)}</option>
                       ))}
@@ -376,32 +409,26 @@ export default function InternalCasePage() {
                   {/* Từ ngày */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                        <span>Từ</span>
-                      </div>
+                      Từ
                     </label>
                     <input
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                     />
                   </div>
 
                   {/* Đến ngày */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
-                        <span>Đến</span>
-                      </div>
+                      Đến
                     </label>
                     <input
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm ${
+                      className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${
                         !filterSummary.isDateRangeValid ? 'border-red-300' : 'border-gray-200'
                       }`}
                     />
@@ -467,15 +494,18 @@ export default function InternalCasePage() {
                 </div>
               )}
 
-              {/* Results Summary */}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                <div className="text-sm text-gray-600">
-                  Trang {currentPage} / {totalPages} - Hiển thị <span className="font-medium text-gray-900">{filteredCases.length}</span> case
-                  {filterSummary.hasActiveFilters && (
-                    <span className="ml-2 text-blue-600 font-medium">
-                      (đã lọc)
-                    </span>
-                  )}
+              {/* Results Summary - Simplified on mobile */}
+              <div className="flex items-center justify-between pt-2 md:pt-3 border-t border-gray-200">
+                <div className="text-xs md:text-sm text-gray-600">
+                  <span className="md:hidden">{filteredCases.length} / {totalCases} case</span>
+                  <span className="hidden md:inline">
+                    Trang {currentPage} / {totalPages} - Hiển thị <span className="font-medium text-gray-900">{filteredCases.length}</span> case
+                    {filterSummary.hasActiveFilters && (
+                      <span className="ml-2 text-blue-600 font-medium">
+                        (đã lọc)
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
             </div>
@@ -601,27 +631,11 @@ export default function InternalCasePage() {
             </table>
           </div>
           
-          {/* Pagination */}
+          {/* Pagination - Desktop style on both mobile and desktop */}
           {totalPages > 1 && (
-            <div className="bg-white px-2 sm:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <button
-                  onClick={goToPrevPage}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Trước
-                </button>
-                <button
-                  onClick={goToNextPage}
-                  disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Sau
-                </button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
+            <div className="bg-white px-2 md:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+              <div className="flex-1 flex items-center justify-between md:justify-between">
+                <div className="hidden md:block">
                   <p className="text-sm text-gray-700">
                     Hiển thị{' '}
                     <span className="font-medium">{(currentPage - 1) * casesPerPage + 1}</span>
@@ -639,10 +653,10 @@ export default function InternalCasePage() {
                     <button
                       onClick={goToPrevPage}
                       disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Trước</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </button>
@@ -664,7 +678,7 @@ export default function InternalCasePage() {
                         <button
                           key={pageNum}
                           onClick={() => goToPage(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          className={`relative inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 border text-xs md:text-sm font-medium ${
                             pageNum === currentPage
                               ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                               : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
@@ -678,10 +692,10 @@ export default function InternalCasePage() {
                     <button
                       onClick={goToNextPage}
                       disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Sau</span>
-                      <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                       </svg>
                     </button>

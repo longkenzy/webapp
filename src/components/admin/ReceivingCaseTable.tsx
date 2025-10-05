@@ -203,6 +203,30 @@ export default function ReceivingCaseTable({
     }
   };
 
+  // Helper functions for score calculation
+  const calculateUserTotalScore = (caseItem: ReceivingCase): number => {
+    return (
+      (caseItem.userDifficultyLevel || 0) + 
+      (caseItem.userEstimatedTime || 0) + 
+      (caseItem.userImpactLevel || 0) + 
+      (caseItem.userUrgencyLevel || 0) + 
+      (caseItem.userFormScore || 0)
+    );
+  };
+
+  const calculateAdminTotalScore = (caseItem: ReceivingCase): number => {
+    return (
+      (caseItem.adminDifficultyLevel || 0) + 
+      (caseItem.adminEstimatedTime || 0) + 
+      (caseItem.adminImpactLevel || 0) + 
+      (caseItem.adminUrgencyLevel || 0)
+    );
+  };
+
+  const calculateGrandTotal = (userTotal: number, adminTotal: number): string => {
+    return ((userTotal * 0.4) + (adminTotal * 0.6)).toFixed(1);
+  };
+
   const getFormText = (score: number | null | undefined) => {
     if (score === null || score === undefined) return 'Chưa đánh giá';
     switch (score) {
@@ -609,20 +633,20 @@ export default function ReceivingCaseTable({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white rounded-md shadow">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-3 md:px-6 py-2 md:py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">
+          <h3 className="text-xs md:text-sm font-semibold text-gray-900">
             Danh sách Case Nhận Hàng
           </h3>
           
           {/* Status Filter and Refresh */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             {statusFilter && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-600">Trạng thái:</span>
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+              <div className="flex items-center gap-1 md:gap-2">
+                <span className="text-[10px] md:text-xs text-gray-600 hidden sm:inline">Trạng thái:</span>
+                <span className="px-1.5 md:px-2 py-0.5 md:py-1 bg-blue-100 text-blue-800 rounded text-[10px] md:text-xs font-medium">
                   {statusConfig[statusFilter as ReceivingCaseStatus]?.label || statusFilter}
                 </span>
               </div>
@@ -631,8 +655,8 @@ export default function ReceivingCaseTable({
         </div>
       </div>
 
-      {/* Process Flow Header */}
-      <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+      {/* Process Flow Header - Desktop only */}
+      <div className="hidden md:block px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
         <div className="flex items-center justify-center">
           <div className="flex items-center space-x-8">
             {/* Step 1: Tiếp nhận */}
@@ -663,8 +687,169 @@ export default function ReceivingCaseTable({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3 p-3">
+        {getCurrentPageData().map((caseItem, index) => {
+          const isEvaluated = isCaseEvaluatedByAdmin(caseItem);
+          const userTotalScore = calculateUserTotalScore(caseItem);
+          const adminTotalScore = calculateAdminTotalScore(caseItem);
+          const grandTotal = calculateGrandTotal(userTotalScore, adminTotalScore);
+          const StatusIcon = statusConfig[caseItem.status].icon;
+          
+          return (
+            <div 
+              key={caseItem.id} 
+              className={`p-3 bg-white border border-gray-200 rounded-md shadow-sm ${
+                !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+              } ${
+                deletedCases.has(caseItem.id) ? 'opacity-50 bg-red-50/30' : ''
+              }`}
+            >
+              {/* STT & Status */}
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-medium text-gray-500">
+                  #{filteredCases.length - ((currentPage - 1) * itemsPerPage + index)}
+                </span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${statusConfig[caseItem.status].color}`}>
+                  <StatusIcon className="h-2.5 w-2.5 mr-1" />
+                  {statusConfig[caseItem.status].label}
+                </span>
+              </div>
+
+              {/* Title */}
+              <div className="mb-2">
+                <div className="text-xs font-semibold text-gray-900 break-words">
+                  {caseItem.title.replace('Nhận hàng từ ', '')}
+                </div>
+                {caseItem.supplier?.fullCompanyName && (
+                  <div className="text-[10px] text-gray-600 mt-0.5">
+                    {caseItem.supplier.fullCompanyName}
+                  </div>
+                )}
+              </div>
+
+              {/* Products */}
+              {caseItem.products && caseItem.products.length > 0 && (
+                <div className="mb-2 space-y-1">
+                  {caseItem.products.map((product) => (
+                    <div key={product.id} className="text-[10px] text-gray-700 border-l-2 border-blue-300 pl-2">
+                      <span className="font-medium">{product.name}</span>
+                      <span className="text-gray-600"> | SL: {product.quantity}</span>
+                      {product.code && (
+                        <span className="text-gray-600"> | Mã: {product.code}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Handler & Supplier */}
+              <div className="grid grid-cols-2 gap-2 mb-2 text-[10px]">
+                <div>
+                  <span className="text-gray-500">Người nhận:</span>
+                  <div className="font-medium text-gray-900 break-words">{caseItem.handler?.fullName}</div>
+                  <div className="text-gray-600">{caseItem.handler?.position}</div>
+                </div>
+                <div>
+                  <span className="text-gray-500">NCC:</span>
+                  <div className="font-medium text-gray-900 break-words">
+                    {caseItem.supplier?.shortName || 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Scores */}
+              <div className="flex items-center justify-between mb-2 text-[10px]">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <span className="text-gray-500">User: </span>
+                    <span className="font-semibold text-blue-600">{userTotalScore}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Admin: </span>
+                    <span className="font-semibold text-purple-600">{adminTotalScore || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Tổng: </span>
+                    <span className="font-bold text-green-600">{grandTotal}</span>
+                  </div>
+                </div>
+                {!isEvaluated && (
+                  <span className="text-[9px] text-yellow-600 font-medium">Chưa đánh giá</span>
+                )}
+              </div>
+
+              {/* Dates */}
+              <div className="flex items-center justify-between text-[10px] text-gray-600 mb-2">
+                <div>
+                  <span>Bắt đầu: </span>
+                  <span className="font-medium">
+                    {new Date(caseItem.startDate).toLocaleString('vi-VN', { 
+                      day: '2-digit', 
+                      month: '2-digit', 
+                      year: 'numeric', 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      timeZone: 'Asia/Ho_Chi_Minh' 
+                    })}
+                  </span>
+                </div>
+                {caseItem.endDate && (
+                  <div>
+                    <span>Kết thúc: </span>
+                    <span className="font-medium">
+                      {new Date(caseItem.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1.5 pt-2 border-t border-gray-200">
+                {!isEvaluated && (
+                  <button
+                    onClick={() => handleOpenEvaluationModal(caseItem)}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded hover:bg-yellow-100"
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                    Đánh giá
+                  </button>
+                )}
+                {isEvaluated && (
+                  <button
+                    onClick={() => handleOpenEvaluationModal(caseItem)}
+                    className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100"
+                  >
+                    <CheckCircle className="h-3 w-3" />
+                    Xem đánh giá
+                  </button>
+                )}
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(caseItem)}
+                    disabled={deletedCases.has(caseItem.id)}
+                    className="flex items-center justify-center px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50"
+                  >
+                    <Edit className="h-3 w-3" />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(caseItem)}
+                    disabled={deletedCases.has(caseItem.id)}
+                    className="flex items-center justify-center px-2 py-1 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -849,26 +1034,66 @@ export default function ReceivingCaseTable({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <button
-              onClick={() => setCurrentPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Trước
-            </button>
-            <button
-              onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Sau
-            </button>
+        <div className="bg-white px-3 md:px-4 py-2 md:py-3 border-t border-gray-200">
+          {/* Mobile Pagination */}
+          <div className="sm:hidden">
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px w-full justify-center" aria-label="Pagination">
+              <button
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="sr-only">Trước</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {/* Page numbers */}
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                      pageNum === currentPage
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+              
+              <button
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="sr-only">Sau</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
           </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          
+          {/* Desktop Pagination */}
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-gray-700">
+              <p className="text-xs md:text-sm text-gray-700">
                 Hiển thị{' '}
                 <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
                 {' '}đến{' '}
@@ -939,10 +1164,10 @@ export default function ReceivingCaseTable({
 
       {/* Empty State */}
       {filteredCases.length === 0 && (
-        <div className="text-center py-8">
-          <Package className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Không có case nào</h3>
-          <p className="mt-1 text-sm text-gray-500">
+        <div className="text-center py-6 md:py-8 px-3">
+          <Package className="mx-auto h-8 w-8 md:h-12 md:w-12 text-gray-400" />
+          <h3 className="mt-2 text-xs md:text-sm font-medium text-gray-900">Không có case nào</h3>
+          <p className="mt-1 text-xs md:text-sm text-gray-500">
             {statusFilter ? 'Không có case nào với trạng thái này.' : 'Chưa có case nhận hàng nào được tạo.'}
           </p>
         </div>
@@ -950,33 +1175,45 @@ export default function ReceivingCaseTable({
 
       {/* Evaluation Modal */}
       {showEvaluationModal && selectedCase && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Đánh giá Case: {selectedCase.title}</h3>
-              <p className="text-sm text-gray-600">Đánh giá mức độ khó, thời gian, ảnh hưởng và khẩn cấp</p>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4">
+          <style dangerouslySetInnerHTML={{ __html: `
+            .ios-input-fix input, .ios-input-fix select, .ios-input-fix textarea {
+              -webkit-text-fill-color: #111827 !important;
+              opacity: 1 !important;
+              color: #111827 !important;
+            }
+            .ios-input-fix input::placeholder, .ios-input-fix select::placeholder, .ios-input-fix textarea::placeholder {
+              -webkit-text-fill-color: #9CA3AF !important;
+              opacity: 1 !important;
+              color: #9CA3AF !important;
+            }
+          ` }} />
+          <div className="ios-input-fix bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-2xl h-[95vh] md:max-h-[90vh] overflow-y-auto md:my-8 flex flex-col">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 flex-shrink-0">
+              <h3 className="text-base md:text-lg font-semibold text-gray-900 break-words">Đánh giá Case: {selectedCase.title}</h3>
+              <p className="text-xs md:text-sm text-gray-600 hidden sm:block">Đánh giá mức độ khó, thời gian, ảnh hưởng và khẩn cấp</p>
             </div>
-            <div className="p-6">
-              <div className="space-y-6">
+            <div className="p-3 md:p-6 flex-1 overflow-y-auto">
+              <div className="space-y-4 md:space-y-6">
                 {/* User Evaluation Display */}
-                <div className="bg-blue-50 rounded-md p-4 border border-blue-200">
-                  <h4 className="text-sm font-semibold text-blue-800 mb-3">Đánh giá của User</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>Mức độ khó: {getDifficultyText(selectedCase.userDifficultyLevel || 0)}</div>
-                    <div>Thời gian ước tính: {getEstimatedTimeText(selectedCase.userEstimatedTime || 0)}</div>
-                    <div>Mức độ ảnh hưởng: {getImpactText(selectedCase.userImpactLevel || 0)}</div>
-                    <div>Mức độ khẩn cấp: {getUrgencyText(selectedCase.userUrgencyLevel || 0)}</div>
-                    <div>Hình thức: {getFormText(selectedCase.userFormScore)}</div>
-                    <div className="font-medium text-blue-600">
+                <div className="bg-blue-50 rounded-md p-3 md:p-4 border border-blue-200">
+                  <h4 className="text-xs md:text-sm font-semibold text-blue-800 mb-2 md:mb-3" style={{ WebkitTextFillColor: '#1e40af', color: '#1e40af', opacity: 1 }}>Đánh giá của User</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 text-xs md:text-sm" style={{ WebkitTextFillColor: '#111827', color: '#111827', opacity: 1 }}>
+                    <div style={{ WebkitTextFillColor: '#111827', color: '#111827', opacity: 1 }}>Mức độ khó: {getDifficultyText(selectedCase.userDifficultyLevel || 0)}</div>
+                    <div style={{ WebkitTextFillColor: '#111827', color: '#111827', opacity: 1 }}>Thời gian ước tính: {getEstimatedTimeText(selectedCase.userEstimatedTime || 0)}</div>
+                    <div style={{ WebkitTextFillColor: '#111827', color: '#111827', opacity: 1 }}>Mức độ ảnh hưởng: {getImpactText(selectedCase.userImpactLevel || 0)}</div>
+                    <div style={{ WebkitTextFillColor: '#111827', color: '#111827', opacity: 1 }}>Mức độ khẩn cấp: {getUrgencyText(selectedCase.userUrgencyLevel || 0)}</div>
+                    <div style={{ WebkitTextFillColor: '#111827', color: '#111827', opacity: 1 }}>Hình thức: {getFormText(selectedCase.userFormScore)}</div>
+                    <div className="font-medium text-blue-600" style={{ WebkitTextFillColor: '#2563eb', color: '#2563eb', opacity: 1 }}>
                       Tổng: {((selectedCase.userDifficultyLevel || 0) + (selectedCase.userEstimatedTime || 0) + (selectedCase.userImpactLevel || 0) + (selectedCase.userUrgencyLevel || 0) + (selectedCase.userFormScore || 0))}
                     </div>
                   </div>
                 </div>
 
                 {/* Admin Evaluation Form */}
-                <div className="bg-green-50 rounded-md p-4 border border-green-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-green-800">Đánh giá của Admin</h4>
+                <div className="bg-green-50 rounded-md p-3 md:p-4 border border-green-200">
+                  <div className="flex items-center justify-between mb-2 md:mb-3">
+                    <h4 className="text-xs md:text-sm font-semibold text-green-800">Đánh giá của Admin</h4>
                     <button
                       type="button"
                       onClick={() => {/* fetchConfigs */}}
@@ -984,19 +1221,19 @@ export default function ReceivingCaseTable({
                       title="Làm mới options đánh giá"
                     >
                       <RefreshCw className="h-3 w-3" />
-                      <span>Làm mới</span>
+                      <span className="hidden sm:inline">Làm mới</span>
                     </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     {/* Mức độ khó */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
                         Mức độ khó
                       </label>
                       <select
                         value={evaluationForm.adminDifficultyLevel}
                         onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminDifficultyLevel: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       >
                         <option value="">Chọn mức độ khó</option>
                         {getFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
@@ -1009,13 +1246,13 @@ export default function ReceivingCaseTable({
 
                     {/* Thời gian ước tính */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
                         Thời gian ước tính
                       </label>
                       <select
                         value={evaluationForm.adminEstimatedTime}
                         onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminEstimatedTime: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       >
                         <option value="">Chọn thời gian ước tính</option>
                         {getFieldOptions(EvaluationCategory.TIME).map((option) => (
@@ -1028,13 +1265,13 @@ export default function ReceivingCaseTable({
 
                     {/* Mức độ ảnh hưởng */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
                         Mức độ ảnh hưởng
                       </label>
                       <select
                         value={evaluationForm.adminImpactLevel}
                         onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminImpactLevel: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       >
                         <option value="">Chọn mức độ ảnh hưởng</option>
                         {getFieldOptions(EvaluationCategory.IMPACT).map((option) => (
@@ -1047,13 +1284,13 @@ export default function ReceivingCaseTable({
 
                     {/* Mức độ khẩn cấp */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
                         Mức độ khẩn cấp
                       </label>
                       <select
                         value={evaluationForm.adminUrgencyLevel}
                         onChange={(e) => setEvaluationForm(prev => ({ ...prev, adminUrgencyLevel: e.target.value }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       >
                         <option value="">Chọn mức độ khẩn cấp</option>
                         {getFieldOptions(EvaluationCategory.URGENCY).map((option) => (
@@ -1068,20 +1305,24 @@ export default function ReceivingCaseTable({
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={handleCloseEvaluationModal}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleEvaluationSubmit}
-                disabled={evaluating}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
-              </button>
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 md:px-6 py-3 md:py-4 -mx-3 md:mx-0 flex-shrink-0">
+              <div className="flex gap-2 md:gap-3 md:justify-end">
+                <button
+                  type="button"
+                  onClick={handleCloseEvaluationModal}
+                  className="flex-1 md:flex-none px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer font-medium"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleEvaluationSubmit}
+                  disabled={evaluating}
+                  className="flex-1 md:flex-none px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-medium"
+                >
+                  {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

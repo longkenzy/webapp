@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from 'react';
-import { Plus, Settings, Rocket, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X } from 'lucide-react';
+import { Plus, Settings, Rocket, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X, ChevronDown } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
@@ -99,6 +99,7 @@ export default function AdminDeploymentWorkPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -805,39 +806,61 @@ export default function AdminDeploymentWorkPage() {
   };
 
 
+  // Count active filters
+  const activeFiltersCount = [searchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo].filter(Boolean).length;
+
   return (
     <>
     <div className="min-h-screen bg-gray-50">
+      {/* iOS Safari input fix */}
+      <style dangerouslySetInnerHTML={{__html: `
+        input, select, textarea {
+          -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+          opacity: 1 !important;
+          color: rgba(0, 0, 0, 0.87) !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: rgba(156, 163, 175, 1) !important;
+          color: rgba(156, 163, 175, 1) !important;
+          opacity: 1 !important;
+        }
+        input::-webkit-input-placeholder, textarea::-webkit-input-placeholder {
+          -webkit-text-fill-color: rgba(156, 163, 175, 1) !important;
+          color: rgba(156, 163, 175, 1) !important;
+          opacity: 1 !important;
+        }
+      `}} />
+      
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-full mx-auto px-4 py-6">
+        <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Rocket className="h-6 w-6 text-blue-600" />
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg">
+                <Rocket className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Quản lý triển khai</h1>
-                <p className="text-sm text-gray-600 mt-1">
+                <h1 className="text-lg md:text-2xl font-bold text-gray-900">Quản lý triển khai</h1>
+                <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">
                   Quản lý và theo dõi các case triển khai
                 </p>
                 {activeTab === 'cases' && (
-                  <div className="mt-2 flex items-center space-x-4 text-xs">
+                  <div className="mt-2 flex items-center flex-wrap gap-2 md:gap-4 text-[10px] md:text-xs">
                     <div className="flex items-center space-x-1">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
                       <span className="text-green-600">
                         Đã đánh giá: {filteredWarranties.filter(isDeploymentEvaluatedByAdmin).length}
                       </span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                      <AlertTriangle className="h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
                       <span className="text-yellow-600">
                         Chưa đánh giá: {filteredWarranties.filter(deployment => !isDeploymentEvaluatedByAdmin(deployment)).length}
                       </span>
                     </div>
                     {hasActiveFilters() && (
                       <div className="flex items-center space-x-1">
-                        <Search className="h-4 w-4 text-blue-500" />
+                        <Search className="h-3 w-3 md:h-4 md:w-4 text-blue-500" />
                         <span className="text-blue-600">
                           Đang lọc: {filteredWarranties.length}/{deployments.length}
                         </span>
@@ -852,18 +875,19 @@ export default function AdminDeploymentWorkPage() {
             {activeTab === 'cases' && (
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
+                className="flex items-center space-x-1 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md md:rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm text-xs md:text-sm cursor-pointer"
               >
-                <Rocket className="h-4 w-4" />
-                <span className="font-medium">Tạo Case</span>
+                <Rocket className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="font-medium hidden sm:inline">Tạo Case</span>
+                <span className="font-medium sm:hidden">Tạo</span>
               </button>
             )}
           </div>
           
           {/* Tabs */}
-          <div className="mt-6">
+          <div className="mt-4 md:mt-6">
             <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
+              <nav className="-mb-px flex space-x-4 md:space-x-8 overflow-x-auto scrollbar-hide">
                 <button
                   onClick={() => setActiveTab('cases')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
@@ -907,26 +931,37 @@ export default function AdminDeploymentWorkPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-full mx-auto px-4 py-8">
+      <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-8">
 
         {/* Cases Tab Content */}
         {activeTab === 'cases' ? (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Search and Filter Bar */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-1.5 bg-blue-100 rounded-md">
-                      <Search className="h-4 w-4 text-blue-600" />
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center space-x-2 flex-1 cursor-pointer"
+                  >
+                    <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
+                      <Search className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                     </div>
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
-                      <p className="text-xs text-gray-600">Tìm kiếm và lọc bảo hành theo nhiều tiêu chí</p>
+                    <div className="flex-1">
+                      <h3 className="text-sm md:text-base font-semibold text-gray-900 flex items-center gap-2">
+                        Tìm kiếm & Lọc
+                        {activeFiltersCount > 0 && (
+                          <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-blue-600 rounded-full">
+                            {activeFiltersCount}
+                          </span>
+                        )}
+                      </h3>
+                      <p className="text-[10px] md:text-xs text-gray-600 hidden md:block">Tìm kiếm và lọc triển khai theo nhiều tiêu chí</p>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
+                    <ChevronDown className={`h-4 w-4 md:h-5 md:w-5 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                  </button>
+                  <div className="hidden md:flex items-center space-x-2 ml-2">
                     <button 
                       onClick={exportToExcel}
                       disabled={filteredWarranties.length === 0}
@@ -948,8 +983,9 @@ export default function AdminDeploymentWorkPage() {
               </div>
 
               {/* Content */}
-              <div className="p-4">
-                <div className="space-y-4">
+              <div className={`transition-all duration-300 overflow-hidden ${showFilters ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div className="p-3 md:p-4">
+                <div className="space-y-3 md:space-y-4">
                   {/* Search Section */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1166,8 +1202,8 @@ export default function AdminDeploymentWorkPage() {
 
                 {/* Results Summary */}
                 <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                  <div className="text-sm text-gray-600">
-                    Hiển thị <span className="font-medium text-gray-900">{filteredWarranties.length}</span> trong tổng số <span className="font-medium text-gray-900">{deployments.length}</span> bảo hành
+                  <div className="text-xs md:text-sm text-gray-600">
+                    Hiển thị <span className="font-medium text-gray-900">{filteredWarranties.length}</span> trong tổng số <span className="font-medium text-gray-900">{deployments.length}</span> triển khai
                     {hasActiveFilters() && (
                       <span className="ml-2 text-blue-600 font-medium">
                         (đã lọc)
@@ -1176,28 +1212,197 @@ export default function AdminDeploymentWorkPage() {
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
-            {/* Incidents Table */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            {/* Deployments Table/Cards */}
+            <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
               {loading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-gray-600">Đang tải...</span>
+                  <span className="ml-2 text-sm md:text-base text-gray-600">Đang tải...</span>
                 </div>
               ) : filteredWarranties.length === 0 ? (
                 <div className="text-center py-12">
-                  <AlertTriangle className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">Không có bảo hành nào</h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <Rocket className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">Không có triển khai nào</h3>
+                  <p className="mt-1 text-xs md:text-sm text-gray-500">
                     {hasActiveFilters()
-                      ? 'Không tìm thấy bảo hành phù hợp với bộ lọc.'
-                      : 'Chưa có bảo hành nào được tạo.'}
+                      ? 'Không tìm thấy triển khai phù hợp với bộ lọc.'
+                      : 'Chưa có triển khai nào được tạo.'}
                   </p>
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3 p-3">
+                    {paginatedDeployments.map((deployment, index) => {
+                      const isEvaluated = isDeploymentEvaluatedByAdmin(deployment);
+                      const userTotal = (deployment.userDifficultyLevel || 0) + (deployment.userEstimatedTime || 0) + (deployment.userImpactLevel || 0) + (deployment.userUrgencyLevel || 0) + (deployment.userFormScore || 0);
+                      const adminTotal = (deployment.adminDifficultyLevel || 0) + (deployment.adminEstimatedTime || 0) + (deployment.adminImpactLevel || 0) + (deployment.adminUrgencyLevel || 0);
+                      const grandTotal = ((userTotal * 0.4) + (adminTotal * 0.6)).toFixed(1);
+                      
+                      return (
+                        <div 
+                          key={deployment.id} 
+                          className={`p-3 bg-white border border-gray-200 rounded-md shadow-sm ${
+                            !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                          } ${
+                            deletedDeployments.has(deployment.id) ? 'opacity-50 bg-red-50/30' : ''
+                          }`}
+                        >
+                          {/* STT & Status */}
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-medium text-gray-500">
+                              #{totalItems - startIndex - index}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${getStatusBadgeColor(deployment.status)}`}>
+                              {getStatusLabel(deployment.status)}
+                            </span>
+                          </div>
+
+                          {/* Title & Type */}
+                          <div className="mb-2">
+                            <div className="text-xs font-semibold text-gray-900 break-words mb-1">
+                              {deployment.title}
+                            </div>
+                            <div className="text-[10px] text-blue-600 font-medium">
+                              {formatDeploymentType(deployment.deploymentType)}
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-[10px] text-gray-600 mb-2 line-clamp-2">
+                            {deployment.description}
+                          </p>
+
+                          {/* Handler & Customer */}
+                          <div className="grid grid-cols-2 gap-2 mb-2 text-[10px]">
+                            <div>
+                              <span className="text-gray-500">Người xử lý:</span>
+                              <div className="font-medium text-gray-900 break-words">{deployment.handler?.fullName}</div>
+                              <div className="text-gray-600">{deployment.handler?.position}</div>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Khách hàng:</span>
+                              <div className="font-medium text-gray-900 break-words">
+                                {deployment.customer?.shortName || deployment.customerName}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Scores */}
+                          <div className="flex items-center justify-between mb-2 text-[10px]">
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <span className="text-gray-500">User: </span>
+                                <span className="font-semibold text-blue-600">{userTotal}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Admin: </span>
+                                <span className="font-semibold text-purple-600">{adminTotal || '-'}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Tổng: </span>
+                                <span className="font-bold text-green-600">{grandTotal}</span>
+                              </div>
+                            </div>
+                            {!isEvaluated && (
+                              <span className="text-[9px] text-yellow-600 font-medium">Chưa đánh giá</span>
+                            )}
+                          </div>
+
+                          {/* Dates */}
+                          <div className="flex items-center justify-between text-[10px] text-gray-600 mb-2">
+                            <div>
+                              <span>Bắt đầu: </span>
+                              <span className="font-medium">
+                                {new Date(deployment.startDate).toLocaleString('vi-VN', { 
+                                  day: '2-digit', 
+                                  month: '2-digit', 
+                                  year: 'numeric', 
+                                  hour: '2-digit', 
+                                  minute: '2-digit',
+                                  timeZone: 'Asia/Ho_Chi_Minh' 
+                                })}
+                              </span>
+                            </div>
+                            {deployment.endDate && (
+                              <div>
+                                <span>Kết thúc: </span>
+                                <span className="font-medium">
+                                  {new Date(deployment.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-1.5 pt-2 border-t border-gray-200">
+                            {!isEvaluated && (
+                              <button
+                                onClick={() => {
+                                  setSelectedDeployment(deployment);
+                                  setShowEvaluationModal(true);
+                                  setEvaluationForm({
+                                    adminDifficultyLevel: deployment.adminDifficultyLevel?.toString() || '',
+                                    adminEstimatedTime: deployment.adminEstimatedTime?.toString() || '',
+                                    adminImpactLevel: deployment.adminImpactLevel?.toString() || '',
+                                    adminUrgencyLevel: deployment.adminUrgencyLevel?.toString() || ''
+                                  });
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded hover:bg-yellow-100"
+                              >
+                                <AlertTriangle className="h-3 w-3" />
+                                Đánh giá
+                              </button>
+                            )}
+                            {isEvaluated && (
+                              <button
+                                onClick={() => {
+                                  setSelectedDeployment(deployment);
+                                  setShowEvaluationModal(true);
+                                  setEvaluationForm({
+                                    adminDifficultyLevel: deployment.adminDifficultyLevel?.toString() || '',
+                                    adminEstimatedTime: deployment.adminEstimatedTime?.toString() || '',
+                                    adminImpactLevel: deployment.adminImpactLevel?.toString() || '',
+                                    adminUrgencyLevel: deployment.adminUrgencyLevel?.toString() || ''
+                                  });
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100"
+                              >
+                                <CheckCircle className="h-3 w-3" />
+                                Xem đánh giá
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setEditingDeployment(deployment);
+                                setShowCreateModal(true);
+                              }}
+                              disabled={deletedDeployments.has(deployment.id)}
+                              className="flex items-center justify-center px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedDeployment(deployment);
+                                setShowDeleteModal(true);
+                              }}
+                              disabled={deletedDeployments.has(deployment.id)}
+                              className="flex items-center justify-center px-2 py-1 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50"
+                            >
+                              <Trash className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Desktop Table */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -1474,24 +1679,64 @@ export default function AdminDeploymentWorkPage() {
                   
                   {/* Pagination */}
                   {totalPages > 1 && (
-                    <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                      <div className="flex-1 flex justify-between sm:hidden">
-                        <button
-                          onClick={goToPrevPage}
-                          disabled={currentPage === 1}
-                          className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Trước
-                        </button>
-                        <button
-                          onClick={goToNextPage}
-                          disabled={currentPage === totalPages}
-                          className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Sau
-                        </button>
+                    <div className="bg-white px-3 md:px-4 py-2 md:py-3 border-t border-gray-200">
+                      {/* Mobile Pagination */}
+                      <div className="sm:hidden">
+                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px w-full justify-center" aria-label="Pagination">
+                          <button
+                            onClick={goToPrevPage}
+                            disabled={currentPage === 1}
+                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            <span className="sr-only">Trước</span>
+                            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                          
+                          {/* Page numbers */}
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= totalPages - 2) {
+                              pageNum = totalPages - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+                            
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => goToPage(pageNum)}
+                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium cursor-pointer ${
+                                  pageNum === currentPage
+                                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                          
+                          <button
+                            onClick={goToNextPage}
+                            disabled={currentPage === totalPages}
+                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            <span className="sr-only">Sau</span>
+                            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </nav>
                       </div>
-                      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                      
+                      {/* Desktop Pagination */}
+                      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                         <div>
                           <p className="text-sm text-gray-700">
                             Hiển thị{' '}
@@ -1607,21 +1852,31 @@ export default function AdminDeploymentWorkPage() {
 
         {/* Evaluation Modal */}
         {showEvaluationModal && selectedDeployment && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Đánh giá Case: {selectedDeployment.title}</h3>
-                <p className="text-sm text-gray-600">Đánh giá mức độ khó, thời gian, ảnh hưởng và khẩn cấp</p>
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4">
+            <style dangerouslySetInnerHTML={{ __html: `
+              .ios-input-fix input, .ios-input-fix select, .ios-input-fix textarea {
+                -webkit-text-fill-color: #111827 !important;
+                opacity: 1 !important;
+                color: #111827 !important;
+              }
+              .ios-input-fix input::placeholder, .ios-input-fix select::placeholder, .ios-input-fix textarea::placeholder {
+                -webkit-text-fill-color: #9CA3AF !important;
+                opacity: 1 !important;
+                color: #9CA3AF !important;
+              }
+            ` }} />
+            <div className="ios-input-fix bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-2xl h-[95vh] md:max-h-[90vh] overflow-y-auto md:my-8 flex flex-col">
+              <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200 flex-shrink-0">
+                <h3 className="text-base md:text-lg font-semibold text-gray-900 break-words">Đánh giá Case: {selectedDeployment.title}</h3>
+                <p className="text-xs md:text-sm text-gray-600 hidden sm:block">Đánh giá mức độ khó, thời gian, ảnh hưởng và khẩn cấp</p>
               </div>
               
-              <div className="p-6">
-                <div className="space-y-6">
+              <div className="p-3 md:p-6 flex-1 overflow-y-auto">
+                <div className="space-y-4 md:space-y-6">
                   {/* User Assessment Display */}
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold text-blue-800">Đánh giá của User</h4>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="bg-blue-50 rounded-md p-3 md:p-4 border border-blue-200">
+                    <h4 className="text-xs md:text-sm font-semibold text-blue-800 mb-2 md:mb-3" style={{ WebkitTextFillColor: '#1e40af', color: '#1e40af', opacity: 1 }}>Đánh giá của User</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 text-xs md:text-sm" style={{ WebkitTextFillColor: '#111827', color: '#111827', opacity: 1 }}>
                       <div>Mức độ khó: {getDifficultyText(selectedDeployment.userDifficultyLevel || 0)}</div>
                       <div>Thời gian ước tính: {getEstimatedTimeText(selectedDeployment.userEstimatedTime || 0)}</div>
                       <div>Mức độ ảnh hưởng: {getImpactText(selectedDeployment.userImpactLevel || 0)}</div>
@@ -1634,9 +1889,9 @@ export default function AdminDeploymentWorkPage() {
                   </div>
 
                   {/* Admin Assessment Form */}
-                  <div className="bg-green-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="text-sm font-semibold text-green-800">Đánh giá của Admin</h4>
+                  <div className="bg-green-50 rounded-md p-3 md:p-4 border border-green-200">
+                    <div className="flex items-center justify-between mb-2 md:mb-3">
+                      <h4 className="text-xs md:text-sm font-semibold text-green-800">Đánh giá của Admin</h4>
                       <button
                         type="button"
                         onClick={fetchConfigs}
@@ -1644,10 +1899,10 @@ export default function AdminDeploymentWorkPage() {
                         title="Làm mới options đánh giá"
                       >
                         <RefreshCw className="h-3 w-3" />
-                        <span>Làm mới</span>
+                        <span className="hidden sm:inline">Làm mới</span>
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                       {/* Mức độ khó */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1729,29 +1984,33 @@ export default function AdminDeploymentWorkPage() {
                 </div>
               </div>
               
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                <button
-                  onClick={() => {
-                    setShowEvaluationModal(false);
-                    setSelectedDeployment(null);
-                    setEvaluationForm({
-                      adminDifficultyLevel: '',
-                      adminEstimatedTime: '',
-                      adminImpactLevel: '',
-                      adminUrgencyLevel: ''
-                    });
-                  }}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={handleEvaluationSubmit}
-                  disabled={evaluating}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
-                </button>
+              <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 md:px-6 py-3 md:py-4 -mx-3 md:mx-0 flex-shrink-0">
+                <div className="flex gap-2 md:gap-3 md:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEvaluationModal(false);
+                      setSelectedDeployment(null);
+                      setEvaluationForm({
+                        adminDifficultyLevel: '',
+                        adminEstimatedTime: '',
+                        adminImpactLevel: '',
+                        adminUrgencyLevel: ''
+                      });
+                    }}
+                    className="flex-1 md:flex-none px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer font-medium"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEvaluationSubmit}
+                    disabled={evaluating}
+                    className="flex-1 md:flex-none px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-medium"
+                  >
+                    {evaluating ? 'Đang cập nhật...' : 'Cập nhật đánh giá'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1759,12 +2018,13 @@ export default function AdminDeploymentWorkPage() {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && selectedDeployment && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Xác nhận xóa bảo hành</h3>
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+            <div className="bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200">
+                <h3 className="text-base md:text-lg font-semibold text-gray-900">Xác nhận xóa triển khai</h3>
+                <p className="text-xs md:text-sm text-gray-600 mt-0.5">Thao tác này không thể hoàn tác</p>
               </div>
-              <div className="p-6">
+              <div className="p-4 md:p-6">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
                     <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -1789,21 +2049,23 @@ export default function AdminDeploymentWorkPage() {
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 md:px-6 py-3 md:py-4 flex gap-2 md:gap-3">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowDeleteModal(false);
                     setSelectedDeployment(null);
                   }}
                   disabled={deleting}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                  className="flex-1 md:flex-none px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer font-medium disabled:opacity-50"
                 >
                   Hủy
                 </button>
                 <button
+                  type="button"
                   onClick={() => deleteDeployment(selectedDeployment.id)}
                   disabled={deleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
+                  className="flex-1 md:flex-none px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-medium flex items-center justify-center"
                 >
                   {deleting ? (
                     <>
@@ -1813,7 +2075,7 @@ export default function AdminDeploymentWorkPage() {
                   ) : (
                     <>
                       <Trash className="h-4 w-4 mr-2" />
-                      Xóa bảo hành
+                      Xóa triển khai
                     </>
                   )}
                 </button>

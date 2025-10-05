@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Search, Filter, Download, RefreshCw, FileText } from 'lucide-react';
+import { Package, Search, Filter, Download, RefreshCw, FileText, Trash2, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
 import CreateDeliveryCaseModal from './CreateDeliveryCaseModal';
@@ -79,6 +79,12 @@ export default function DeliveryCasesPage() {
   const [deliveryPersons, setDeliveryPersons] = useState<Array<{id: string, fullName: string}>>([]);
   const [customers, setCustomers] = useState<Array<{id: string, shortName: string}>>([]);
   const [allCases, setAllCases] = useState<DeliveryCase[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Delete modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletedCases, setDeletedCases] = useState<Set<string>>(new Set());
   
   // Create/Edit modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -158,38 +164,90 @@ export default function DeliveryCasesPage() {
     setShowCreateModal(true); // Sử dụng create modal cho edit
   };
 
-  const handleDeleteCase = async (caseItem: DeliveryCase) => {
-    if (confirm(`Bạn có chắc chắn muốn xóa case "${caseItem.title}"?`)) {
-      try {
-        const response = await fetch(`/api/delivery-cases/${caseItem.id}`, {
-          method: 'DELETE',
-        });
+  const handleOpenDeleteModal = (caseItem: DeliveryCase) => {
+    setSelectedCase(caseItem);
+    setShowDeleteModal(true);
+  };
 
-        if (response.ok) {
-          // Remove the case from the local state
-          setAllCases(prevCases => prevCases.filter(c => c.id !== caseItem.id));
-          toast.success('Xóa case thành công!', {
-            duration: 3000,
-            position: 'top-right',
-            style: {
-              background: '#10B981',
-              color: '#fff',
-            },
-          });
-        } else {
-          const error = await response.json();
-          toast.error(`Lỗi: ${error.error || 'Không thể xóa case'}`, {
-            duration: 4000,
-            position: 'top-right',
-          });
-        }
-      } catch (error) {
-        console.error('Error deleting case:', error);
-        toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setSelectedCase(null);
+    setDeleting(false);
+  };
+
+  const handleDeleteCase = async () => {
+    if (!selectedCase) return;
+
+    const caseToDelete = selectedCase;
+    
+    try {
+      setDeleting(true);
+      
+      // Mark case as being deleted for visual feedback
+      setDeletedCases(prev => new Set(prev).add(caseToDelete.id));
+      
+      // Optimistic update - remove from UI immediately for better UX
+      setAllCases(prevCases => 
+        prevCases.filter(c => c.id !== caseToDelete.id)
+      );
+      
+      // Close modal immediately
+      handleCloseDeleteModal();
+      
+      // Make API call in background
+      const response = await fetch(`/api/delivery-cases/${caseToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        // If API call fails, restore the case to the list
+        setAllCases(prevCases => [...prevCases, caseToDelete]);
+        setDeletedCases(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(caseToDelete.id);
+          return newSet;
+        });
+        
+        const error = await response.json();
+        toast.error(`Lỗi: ${error.error || 'Không thể xóa case'}`, {
           duration: 4000,
           position: 'top-right',
         });
+      } else {
+        // Success - remove from deleted cases tracking
+        setDeletedCases(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(caseToDelete.id);
+          return newSet;
+        });
+        
+        toast.success('Xóa case thành công!', {
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: '#fff',
+          },
+        });
       }
+      
+    } catch (error) {
+      console.error('Error deleting case:', error);
+      
+      // Restore the case to the list on network error
+      setAllCases(prevCases => [...prevCases, caseToDelete]);
+      setDeletedCases(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(caseToDelete.id);
+        return newSet;
+      });
+      
+      toast.error('Lỗi kết nối. Vui lòng thử lại!', {
+        duration: 4000,
+        position: 'top-right',
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -461,19 +519,41 @@ export default function DeliveryCasesPage() {
     }
   };
 
+  // Count active filters
+  const activeFiltersCount = [statusFilter, deliveryPersonFilter, customerFilter, startDate, endDate, searchTerm].filter(Boolean).length;
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* iOS Safari input fix */}
+      <style dangerouslySetInnerHTML={{__html: `
+        input, select, textarea {
+          -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+          opacity: 1 !important;
+          color: rgba(0, 0, 0, 0.87) !important;
+        }
+        input::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: rgba(156, 163, 175, 1) !important;
+          color: rgba(156, 163, 175, 1) !important;
+          opacity: 1 !important;
+        }
+        input::-webkit-input-placeholder, textarea::-webkit-input-placeholder {
+          -webkit-text-fill-color: rgba(156, 163, 175, 1) !important;
+          color: rgba(156, 163, 175, 1) !important;
+          opacity: 1 !important;
+        }
+      `}} />
+      
         {/* Header */}
         <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-full mx-auto px-4 py-6">
+          <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Package className="h-6 w-6 text-green-600" />
+              <div className="flex items-center space-x-2 md:space-x-4">
+                <div className="p-1.5 md:p-2 bg-green-100 rounded-lg">
+                  <Package className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Quản lý case giao hàng</h1>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <h1 className="text-lg md:text-2xl font-bold text-gray-900">Quản lý case giao hàng</h1>
+                  <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">
                     Quản lý và theo dõi các case giao hàng đến khách hàng
                   </p>
                 </div>
@@ -482,10 +562,11 @@ export default function DeliveryCasesPage() {
               {/* Create Case Button */}
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-sm"
+                className="flex items-center space-x-1 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-md md:rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-sm text-xs md:text-sm cursor-pointer"
               >
-                <Package className="h-4 w-4" />
-                <span className="font-medium">Tạo Case</span>
+                <Package className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="font-medium hidden sm:inline">Tạo Case</span>
+                <span className="font-medium sm:hidden">Tạo</span>
               </button>
             </div>
             
@@ -493,26 +574,37 @@ export default function DeliveryCasesPage() {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-full mx-auto px-4 py-8">
+        <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-8">
 
         {/* Main Content */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
 
         {/* Search and Filter Bar */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="mb-4 md:mb-6 bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-4 py-3 border-b border-gray-100">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="p-1.5 bg-green-100 rounded-md">
-                        <Search className="h-4 w-4 text-green-600" />
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className="flex items-center space-x-2 flex-1 cursor-pointer"
+                    >
+                      <div className="p-1 md:p-1.5 bg-green-100 rounded-md">
+                        <Search className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-600" />
                       </div>
-                      <div>
-                        <h3 className="text-base font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
-                        <p className="text-xs text-gray-600">Tìm kiếm và lọc case giao hàng theo nhiều tiêu chí</p>
+                      <div className="flex-1">
+                        <h3 className="text-sm md:text-base font-semibold text-gray-900 flex items-center gap-2">
+                          Tìm kiếm & Lọc
+                          {activeFiltersCount > 0 && (
+                            <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-green-600 rounded-full">
+                              {activeFiltersCount}
+                            </span>
+                          )}
+                        </h3>
+                        <p className="text-[10px] md:text-xs text-gray-600 hidden md:block">Tìm kiếm và lọc case giao hàng theo nhiều tiêu chí</p>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
+                      <ChevronDown className={`h-4 w-4 md:h-5 md:w-5 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                    </button>
+                    <div className="hidden md:flex items-center space-x-2 ml-2">
                       <button 
                         onClick={exportToExcel}
                         disabled={allCases.length === 0}
@@ -533,31 +625,33 @@ export default function DeliveryCasesPage() {
           </div>
 
           {/* Content */}
-          <div className="p-4">
-            <div className="space-y-4">
+          <div className={`transition-all duration-300 overflow-hidden ${showFilters ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="p-3 md:p-4">
+            <div className="space-y-3 md:space-y-4">
               {/* Search Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">
                   Tìm kiếm
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-2.5 md:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Tìm kiếm theo tên case, người giao hàng, khách hàng..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    className="w-full pl-9 md:pl-10 pr-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                    style={{ WebkitAppearance: 'none' }}
                   />
                 </div>
               </div>
 
               {/* Filters Section */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">
                   Bộ lọc
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
                   {/* Status Filter */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1.5">
@@ -569,7 +663,8 @@ export default function DeliveryCasesPage() {
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả trạng thái</option>
                       <option value="RECEIVED">Tiếp nhận</option>
@@ -590,7 +685,8 @@ export default function DeliveryCasesPage() {
                     <select
                       value={deliveryPersonFilter}
                       onChange={(e) => setDeliveryPersonFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả người giao hàng</option>
                       {deliveryPersons.map((deliveryPerson) => (
@@ -612,7 +708,8 @@ export default function DeliveryCasesPage() {
                     <select
                       value={customerFilter}
                       onChange={(e) => setCustomerFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả khách hàng</option>
                       {customers.map((customer) => (
@@ -635,7 +732,8 @@ export default function DeliveryCasesPage() {
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     />
                   </div>
 
@@ -651,7 +749,8 @@ export default function DeliveryCasesPage() {
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     />
                   </div>
                 </div>
@@ -659,7 +758,7 @@ export default function DeliveryCasesPage() {
 
               {/* Active Filters & Actions */}
               {(statusFilter || deliveryPersonFilter || customerFilter || startDate || endDate || searchTerm) && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-md p-3 border border-green-100">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-md p-2 md:p-3 border border-green-100">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex-1">
                       <div className="flex items-center space-x-1.5 mb-1.5">
@@ -707,7 +806,7 @@ export default function DeliveryCasesPage() {
                         )}
                       </div>
                     </div>
-                    <button
+                      <button
                       onClick={() => {
                         setStatusFilter('');
                         setDeliveryPersonFilter('');
@@ -716,63 +815,64 @@ export default function DeliveryCasesPage() {
                         setEndDate('');
                         setSearchTerm('');
                       }}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
+                      className="flex items-center space-x-1 md:space-x-1.5 px-2.5 md:px-3 py-1 md:py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
                     >
-                      <span className="text-sm font-medium">Xóa tất cả</span>
+                      <span className="text-xs md:text-sm font-medium">Xóa tất cả</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
           </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-8">
+          <div className="bg-white rounded-md shadow p-3 md:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Package className="h-6 w-6 text-green-600" />
+              <div className="p-1.5 md:p-2 bg-green-100 rounded-md md:rounded-lg">
+                <Package className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tổng Case</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <div className="ml-2 md:ml-4">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600">Tổng Case</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-md shadow p-3 md:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Package className="h-6 w-6 text-yellow-600" />
+              <div className="p-1.5 md:p-2 bg-yellow-100 rounded-md md:rounded-lg">
+                <Package className="h-4 w-4 md:h-6 md:w-6 text-yellow-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Đang xử lý</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.inProgress}</p>
+              <div className="ml-2 md:ml-4">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600">Đang xử lý</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.inProgress}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-md shadow p-3 md:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Package className="h-6 w-6 text-green-600" />
+              <div className="p-1.5 md:p-2 bg-green-100 rounded-md md:rounded-lg">
+                <Package className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Hoàn thành</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
+              <div className="ml-2 md:ml-4">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600">Hoàn thành</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.completed}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-md shadow p-3 md:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Package className="h-6 w-6 text-red-600" />
+              <div className="p-1.5 md:p-2 bg-red-100 rounded-md md:rounded-lg">
+                <Package className="h-4 w-4 md:h-6 md:w-6 text-red-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Đã hủy</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.cancelled}</p>
+              <div className="ml-2 md:ml-4">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600">Đã hủy</p>
+                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.cancelled}</p>
               </div>
             </div>
           </div>
@@ -782,7 +882,7 @@ export default function DeliveryCasesPage() {
         <DeliveryCaseTable
           onView={handleViewCase}
           onEdit={handleEditCase}
-          onDelete={handleDeleteCase}
+          onDelete={handleOpenDeleteModal}
           searchTerm={debouncedSearchTerm}
           statusFilter={statusFilter}
           deliveryPersonFilter={deliveryPersonFilter}
@@ -790,9 +890,56 @@ export default function DeliveryCasesPage() {
           startDate={startDate}
           endDate={endDate}
           allCases={allCases}
+          deletedCases={deletedCases}
         />
           </div>
         </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && selectedCase && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+          <div className="bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="px-4 md:px-6 py-4 md:py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-md">
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-gray-900">Xác nhận xóa case</h3>
+                  <p className="text-xs md:text-sm text-gray-600 mt-0.5">Thao tác này không thể hoàn tác</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 md:p-6">
+              <p className="text-sm md:text-base text-gray-700 mb-3">
+                Bạn có chắc chắn muốn xóa case:
+              </p>
+              <div className="bg-gray-50 rounded-md p-3 border border-gray-200">
+                <p className="text-sm font-semibold text-gray-900 mb-1">{selectedCase.title}</p>
+                <p className="text-xs text-gray-600">{selectedCase.description}</p>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 md:px-6 py-3 md:py-4 flex gap-2 md:gap-3">
+              <button
+                type="button"
+                onClick={handleCloseDeleteModal}
+                disabled={deleting}
+                className="flex-1 md:flex-none px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors cursor-pointer font-medium disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteCase}
+                disabled={deleting}
+                className="flex-1 md:flex-none px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors cursor-pointer font-medium disabled:opacity-50"
+              >
+                {deleting ? 'Đang xóa...' : 'Xóa case'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create/Edit Case Modal */}
       <CreateDeliveryCaseModal

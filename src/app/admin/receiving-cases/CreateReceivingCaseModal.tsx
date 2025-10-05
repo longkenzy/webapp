@@ -647,23 +647,23 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto my-8">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4">
+      <div className="bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-4xl h-[95vh] md:max-h-[90vh] overflow-y-auto md:my-8 flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 rounded-t-lg z-40">
+        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-t-2xl md:rounded-t-lg z-40 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-md">
-                <Package className="h-5 w-5" />
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-1.5 md:p-2 bg-white/20 rounded-md">
+                <Package className="h-4 w-4 md:h-5 md:w-5" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">{editData ? 'Chỉnh sửa Case Nhận Hàng (Admin)' : 'Tạo Case Nhận Hàng (Admin)'}</h2>
-                <p className="text-blue-100 text-sm">{editData ? 'Cập nhật thông tin nhận hàng' : 'Hệ thống quản lý nhận hàng'}</p>
+                <h2 className="text-base md:text-lg font-semibold">{editData ? 'Chỉnh sửa Case Nhận Hàng (Admin)' : 'Tạo Case Nhận Hàng (Admin)'}</h2>
+                <p className="text-blue-100 text-xs md:text-sm hidden sm:block">{editData ? 'Cập nhật thông tin nhận hàng' : 'Hệ thống quản lý nhận hàng'}</p>
               </div>
             </div>
             <button
               onClick={handleClose}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
+              className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -671,15 +671,15 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="space-y-6">
+        <form onSubmit={handleSubmit} className="p-3 md:p-6 flex-1 overflow-y-auto">
+          <div className="space-y-4 md:space-y-6">
             {/* Section 1: Người nhận hàng */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-blue-100 rounded-md">
-                  <User className="h-4 w-4 text-blue-600" />
+            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 md:mb-4">
+                <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
+                  <User className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Người nhận hàng</h3>
+                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Người nhận hàng</h3>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600 flex items-center">
@@ -710,12 +710,12 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
             </div>
 
             {/* Section 2: Nhà cung cấp */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-blue-100 rounded-md">
-                  <Truck className="h-4 w-4 text-blue-600" />
+            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 md:mb-4">
+                <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
+                  <Truck className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Nhà cung cấp</h3>
+                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Nhà cung cấp</h3>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600 flex items-center">
@@ -792,33 +792,34 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
             </div>
 
             {/* Section 3: Chi tiết hàng hóa */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-blue-100 rounded-md">
-                    <Package className="h-4 w-4 text-blue-600" />
+            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
+                    <Package className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-700">Chi tiết hàng hóa</h3>
+                  <h3 className="text-xs md:text-sm font-semibold text-gray-700">Chi tiết hàng hóa</h3>
                 </div>
                 <button
                   type="button"
                   onClick={addProduct}
-                  className="flex items-center space-x-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-1 px-2 md:px-3 py-1 md:py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                 >
                   <Plus className="h-3 w-3" />
-                  <span>Thêm sản phẩm</span>
+                  <span>Thêm</span>
                 </button>
               </div>
               
               {products.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-6 md:py-8 text-gray-500">
                   <Package className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm">Chưa có sản phẩm nào</p>
-                  <p className="text-xs">Nhấn "Thêm sản phẩm" để bắt đầu</p>
+                  <p className="text-xs md:text-sm">Chưa có sản phẩm nào</p>
+                  <p className="text-xs hidden md:block">Nhấn &quot;Thêm&quot; để bắt đầu</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="overflow-x-auto">
+                <div className="space-y-3 md:space-y-4">
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="min-w-full bg-white border border-gray-200 rounded-md">
                       <thead className="bg-gray-100">
                         <tr>
@@ -904,6 +905,89 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-2">
+                    {products.map((product, index) => (
+                      <div key={product.id} className="bg-white border border-gray-200 rounded-md p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-medium text-gray-700">Sản phẩm #{index + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeProduct(product.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {/* Tên sản phẩm */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Tên sản phẩm <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={product.name}
+                              onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
+                              className={`w-full px-2.5 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${
+                                errors[`product_${index}_name`] ? 'border-red-300' : 'border-gray-300'
+                              }`}
+                              placeholder="Nhập tên sản phẩm"
+                            />
+                            {errors[`product_${index}_name`] && (
+                              <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_name`]}</p>
+                            )}
+                          </div>
+
+                          {/* 2 columns: Code & Quantity */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Mã SP</label>
+                              <input
+                                type="text"
+                                value={product.code}
+                                onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                placeholder="Mã"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Số lượng <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={product.quantity}
+                                onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
+                                className={`w-full px-2.5 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${
+                                  errors[`product_${index}_quantity`] ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                                placeholder="SL"
+                                min="1"
+                              />
+                              {errors[`product_${index}_quantity`] && (
+                                <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_quantity`]}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Serial Number */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Serial Number</label>
+                            <input
+                              type="text"
+                              value={product.serialNumber}
+                              onChange={(e) => updateProduct(product.id, 'serialNumber', e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                              placeholder="S/N (tùy chọn)"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                   
                   {errors.products && (
                     <p className="text-xs text-red-600 flex items-center space-x-1">
@@ -916,12 +1000,12 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
             </div>
 
             {/* Section 4: Thời gian & Mã CRM */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-blue-100 rounded-md">
-                  <Calendar className="h-4 w-4 text-blue-600" />
+            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 md:mb-4">
+                <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
+                  <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thời gian & Mã CRM</h3>
+                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Thời gian & Mã CRM</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
@@ -973,12 +1057,12 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
             </div>
 
             {/* Section 5: Trạng thái */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-blue-100 rounded-md">
-                  <FileText className="h-4 w-4 text-blue-600" />
+            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 md:mb-4">
+                <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
+                  <FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Trạng thái</h3>
+                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Trạng thái</h3>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium text-gray-600">
@@ -1176,21 +1260,23 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (editData ? 'Đang cập nhật...' : 'Đang tạo...') : (editData ? 'Cập nhật Case' : 'Tạo Case')}
-            </button>
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 md:px-0 py-3 md:py-0 md:relative md:border-t-0 mt-4 md:mt-0 md:pt-6 -mx-3 md:mx-0">
+            <div className="flex gap-2 md:gap-3 md:justify-end">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex-1 md:flex-none px-4 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 md:flex-none px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {loading ? (editData ? 'Đang cập nhật...' : 'Đang tạo...') : (editData ? 'Cập nhật Case' : 'Tạo Case')}
+              </button>
+            </div>
           </div>
         </form>
       </div>

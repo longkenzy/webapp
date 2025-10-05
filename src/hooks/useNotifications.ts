@@ -55,6 +55,13 @@ export function useNotifications(): UseNotificationsReturn {
         }
       });
       
+      // Handle 401 Unauthorized gracefully (session expired or not logged in)
+      if (response.status === 401) {
+        setNotifications([]);
+        setUnreadCount(0);
+        return;
+      }
+      
       if (!response.ok) {
         throw new Error('Failed to fetch notifications');
       }
@@ -80,6 +87,12 @@ export function useNotifications(): UseNotificationsReturn {
     
     try {
       const response = await fetch('/api/notifications/unread-count');
+      
+      // Handle 401 Unauthorized gracefully
+      if (response.status === 401) {
+        setUnreadCount(0);
+        return;
+      }
       
       if (response.ok) {
         const data = await response.json();

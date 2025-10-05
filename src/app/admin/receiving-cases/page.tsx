@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Search, Filter, Download, Trash2, RefreshCw, FileText } from 'lucide-react';
+import { Package, Search, Filter, Download, Trash2, RefreshCw, FileText, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReceivingCaseTable from '@/components/admin/ReceivingCaseTable';
 import CreateReceivingCaseModal from './CreateReceivingCaseModal';
@@ -79,6 +79,7 @@ export default function ReceivingCasesPage() {
   const [receivers, setReceivers] = useState<Array<{id: string, fullName: string}>>([]);
   const [suppliers, setSuppliers] = useState<Array<{id: string, shortName: string}>>([]);
   const [allCases, setAllCases] = useState<ReceivingCase[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   
   
   // Delete modal states
@@ -491,27 +492,42 @@ export default function ReceivingCasesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* iOS Safari input fix */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        input, select, textarea {
+          -webkit-text-fill-color: #111827 !important;
+          opacity: 1 !important;
+          color: #111827 !important;
+        }
+        input::placeholder, select::placeholder, textarea::placeholder {
+          -webkit-text-fill-color: #9CA3AF !important;
+          opacity: 1 !important;
+          color: #9CA3AF !important;
+        }
+      ` }} />
+      
         {/* Header */}
         <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-full mx-auto px-4 py-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Package className="h-6 w-6 text-yellow-600" />
+          <div className="max-w-full mx-auto px-3 md:px-4 py-3 md:py-6">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2 md:space-x-4 flex-1 min-w-0">
+                  <div className="p-1.5 md:p-2 bg-yellow-100 rounded-md flex-shrink-0">
+                    <Package className="h-4 w-4 md:h-6 md:w-6 text-yellow-600" />
                   </div>
-                  <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Quản lý case nhận hàng</h1>
-                    <p className="text-sm text-gray-600 mt-1">
+                  <div className="min-w-0">
+                    <h1 className="text-sm md:text-2xl font-bold text-gray-900 truncate">Quản lý case nhận hàng</h1>
+                    <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">
                       Quản lý và theo dõi các case nhận hàng từ nhà cung cấp
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm"
+                  className="flex items-center space-x-1 md:space-x-2 px-2 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm flex-shrink-0"
                 >
-                  <Package className="h-4 w-4" />
-                  <span className="font-medium">Tạo Case</span>
+                  <Package className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span className="text-xs md:text-sm font-medium hidden sm:inline">Tạo Case</span>
+                  <span className="text-xs md:text-sm font-medium sm:hidden">Tạo</span>
                 </button>
               </div>
             
@@ -519,82 +535,99 @@ export default function ReceivingCasesPage() {
         </div>
 
         {/* Main Content */}
-        <div className="max-w-full mx-auto px-4 py-8">
+        <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-8">
 
         {/* Main Content */}
-        <div className="space-y-6">
+        <div className="space-y-3 md:space-y-6">
             {/* Search and Filter Bar */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="mb-3 md:mb-6 bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="p-1.5 bg-blue-100 rounded-md">
-                        <Search className="h-4 w-4 text-blue-600" />
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center space-x-1.5 md:space-x-2 flex-1 min-w-0">
+                      <div className="p-1 md:p-1.5 bg-blue-100 rounded-md flex-shrink-0">
+                        <Search className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
                       </div>
-                      <div>
-                        <h3 className="text-base font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
-                        <p className="text-xs text-gray-600">Tìm kiếm và lọc case nhận hàng theo nhiều tiêu chí</p>
+                      <div className="min-w-0">
+                        <h3 className="text-xs md:text-base font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
+                        <p className="text-[10px] md:text-xs text-gray-600 hidden sm:block">Tìm kiếm và lọc case nhận hàng theo nhiều tiêu chí</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
                       <button 
                         onClick={exportToExcel}
                         disabled={allCases.length === 0}
-                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+                        className="flex items-center space-x-1 md:space-x-1.5 px-2 md:px-3 py-1 md:py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
                       >
-                        <Download className="h-3.5 w-3.5" />
-                        <span className="text-sm font-medium">Xuất Excel</span>
+                        <Download className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                        <span className="text-[10px] md:text-sm font-medium hidden sm:inline">Xuất Excel</span>
                       </button>
                       <button 
                         onClick={fetchAllData}
-                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
+                        className="flex items-center space-x-1 md:space-x-1.5 px-2 md:px-3 py-1 md:py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
                       >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                        <span className="text-sm font-medium">Làm mới</span>
+                        <RefreshCw className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                        <span className="text-[10px] md:text-sm font-medium hidden sm:inline">Làm mới</span>
                       </button>
                     </div>
                   </div>
           </div>
 
           {/* Content */}
-          <div className="p-4">
-            <div className="space-y-4">
+          <div className="p-2 md:p-4">
+            <div className="space-y-2 md:space-y-4">
               {/* Search Section */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tìm kiếm
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative flex items-center">
+                  <Search className="absolute left-2 md:left-3 h-3 w-3 md:h-4 md:w-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Tìm kiếm theo tên case, người nhận, nhà cung cấp..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                    className="w-full pl-7 md:pl-10 pr-2 md:pr-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                    style={{ WebkitAppearance: 'none', lineHeight: 'normal' }}
                   />
                 </div>
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-1 px-2 md:px-3 py-1.5 md:py-2 border rounded-md transition-all relative ${
+                    showFilters 
+                      ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <Filter className="h-3 w-3 md:h-4 md:w-4" />
+                  <span className="text-xs md:text-sm font-medium hidden sm:inline">Lọc</span>
+                  {(statusFilter || receiverFilter || supplierFilter || startDate || endDate) && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                      {[statusFilter, receiverFilter, supplierFilter, startDate, endDate].filter(Boolean).length}
+                    </span>
+                  )}
+                  <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                </button>
               </div>
 
-              {/* Filters Section */}
+              {/* Filters Section - Collapsible */}
+              <div className={`overflow-hidden transition-all duration-300 ${showFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
                   Bộ lọc
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-4">
                   {/* Status Filter */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-purple-500 rounded-full"></div>
                         <span>Trạng thái</span>
                       </div>
                     </label>
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả trạng thái</option>
                       <option value="RECEIVED">Tiếp nhận</option>
@@ -606,16 +639,17 @@ export default function ReceivingCasesPage() {
 
                   {/* Receiver Filter */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-green-500 rounded-full"></div>
                         <span>Người nhận</span>
                       </div>
                     </label>
                     <select
                       value={receiverFilter}
                       onChange={(e) => setReceiverFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả người nhận</option>
                       {receivers.map((receiver) => (
@@ -628,16 +662,17 @@ export default function ReceivingCasesPage() {
 
                   {/* Supplier Filter */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-orange-500 rounded-full"></div>
                         <span>Nhà cung cấp</span>
                       </div>
                     </label>
                     <select
                       value={supplierFilter}
                       onChange={(e) => setSupplierFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả nhà cung cấp</option>
                       {suppliers.map((supplier) => (
@@ -650,9 +685,9 @@ export default function ReceivingCasesPage() {
 
                   {/* Date From Filter */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-blue-500 rounded-full"></div>
                         <span>Từ ngày</span>
                       </div>
                     </label>
@@ -660,15 +695,16 @@ export default function ReceivingCasesPage() {
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     />
                   </div>
 
                   {/* Date To Filter */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-indigo-500 rounded-full"></div>
                         <span>Đến ngày</span>
                       </div>
                     </label>
@@ -676,10 +712,12 @@ export default function ReceivingCasesPage() {
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none' }}
                     />
                   </div>
                 </div>
+              </div>
               </div>
 
               {/* Active Filters & Actions */}
@@ -753,51 +791,51 @@ export default function ReceivingCasesPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-6 mb-3 md:mb-8">
+          <div className="bg-white rounded-md shadow p-3 md:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Package className="h-6 w-6 text-blue-600" />
+              <div className="p-1 md:p-2 bg-blue-100 rounded-md flex-shrink-0">
+                <Package className="h-4 w-4 md:h-6 md:w-6 text-blue-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Tổng Case</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <div className="ml-2 md:ml-4 min-w-0">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600">Tổng Case</p>
+                <p className="text-base md:text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-md shadow p-3 md:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Package className="h-6 w-6 text-yellow-600" />
+              <div className="p-1 md:p-2 bg-yellow-100 rounded-md flex-shrink-0">
+                <Package className="h-4 w-4 md:h-6 md:w-6 text-yellow-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Đang xử lý</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.inProgress}</p>
+              <div className="ml-2 md:ml-4 min-w-0">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Đang xử lý</p>
+                <p className="text-base md:text-2xl font-bold text-gray-900">{stats.inProgress}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-md shadow p-3 md:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Package className="h-6 w-6 text-green-600" />
+              <div className="p-1 md:p-2 bg-green-100 rounded-md flex-shrink-0">
+                <Package className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Hoàn thành</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
+              <div className="ml-2 md:ml-4 min-w-0">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600 truncate">Hoàn thành</p>
+                <p className="text-base md:text-2xl font-bold text-gray-900">{stats.completed}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-md shadow p-3 md:p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <Package className="h-6 w-6 text-red-600" />
+              <div className="p-1 md:p-2 bg-red-100 rounded-md flex-shrink-0">
+                <Package className="h-4 w-4 md:h-6 md:w-6 text-red-600" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Đã hủy</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.cancelled}</p>
+              <div className="ml-2 md:ml-4 min-w-0">
+                <p className="text-[10px] md:text-sm font-medium text-gray-600">Đã hủy</p>
+                <p className="text-base md:text-2xl font-bold text-gray-900">{stats.cancelled}</p>
               </div>
             </div>
           </div>
@@ -822,57 +860,57 @@ export default function ReceivingCasesPage() {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedCase && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Xác nhận xóa case</h3>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 md:p-4">
+          <div className="bg-white rounded-md shadow-xl w-full max-w-md">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200">
+              <h3 className="text-sm md:text-lg font-semibold text-gray-900">Xác nhận xóa case</h3>
             </div>
-            <div className="p-6">
-              <div className="flex items-start space-x-3">
+            <div className="p-4 md:p-6">
+              <div className="flex items-start space-x-2 md:space-x-3">
                 <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                    <Trash2 className="h-5 w-5 text-red-600" />
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <Trash2 className="h-4 w-4 md:h-5 md:w-5 text-red-600" />
                   </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-700 mb-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs md:text-sm text-gray-700 mb-2">
                     Bạn có chắc chắn muốn xóa case này không?
                   </p>
-                  <div className="bg-gray-50 rounded-md p-3 text-sm">
-                    <div className="font-medium text-gray-900">{selectedCase.title}</div>
-                    <div className="text-gray-600 mt-1">
-                      <div>Người yêu cầu: {selectedCase.requester.fullName}</div>
-                      <div>Người nhận hàng: {selectedCase.handler.fullName}</div>
-                      <div>Nhà cung cấp: {selectedCase.supplier?.shortName || 'Không xác định'}</div>
+                  <div className="bg-gray-50 rounded-md p-2 md:p-3 text-xs md:text-sm">
+                    <div className="font-medium text-gray-900 break-words">{selectedCase.title}</div>
+                    <div className="text-gray-600 mt-1 space-y-0.5">
+                      <div className="break-words">Người yêu cầu: {selectedCase.requester.fullName}</div>
+                      <div className="break-words">Người nhận hàng: {selectedCase.handler.fullName}</div>
+                      <div className="break-words">Nhà cung cấp: {selectedCase.supplier?.shortName || 'Không xác định'}</div>
                     </div>
                   </div>
-                  <p className="text-xs text-red-600 mt-2">
+                  <p className="text-[10px] md:text-xs text-red-600 mt-2">
                     ⚠️ Hành động này không thể hoàn tác. Tất cả dữ liệu liên quan sẽ bị xóa vĩnh viễn.
                   </p>
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-t border-gray-200 flex flex-col md:flex-row justify-end gap-2 md:gap-0 md:space-x-3">
               <button
                 onClick={handleCloseDeleteModal}
                 disabled={deleting}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full md:w-auto px-3 md:px-4 py-1.5 md:py-2 border border-gray-300 text-gray-700 text-xs md:text-sm rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 Hủy
               </button>
               <button
                 onClick={handleDeleteCase}
                 disabled={deleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center"
+                className="w-full md:w-auto px-3 md:px-4 py-1.5 md:py-2 bg-red-600 text-white text-xs md:text-sm rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center"
               >
                 {deleting ? (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2 animate-spin" />
                     Đang xóa...
                   </>
                 ) : (
                   <>
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                     Xóa case
                   </>
                 )}

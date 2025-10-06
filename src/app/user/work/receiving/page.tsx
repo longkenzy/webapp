@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { Plus, Search, Filter, Eye, Edit, RefreshCw, Package, X, Calendar, Clock, CheckCircle, Trash2, Check, ChevronDown, User, Building2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatVietnamDateTime } from '@/lib/date-utils';
 import CreateReceivingCaseModal from './CreateReceivingCaseModal';
 import EditReceivingCaseModal from './EditReceivingCaseModal';
 
@@ -412,15 +413,7 @@ export default function ReceivingCasePage() {
   };
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Ho_Chi_Minh'
-    });
+    return formatVietnamDateTime(dateString);
   };
 
   const getProcessFlow = (caseItem: ReceivingCase) => {

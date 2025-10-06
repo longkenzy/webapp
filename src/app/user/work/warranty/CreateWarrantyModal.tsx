@@ -7,7 +7,7 @@ import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -339,8 +339,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
         handlerId: formData.handler,
         warrantyTypeId: formData.warrantyType,
         customerId: formData.customer || null,
-        startDate: new Date(formData.startDate).toISOString(),
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        startDate: convertLocalInputToISO(formData.startDate),
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

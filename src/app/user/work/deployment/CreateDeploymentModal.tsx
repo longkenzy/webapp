@@ -7,7 +7,7 @@ import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -370,8 +370,8 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
         handlerId: formData.handler, // Use selected handler
         deploymentTypeId: selectedDeploymentType.id,
         customerId: formData.customer || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: convertLocalInputToISO(formData.startDate),
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

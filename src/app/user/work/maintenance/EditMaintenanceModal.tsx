@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Wrench, AlertCircle, CheckCircle, Calendar, FileText, User, Building2, Clock, StickyNote } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -90,10 +90,7 @@ export default function EditMaintenanceModal({
       let formattedEndDate = '';
       if (maintenanceData.endDate) {
         try {
-          const date = new Date(maintenanceData.endDate);
-          if (!isNaN(date.getTime())) {
-            formattedEndDate = date.toISOString().slice(0, 16);
-          }
+          formattedEndDate = convertISOToLocalInput(maintenanceData.endDate);
         } catch (error) {
           console.error('Error formatting endDate:', error);
         }
@@ -167,7 +164,7 @@ export default function EditMaintenanceModal({
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null, // Thêm Ghi chú
         crmReferenceCode: formData.crmReferenceCode || null // Thêm Mã CRM

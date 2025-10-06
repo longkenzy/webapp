@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, FileText, Wrench, User, Building2, Clock } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface InternalCase {
   id: string;
@@ -172,7 +172,7 @@ export default function EditInternalCaseModal({
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null
       };

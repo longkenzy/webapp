@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { ReceivingCaseStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
-import { sendCaseCreatedTelegram } from "@/lib/telegram";
 
 interface Product {
   name: string;
@@ -362,24 +361,6 @@ export async function POST(request: NextRequest) {
     } catch (notificationError) {
       console.error('Error creating notifications:', notificationError);
       // Don't fail the case creation if notifications fail
-    }
-
-    // Send Telegram notification to admin
-    try {
-      await sendCaseCreatedTelegram({
-        caseId: receivingCase.id,
-        caseType: 'Case nhận hàng',
-        caseTitle: receivingCase.title,
-        caseDescription: receivingCase.description,
-        requesterName: employee.fullName,
-        requesterEmail: employee.companyEmail,
-        handlerName: receivingCase.handler.fullName,
-        createdAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-      });
-      console.log('✅ Telegram notification sent successfully');
-    } catch (telegramError) {
-      console.error('❌ Error sending Telegram notification:', telegramError);
-      // Don't fail the case creation if Telegram fails
     }
 
     return NextResponse.json(receivingCase, { status: 201 });

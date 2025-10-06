@@ -8,6 +8,7 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import { useSession } from 'next-auth/react';
 import { ReceivingCaseStatus } from '@prisma/client';
 import toast from 'react-hot-toast';
+import { convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -195,8 +196,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       console.log('Form data set:', {
         customerId: editData.customer?.id || '',
         productDetails: editData.description || '',
-        deliveryDateTime: editData.startDate ? new Date(editData.startDate).toISOString().slice(0, 16) : '',
-        completionDateTime: editData.endDate ? new Date(editData.endDate).toISOString().slice(0, 16) : '',
+        deliveryDateTime: editData.startDate ? convertISOToLocalInput(editData.startDate) : '',
+        completionDateTime: editData.endDate ? convertISOToLocalInput(editData.endDate) : '',
         status: editData.status || 'RECEIVED',
         form: selectedFormOption?.label || defaultFormOption?.label || 'Onsite',
         crmReferenceCode: editData.crmReferenceCode || '',
@@ -610,8 +611,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         handlerId: handlerId, // Use handler selected from dropdown
         customerId: formData.customerId,
         form: formData.form || 'Giao hàng',
-        startDate: formData.deliveryDateTime,
-        endDate: formData.completionDateTime || null,
+        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
+        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
         status: formData.status || 'RECEIVED', // Use status from form
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null,

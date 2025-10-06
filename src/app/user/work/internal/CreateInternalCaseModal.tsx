@@ -6,6 +6,7 @@ import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw }
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
+import { getCurrentVietnamDateTime, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -372,12 +373,6 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
     }
     
     try {
-      // Convert datetime-local to ISO string to preserve local timezone
-      // datetime-local format: YYYY-MM-DDTHH:mm
-      // We convert it to a Date object which will be in local timezone
-      const startDateObj = new Date(formData.startDate);
-      const endDateObj = formData.endDate ? new Date(formData.endDate) : null;
-      
       // Prepare data for API
       const caseData = {
         title: formData.title,
@@ -386,8 +381,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         handlerId: formData.handler,
         caseType: formData.caseType,
         form: formData.form,
-        startDate: startDateObj.toISOString(), // Send as ISO string
-        endDate: endDateObj ? endDateObj.toISOString() : null,
+        startDate: convertLocalInputToISO(formData.startDate),
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null,
         // User self-assessment data

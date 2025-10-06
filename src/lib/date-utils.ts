@@ -62,15 +62,23 @@ export const formatVietnamDate = (dateString: string | Date): string => {
 
 /**
  * Convert datetime-local input value to ISO string for API
- * Input: "YYYY-MM-DDTHH:mm" from datetime-local input
+ * Input: "YYYY-MM-DDTHH:mm" from datetime-local input (treated as Vietnam time)
  * Output: ISO string in UTC
  */
 export const convertLocalInputToISO = (localDateTimeString: string): string => {
   if (!localDateTimeString) return '';
   
   try {
-    // Parse as Vietnam time and convert to UTC
-    const vietnamTime = new Date(localDateTimeString);
+    // Parse the string as Vietnam time (interpret the string as GMT+7)
+    // The input is "YYYY-MM-DDTHH:mm" which we treat as Vietnam local time
+    const [datePart, timePart] = localDateTimeString.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute] = timePart.split(':').map(Number);
+    
+    // Create a date object with Vietnam timezone
+    const vietnamTime = new Date(year, month - 1, day, hour, minute, 0);
+    
+    // Convert from Vietnam timezone to UTC
     const utcTime = fromZonedTime(vietnamTime, VIETNAM_TIMEZONE);
     return utcTime.toISOString();
   } catch (error) {

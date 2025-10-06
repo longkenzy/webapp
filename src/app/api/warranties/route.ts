@@ -3,7 +3,6 @@ import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { WarrantyStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
-import { sendCaseCreatedTelegram } from "@/lib/telegram";
 
 export async function POST(request: NextRequest) {
   try {
@@ -155,25 +154,6 @@ export async function POST(request: NextRequest) {
           console.log(`Notifications sent to ${adminUsers.length} admin users`);
         } catch (notificationError) {
           console.error('Error creating notifications:', notificationError);
-        }
-      })(),
-      
-      // Send Telegram notification to admin
-      (async () => {
-        try {
-          await sendCaseCreatedTelegram({
-            caseId: newWarranty.id,
-            caseType: 'Case bảo hành',
-            caseTitle: newWarranty.title,
-            caseDescription: newWarranty.description,
-            requesterName: defaultEmployee.fullName,
-            requesterEmail: defaultEmployee.companyEmail,
-            handlerName: newWarranty.handler.fullName,
-            createdAt: new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
-          });
-          console.log('✅ Telegram notification sent successfully');
-        } catch (telegramError) {
-          console.error('❌ Error sending Telegram notification:', telegramError);
         }
       })()
     ]).catch(err => console.error('Background notification error:', err));

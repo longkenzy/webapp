@@ -42,7 +42,12 @@ export default function EmployeeEditForm({ employee }: EmployeeEditFormProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const formatDateForInput = (date: Date) => {
-    return new Date(date).toISOString().split('T')[0];
+    // Convert to Vietnam timezone and format for date input (YYYY-MM-DD)
+    const dateObj = new Date(date);
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const [formData, setFormData] = useState({

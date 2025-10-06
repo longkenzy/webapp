@@ -8,6 +8,7 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import { useSession } from 'next-auth/react';
 import { ReceivingCaseStatus } from '@prisma/client';
 import toast from 'react-hot-toast';
+import { convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -279,8 +280,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         handlerId: currentEmployee.id,
         supplierId: formData.supplierId,
         form: formData.form,
-        startDate: formData.deliveryDateTime ? new Date(formData.deliveryDateTime).toISOString() : null,
-        endDate: formData.completionDateTime ? new Date(formData.completionDateTime).toISOString() : null,
+        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
+        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
         status: ReceivingCaseStatus.RECEIVED,
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

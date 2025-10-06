@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, AlertTriangle, FileText, User, Building2, Clock, StickyNote } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Incident {
   id: string;
@@ -76,7 +76,7 @@ export default function EditIncidentModal({
   useEffect(() => {
     if (isOpen && incidentData) {
       setFormData({
-        endDate: incidentData.endDate ? new Date(incidentData.endDate).toISOString().slice(0, 16) : '',
+        endDate: incidentData.endDate ? convertISOToLocalInput(incidentData.endDate) : '',
         status: incidentData.status,
         notes: incidentData.notes || '', // Khởi tạo Ghi chú
         crmReferenceCode: incidentData.crmReferenceCode || '' // Khởi tạo Mã CRM
@@ -167,7 +167,7 @@ export default function EditIncidentModal({
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null, // Thêm Ghi chú
         crmReferenceCode: formData.crmReferenceCode || null // Thêm Mã CRM

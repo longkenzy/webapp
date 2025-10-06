@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, Shield, FileText, User, Building2, Clock, StickyNote } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Warranty {
   id: string;
@@ -76,7 +76,7 @@ export default function EditWarrantyModal({
   useEffect(() => {
     if (isOpen && warrantyData) {
       setFormData({
-        endDate: warrantyData.endDate ? new Date(warrantyData.endDate).toISOString().slice(0, 16) : '',
+        endDate: warrantyData.endDate ? convertISOToLocalInput(warrantyData.endDate) : '',
         status: warrantyData.status,
         notes: warrantyData.notes || '', // Khởi tạo Ghi chú
         crmReferenceCode: warrantyData.crmReferenceCode || '' // Khởi tạo Mã CRM
@@ -199,7 +199,7 @@ export default function EditWarrantyModal({
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null, // Thêm Ghi chú
         crmReferenceCode: formData.crmReferenceCode || null // Thêm Mã CRM

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, Plus, Trash2, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO, formatVietnamDateTime } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -97,7 +97,7 @@ export default function EditReceivingCaseModal({
   useEffect(() => {
     if (isOpen && caseData) {
       setFormData({
-        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
+        endDate: caseData.endDate ? convertISOToLocalInput(caseData.endDate) : '',
         status: caseData.status,
         crmReferenceCode: caseData.crmReferenceCode || ''
       });
@@ -253,7 +253,7 @@ export default function EditReceivingCaseModal({
       // Auto-set inProgressAt if status is changed to IN_PROGRESS
       
       if (formData.status === 'IN_PROGRESS' && caseData.status !== 'IN_PROGRESS') {
-        inProgressAt = new Date().toISOString();
+        inProgressAt = convertLocalInputToISO(getCurrentVietnamDateTime());
         
         // Show notification about auto-time setting
         toast('Thời gian đang xử lý đã được tự động cập nhật', {
@@ -270,7 +270,7 @@ export default function EditReceivingCaseModal({
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: finalStatus,
         inProgressAt: inProgressAt,
         crmReferenceCode: formData.crmReferenceCode || null,
@@ -421,7 +421,7 @@ export default function EditReceivingCaseModal({
               <div>
                 <span className="font-medium text-gray-600">Ngày bắt đầu:</span>
                 <span className="ml-2 text-gray-900">
-                  {new Date(caseData.startDate).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                  {formatVietnamDateTime(caseData.startDate)}
                 </span>
               </div>
             </div>

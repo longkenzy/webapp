@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Calendar, CheckCircle, Plus, Trash2, Package, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -95,7 +95,7 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
     if (caseData && isOpen) {
       setFormData({
         status: caseData.status || '',
-        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
+        endDate: caseData.endDate ? convertISOToLocalInput(caseData.endDate) : '',
         crmReferenceCode: caseData.crmReferenceCode || ''
       });
 
@@ -246,7 +246,7 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
       
       // Auto-set inProgressAt if status is changed to IN_PROGRESS
       if (formData.status === 'IN_PROGRESS' && caseData.status !== 'IN_PROGRESS') {
-        inProgressAt = new Date().toISOString();
+        inProgressAt = convertLocalInputToISO(getCurrentVietnamDateTime());
         
         // Show notification about auto-time setting
         toast('Thời gian đang xử lý đã được tự động cập nhật', {

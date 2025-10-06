@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Rocket, Calendar, CheckCircle, FileText, User, Building2, Clock, StickyNote } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -78,7 +78,7 @@ export default function EditDeploymentModal({
   useEffect(() => {
     if (isOpen && caseData) {
       setFormData({
-        endDate: caseData.endDate ? new Date(caseData.endDate).toISOString().slice(0, 16) : '',
+        endDate: caseData.endDate ? convertISOToLocalInput(caseData.endDate) : '',
         status: caseData.status || 'RECEIVED',
         notes: caseData.notes || '', // Khởi tạo Ghi chú
         crmReferenceCode: caseData.crmReferenceCode || '' // Khởi tạo Mã CRM
@@ -145,7 +145,7 @@ export default function EditDeploymentModal({
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null, // Thêm Ghi chú
         crmReferenceCode: formData.crmReferenceCode || null // Thêm Mã CRM

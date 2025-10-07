@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
     // Skip ESLint during production builds on Vercel
     ignoreDuringBuilds: true,
   },
+  // Enable standalone output for Docker deployment
+  output: 'standalone',
   // Disable automatic static optimization for dynamic routes
   experimental: {
     // Optimize page loading

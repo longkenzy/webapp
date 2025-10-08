@@ -294,7 +294,7 @@ export default function CasesPieChart() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={stats.caseTypes}
+                      data={stats.caseTypes.map(({ name, value }) => ({ name, value }))}
                       cx="50%"
                       cy="50%"
                       innerRadius={40}

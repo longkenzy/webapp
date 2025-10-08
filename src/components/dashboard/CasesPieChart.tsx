@@ -301,13 +301,16 @@ export default function CasesPieChart() {
                       outerRadius={80}
                       paddingAngle={2}
                       dataKey="value"
-                      label={({value, name}) => {
+                      label={({ value, name }) => {
                         if (value === undefined || value === null) return '';
+                        const numericValue = typeof value === 'number' ? value : Number(value);
+                        if (Number.isNaN(numericValue)) return '';
                         const total = stats.totalCases;
-                        const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                        const shortName = name.replace('Case ', '').replace(/^\w/, c => c.toUpperCase());
-                        const caseText = value === 1 ? 'case' : 'cases';
-                        return percentage >= 5 ? `${shortName}\n(${value} ${caseText})\n${percentage}%` : ''; // Show name, count in parentheses, and percentage
+                        const percentage = total > 0 ? Math.round((numericValue / total) * 100) : 0;
+                        const labelName = typeof name === 'string' ? name : String(name ?? '');
+                        const shortName = labelName.replace('Case ', '').replace(/^\w/, c => c.toUpperCase());
+                        const caseText = numericValue === 1 ? 'case' : 'cases';
+                        return percentage >= 5 ? `${shortName}\n(${numericValue} ${caseText})\n${percentage}%` : '';
                       }}
                       labelLine={false}
                     >

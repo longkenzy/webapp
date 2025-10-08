@@ -15,6 +15,10 @@ COPY . .
 
 # ⚡ Dùng Webpack build thay vì Turbopack
 RUN sed -i 's/--turbopack//g' package.json
+# Thiết lập biến môi trường cho Prisma trong lúc build
+ARG DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL}
+
 RUN npx prisma generate --schema src/prisma/schema.prisma
 RUN npm run build
 

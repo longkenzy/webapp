@@ -4,7 +4,7 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm install --omit=dev --ignore-scripts
+RUN npm install --ignore-scripts
 RUN npm install @tailwindcss/postcss
 
 

@@ -18,7 +18,7 @@ RUN npm run build
 FROM node:18-bullseye-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
 # You may uncomment if you see OpenSSL issues at runtime (Prisma)
 # RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*

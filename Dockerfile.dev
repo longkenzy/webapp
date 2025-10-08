@@ -1,18 +1,31 @@
+# Sử dụng Node.js 18 trên Alpine Linux (nhẹ, nhanh)
 FROM node:18-alpine
 
+# Cài gói hỗ trợ cần thiết cho Prisma và Node
+RUN apk add --no-cache openssl libc6-compat
+
+# Thiết lập thư mục làm việc
 WORKDIR /app
 
-# Install dependencies
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Chỉ copy file định nghĩa dependencies trước để tận dụng cache
+COPY package*.json ./
 
-# Copy source code
+# Cài dependencies (dành cho môi trường dev, có devDependencies)
+RUN npm install
+
+# Copy toàn bộ source code vào container
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate --schema src/prisma/schema.prisma
+# Tạo Prisma client
+RUN npx prisma generate --schema=src/prisma/schema.prisma
 
+# Expose port cho server dev
 EXPOSE 3000
 
-# Start development server
+# Biến môi trường cơ bản
+ENV NODE_ENV=development
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+
+# Lệnh chạy server dev
 CMD ["npm", "run", "dev"]

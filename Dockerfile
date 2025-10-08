@@ -1,51 +1,62 @@
-# Use the official Node.js 18 image as base
+# ==============================
+# Stage 1: Base image
+# ==============================
 FROM node:18-alpine AS base
 
-# Install dependencies only when needed
-FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+# Install system dependencies
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+# ==============================
+# Stage 2: Dependencies
+# ==============================
+FROM base AS deps
 
-# Rebuild the source code only when needed
+# Copy package files and install dependencies
+COPY package.json package-lock.json* ./
+
+# ⚡ Sửa chỗ này: dùng npm install thay vì npm ci để tránh lỗi lockfile
+RUN npm install --omit=dev
+
+# ==============================
+# Stage 3: Builder
+# ==============================
 FROM base AS builder
 WORKDIR /app
+
+# Copy node_modules từ stage deps
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client
 RUN npx prisma generate --schema src/prisma/schema.prisma
 
-# Build the application
+# Build Next.js app
 RUN npm run build
 
-# Production image, copy all the files and run next
+# ==============================
+# Stage 4: Runner (Production)
+# ==============================
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-# Uncomment the following line in case you want to disable telemetry during runtime.
-# ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Tạo user bảo mật (không chạy bằng root)
+RUN addgroup --system --gid 1001 nodejs \
+ && adduser --system --uid 1001 nextjs
 
+# Copy các file cần thiết cho runtime
 COPY --from=builder /app/public ./public
+RUN mkdir .next && chown nextjs:nodejs .next
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
+# Copy output build của Next.js
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema and generated client
+# Copy Prisma schema và client đã generate
 COPY --from=builder --chown=nextjs:nodejs /app/src/prisma ./src/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
@@ -53,9 +64,5 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
+# Chạy server Next.js production
 CMD ["node", "server.js"]

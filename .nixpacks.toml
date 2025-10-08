@@ -1,23 +1,11 @@
-# Nixpacks configuration for Next.js + Prisma
-
-# 1️⃣ Cài đặt dependencies (sử dụng npm install thay cho npm ci)
 [phases.install]
 cmd = "npm install"
 
-# 2️⃣ Build app và sinh Prisma client
 [phases.build]
 cmds = [
   "npx prisma generate --schema src/prisma/schema.prisma",
   "npm run build"
 ]
 
-# 3️⃣ Thiết lập biến môi trường mặc định (có thể override trong Coolify)
-[environment]
-NODE_ENV = "production"
-PORT = "3000"
-DATABASE_URL = "${DATABASE_URL}"
-NEXTAUTH_SECRET = "${NEXTAUTH_SECRET}"
-
-# 4️⃣ Lệnh khởi động ứng dụng
 [start]
-cm
+cmd = "npx prisma generate --schema src/prisma/schema.prisma && npm run start"

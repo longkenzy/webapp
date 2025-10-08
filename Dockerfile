@@ -1,10 +1,11 @@
 # ==============================
-# Stage 1: Base image
+# Stage 1: Base
 # ==============================
 FROM node:18-alpine AS base
 
-# Install system dependencies
-RUN apk add --no-cache libc6-compat
+# Cài đặt gói cần thiết cho Prisma
+RUN apk add --no-cache libc6-compat openssl
+
 WORKDIR /app
 
 # ==============================
@@ -12,10 +13,10 @@ WORKDIR /app
 # ==============================
 FROM base AS deps
 
-# Copy package files and install dependencies
+# Copy file định nghĩa package
 COPY package.json package-lock.json* ./
 
-# ⚡ Sửa chỗ này: dùng npm install thay vì npm ci để tránh lỗi lockfile
+# ⚡ Dùng npm install thay vì npm ci để tránh lỗi lockfile mismatch
 RUN npm install --omit=dev
 
 # ==============================
@@ -24,39 +25,39 @@ RUN npm install --omit=dev
 FROM base AS builder
 WORKDIR /app
 
-# Copy node_modules từ stage deps
+# Copy dependencies từ stage deps
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client
+# Tạo Prisma client
 RUN npx prisma generate --schema src/prisma/schema.prisma
 
-# Build Next.js app
+# Build ứng dụng Next.js
 RUN npm run build
 
 # ==============================
-# Stage 4: Runner (Production)
+# Stage 4: Runner (production)
 # ==============================
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
-# Tạo user bảo mật (không chạy bằng root)
+# Tạo user không phải root để bảo mật
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
 
-# Copy các file cần thiết cho runtime
+# Copy các file cần thiết từ builder
 COPY --from=builder /app/public ./public
 RUN mkdir .next && chown nextjs:nodejs .next
 
-# Copy output build của Next.js
+# Copy kết quả build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema và client đã generate
+# Copy Prisma schema + client đã generate
 COPY --from=builder --chown=nextjs:nodejs /app/src/prisma ./src/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
@@ -64,5 +65,5 @@ USER nextjs
 
 EXPOSE 3000
 
-# Chạy server Next.js production
+# Lệnh chạy ứng dụng
 CMD ["node", "server.js"]

@@ -17,7 +17,8 @@ FROM base AS deps
 COPY package.json package-lock.json* ./
 
 # ⚡ Dùng npm install thay vì npm ci để tránh lỗi lockfile mismatch
-RUN npm install --omit=dev
+RUN npm install --omit=dev --ignore-scripts
+
 
 # ==============================
 # Stage 3: Builder

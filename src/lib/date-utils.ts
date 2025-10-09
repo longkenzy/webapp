@@ -177,3 +177,29 @@ export const ensureTimezone = (): void => {
   }
 };
 
+/**
+ * Convert local datetime input to proper timezone for database storage
+ * This function ensures consistent timezone handling across the application
+ */
+export const convertToVietnamTime = (dateTimeString: string): Date => {
+  try {
+    // Parse the datetime string as if it's in Vietnam timezone
+    const localDate = parseISO(dateTimeString);
+    // Convert to zoned time to ensure proper timezone handling
+    const vietnamTime = toZonedTime(localDate, VIETNAM_TIMEZONE);
+    return vietnamTime;
+  } catch (error) {
+    console.error('Error converting to Vietnam time:', error);
+    return new Date();
+  }
+};
+
+/**
+ * Get current timestamp in Vietnam timezone for database storage
+ */
+export const getCurrentVietnamTimestamp = (): string => {
+  const now = new Date();
+  const vietnamTime = toZonedTime(now, VIETNAM_TIMEZONE);
+  return vietnamTime.toISOString();
+};
+

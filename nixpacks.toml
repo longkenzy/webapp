@@ -3,6 +3,9 @@ cmds = [
   "npm install"
 ]
 
+[variables]
+TZ = "Asia/Ho_Chi_Minh"
+
 [phases.build]
 cmds = [
   "npx prisma generate --schema src/prisma/schema.prisma",

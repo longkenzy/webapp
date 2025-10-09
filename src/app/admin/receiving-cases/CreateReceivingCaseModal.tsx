@@ -286,7 +286,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     try {
       const response = await fetch('/api/employees/list');
       if (response.ok) {
-        const data = await response.json();
+        const dataResult = await response.json();
+        const data = dataResult.data || dataResult;
         setEmployees(data);
         console.log('✅ Fetched employees:', data.length);
       } else {
@@ -303,7 +304,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     try {
       const response = await fetch('/api/employees/list');
       if (response.ok) {
-        const employees = await response.json();
+        const employeesResult = await response.json();
+        const employees = employeesResult.data || employeesResult;
         const employee = employees.find((emp: Employee) => 
           emp.companyEmail === session.user.email
         );

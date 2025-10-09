@@ -367,7 +367,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       console.log('Loading employees from API...');
       const response = await fetch('/api/employees/list');
       if (response.ok) {
-        const data = await response.json();
+        const dataResult = await response.json();
+        const data = dataResult.data || dataResult;
         setEmployees(data);
         console.log('✅ Fetched employees:', data.length);
       } else {

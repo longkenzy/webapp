@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import CreateWarrantyModal from './CreateWarrantyModal';
+import { getCurrentDateForFilename } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -174,7 +175,8 @@ export default function AdminWarrantyWorkPage() {
         headers: { 'Cache-Control': 'max-age=600' }
       });
       if (response.ok) {
-        const data = await response.json();
+        const result = await response.json();
+        const data = result.data || result;
         setEmployees(data || []);
         setEmployeesLoaded(true);
       }
@@ -473,7 +475,7 @@ export default function AdminWarrantyWorkPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Danh sách sự cố');
     
-    const fileName = `danh-sach-bao-hanh-${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `danh-sach-bao-hanh-${getCurrentDateForFilename()}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Xuất file Excel thành công');
   }, [filteredWarranties]);
@@ -1217,7 +1219,7 @@ export default function AdminWarrantyWorkPage() {
                                 {warranty.title}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Tạo: {new Date(warranty.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                                Tạo: {new Date(warranty.createdAt).toLocaleString('vi-VN')}
                               </div>
                             </div>
                           </td>
@@ -1249,8 +1251,7 @@ export default function AdminWarrantyWorkPage() {
                               month: '2-digit', 
                               day: '2-digit', 
                               hour: '2-digit', 
-                              minute: '2-digit',
-                              timeZone: 'Asia/Ho_Chi_Minh'
+                              minute: '2-digit'
                             })}</div>
                             {warranty.endDate && (
                               <div>Kết thúc: {new Date(warranty.endDate).toLocaleString('vi-VN', { 
@@ -1258,8 +1259,7 @@ export default function AdminWarrantyWorkPage() {
                                 month: '2-digit', 
                                 day: '2-digit', 
                                 hour: '2-digit', 
-                                minute: '2-digit',
-                                timeZone: 'Asia/Ho_Chi_Minh'
+                                minute: '2-digit'
                               })}</div>
                             )}
                           </td>

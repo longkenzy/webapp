@@ -7,6 +7,7 @@ import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
 import CreateDeliveryCaseModal from './CreateDeliveryCaseModal';
 import * as XLSX from 'xlsx';
 import { DeliveryCaseStatus } from '@prisma/client';
+import { getCurrentDateForFilename } from '@/lib/date-utils';
 
 interface DeliveryCase {
   id: string;
@@ -118,7 +119,9 @@ export default function DeliveryCasesPage() {
       // Fetch delivery persons (employees)
       const deliveryPersonsResponse = await fetch('/api/employees/list');
       if (deliveryPersonsResponse.ok) {
-        const deliveryPersonsData = await deliveryPersonsResponse.json();
+        const deliveryPersonsResult = await deliveryPersonsResponse.json();
+        // Handle both old and new API response formats
+        const deliveryPersonsData = deliveryPersonsResult.data || deliveryPersonsResult;
         setDeliveryPersons(deliveryPersonsData.map((emp: any) => ({
           id: emp.id,
           fullName: emp.fullName
@@ -495,7 +498,7 @@ export default function DeliveryCasesPage() {
       XLSX.utils.book_append_sheet(wb, ws, "Case Giao Hàng");
 
       // Generate filename with current date
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = getCurrentDateForFilename();
       const filename = `Case_Giao_Hang_${currentDate}.xlsx`;
 
       // Save file

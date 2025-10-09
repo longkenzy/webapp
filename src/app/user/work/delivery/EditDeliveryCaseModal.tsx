@@ -389,7 +389,7 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
               <div>
                 <span className="font-medium text-gray-600">Ngày bắt đầu:</span>
                 <span className="ml-2 text-gray-900">
-                  {new Date(caseData.startDate).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                  {new Date(caseData.startDate).toLocaleString('vi-VN')}
                 </span>
               </div>
             </div>

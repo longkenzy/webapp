@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import EditIncidentModal from './EditIncidentModal';
 import CreateIncidentModal from '../../../user/work/incident/CreateIncidentModal';
+import { getCurrentDateForFilename } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -178,7 +179,8 @@ export default function AdminIncidentWorkPage() {
         headers: { 'Cache-Control': 'max-age=600' }
       });
       if (response.ok) {
-        const data = await response.json();
+        const result = await response.json();
+        const data = result.data || result;
         setEmployees(data || []);
         setEmployeesLoaded(true);
       }
@@ -481,7 +483,7 @@ export default function AdminIncidentWorkPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Danh sách sự cố');
     
-    const fileName = `danh-sach-su-co-${new Date().toISOString().split('T')[0]}.xlsx`;
+    const fileName = `danh-sach-su-co-${getCurrentDateForFilename()}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Xuất file Excel thành công');
   }, [filteredIncidents]);
@@ -1197,7 +1199,7 @@ export default function AdminIncidentWorkPage() {
                                 {incident.title}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Tạo: {new Date(incident.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                                Tạo: {new Date(incident.createdAt).toLocaleString('vi-VN')}
                               </div>
                             </div>
                           </td>
@@ -1229,8 +1231,7 @@ export default function AdminIncidentWorkPage() {
                               month: '2-digit', 
                               day: '2-digit', 
                               hour: '2-digit', 
-                              minute: '2-digit',
-                              timeZone: 'Asia/Ho_Chi_Minh'
+                              minute: '2-digit'
                             })}</div>
                             {incident.endDate && (
                               <div>Kết thúc: {new Date(incident.endDate).toLocaleString('vi-VN', { 
@@ -1238,8 +1239,7 @@ export default function AdminIncidentWorkPage() {
                                 month: '2-digit', 
                                 day: '2-digit', 
                                 hour: '2-digit', 
-                                minute: '2-digit',
-                                timeZone: 'Asia/Ho_Chi_Minh'
+                                minute: '2-digit'
                               })}</div>
                             )}
                           </td>

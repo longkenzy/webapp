@@ -350,7 +350,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
         userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
         userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
         userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
-        userAssessmentDate: new Date().toISOString()
+        userAssessmentDate: new Date()
       };
 
       console.log('=== Submitting Warranty ===');

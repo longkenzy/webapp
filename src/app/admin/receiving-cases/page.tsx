@@ -7,6 +7,7 @@ import ReceivingCaseTable from '@/components/admin/ReceivingCaseTable';
 import CreateReceivingCaseModal from './CreateReceivingCaseModal';
 import * as XLSX from 'xlsx';
 import { ReceivingCaseStatus } from '@prisma/client';
+import { getCurrentDateForFilename } from '@/lib/date-utils';
 
 interface ReceivingCase {
   id: string;
@@ -113,7 +114,8 @@ export default function ReceivingCasesPage() {
       // Fetch receivers (employees)
       const receiversResponse = await fetch('/api/employees/list');
       if (receiversResponse.ok) {
-        const receiversData = await receiversResponse.json();
+        const receiversResult = await receiversResponse.json();
+        const receiversData = receiversResult.data || receiversResult;
         setReceivers(receiversData.map((emp: any) => ({
           id: emp.id,
           fullName: emp.fullName
@@ -466,7 +468,7 @@ export default function ReceivingCasesPage() {
       XLSX.utils.book_append_sheet(wb, ws, "Case Nhận Hàng");
 
       // Generate filename with current date
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = getCurrentDateForFilename();
       const filename = `Case_Nhan_Hang_${currentDate}.xlsx`;
 
       // Save file

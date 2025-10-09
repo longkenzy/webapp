@@ -153,3 +153,19 @@ export const getRelativeTime = (dateString: string | Date): string => {
   }
 };
 
+/**
+ * Get current date in YYYY-MM-DD format for file naming
+ * Since server runs in Asia/Ho_Chi_Minh timezone, no conversion needed
+ */
+export const getCurrentDateForFilename = (): string => {
+  return new Date().toLocaleDateString('sv-SE');
+};
+
+/**
+ * Get current timestamp as Date object (not ISO string)
+ * Since server runs in Asia/Ho_Chi_Minh timezone, no conversion needed
+ */
+export const getCurrentTimestamp = (): Date => {
+  return new Date();
+};
+

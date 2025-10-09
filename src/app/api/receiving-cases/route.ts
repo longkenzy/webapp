@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       { 
         error: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date()
       },
       { status: 500 }
     );

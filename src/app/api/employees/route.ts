@@ -73,10 +73,7 @@ export async function POST(request: Request) {
       .filter(([key, value]) => !value || value.trim() === '')
       .map(([key]) => key);
 
-    console.log("Validation check:", {
-      allFields: requiredFields,
-      missingFields: missingFields
-    });
+    // Validation completed
 
     if (missingFields.length > 0) {
       console.log("Validation failed. Missing fields:", missingFields);

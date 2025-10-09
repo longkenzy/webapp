@@ -180,17 +180,20 @@ export const ensureTimezone = (): void => {
 /**
  * Convert local datetime input to proper timezone for database storage
  * This function ensures consistent timezone handling across the application
+ * 
+ * IMPORTANT: Prisma stores DateTime fields in UTC, so we need to convert
+ * the local time to UTC before saving to database
  */
-export const convertToVietnamTime = (dateTimeString: string): Date => {
+export const convertToVietnamTime = (dateTimeString: string): string => {
   try {
     // Parse the datetime string as if it's in Vietnam timezone
     const localDate = parseISO(dateTimeString);
-    // Convert to zoned time to ensure proper timezone handling
-    const vietnamTime = toZonedTime(localDate, VIETNAM_TIMEZONE);
-    return vietnamTime;
+    // Convert from Vietnam timezone to UTC for database storage
+    const utcDate = fromZonedTime(localDate, VIETNAM_TIMEZONE);
+    return utcDate.toISOString();
   } catch (error) {
     console.error('Error converting to Vietnam time:', error);
-    return new Date();
+    return new Date().toISOString();
   }
 };
 

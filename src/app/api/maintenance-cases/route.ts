@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { MaintenanceCaseStatus } from '@prisma/client';
 import { createCaseCreatedNotification, getAdminUsers } from '@/lib/notifications';
+import { convertToVietnamTime } from "@/lib/date-utils";
 import { 
   withAuth, 
   withErrorHandling, 
@@ -115,8 +116,8 @@ export const POST = withErrorHandling(
         customerId: customerId || null,
         maintenanceType: 'PREVENTIVE',
         maintenanceTypeId,
-        startDate: startDate,
-        endDate: endDate || null,
+        startDate: convertToVietnamTime(startDate),
+        endDate: endDate ? convertToVietnamTime(endDate) : null,
         notes: notes || '',
         status: status || MaintenanceCaseStatus.RECEIVED,
         crmReferenceCode: crmReferenceCode || null,

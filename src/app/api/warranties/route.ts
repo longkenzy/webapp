@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { WarrantyStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
+import { convertToVietnamTime } from "@/lib/date-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -110,8 +111,8 @@ export async function POST(request: NextRequest) {
         warrantyTypeId: warrantyTypeRecord.id,
         customerId: customerId || null,
         customerName,
-        startDate: startDate,
-        endDate: endDate || null,
+        startDate: convertToVietnamTime(startDate),
+        endDate: endDate ? convertToVietnamTime(endDate) : null,
         status: status || WarrantyStatus.RECEIVED,
         notes: notes || null,
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM

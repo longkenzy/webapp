@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { DeploymentCaseStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
+import { convertToVietnamTime } from "@/lib/date-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -131,8 +132,8 @@ export async function POST(request: NextRequest) {
         deploymentTypeId,
         customerName,
         customerId: customerId || null,
-        startDate: startDate,
-        endDate: endDate || null,
+        startDate: convertToVietnamTime(startDate),
+        endDate: endDate ? convertToVietnamTime(endDate) : null,
         status: status || DeploymentCaseStatus.RECEIVED,
         notes: notes || null,
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM

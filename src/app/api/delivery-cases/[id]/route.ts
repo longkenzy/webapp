@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { db } from '@/lib/db';
+import { convertToVietnamTime } from "@/lib/date-utils";
 
 export async function GET(
   request: NextRequest,
@@ -165,12 +166,12 @@ export async function PUT(
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (form !== undefined) updateData.form = form;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
     if (endDate !== undefined) {
       if (endDate === null || endDate === '') {
         updateData.endDate = null;
       } else {
-        updateData.endDate = new Date(endDate);
+        updateData.endDate = convertToVietnamTime(endDate);
       }
     }
     // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED

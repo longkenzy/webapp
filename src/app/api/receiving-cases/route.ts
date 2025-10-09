@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { ReceivingCaseStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
+import { convertToVietnamTime } from "@/lib/date-utils";
 
 interface Product {
   name: string;
@@ -264,8 +265,8 @@ export async function POST(request: NextRequest) {
       handlerId,
       supplierId,
       form: form || 'Onsite',
-        startDate: startDate,
-        endDate: endDate || null,
+        startDate: convertToVietnamTime(startDate),
+        endDate: endDate ? convertToVietnamTime(endDate) : null,
       status: (status as ReceivingCaseStatus) || ReceivingCaseStatus.RECEIVED,
       notes: notes || null,
       crmReferenceCode: crmReferenceCode || null,

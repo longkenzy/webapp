@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { ReceivingCaseStatus } from "@prisma/client";
+import { convertToVietnamTime } from "@/lib/date-utils";
 
 export async function GET(
   request: NextRequest,
@@ -176,8 +177,8 @@ export async function PUT(
     if (handlerId !== undefined) updateData.handlerId = handlerId;
     if (supplierId !== undefined) updateData.supplierId = supplierId;
     if (form !== undefined) updateData.form = form;
-    if (startDate !== undefined) updateData.startDate = startDate;
-    if (endDate !== undefined) updateData.endDate = endDate || null;
+    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
+    if (endDate !== undefined) updateData.endDate = endDate ? convertToVietnamTime(endDate) : null;
     
     // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED
     let finalStatus = status;

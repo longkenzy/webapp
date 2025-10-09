@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { convertToVietnamTime } from "@/lib/date-utils";
 
 export async function GET(
   request: NextRequest,
@@ -160,12 +161,12 @@ export async function PUT(
     if (customerName !== undefined) updateData.customerName = customerName;
     if (caseType !== undefined) updateData.caseType = caseType;
     if (form !== undefined) updateData.form = form;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
     if (endDate !== undefined) {
       if (endDate === null || endDate === '') {
         updateData.endDate = null;
       } else {
-        updateData.endDate = new Date(endDate);
+        updateData.endDate = convertToVietnamTime(endDate);
       }
     }
     if (status !== undefined) updateData.status = status;

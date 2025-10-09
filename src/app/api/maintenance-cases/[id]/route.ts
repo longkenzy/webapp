@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { convertToVietnamTime } from '@/lib/date-utils';
 
 const prisma = new PrismaClient();
 
@@ -125,7 +126,7 @@ export async function PUT(
       console.log("End <= Start?", endDateObj <= startDateToCheck);
       
       if (endDateObj <= startDateToCheck) {
-        console.log("Invalid end date:", { startDate: startDateToCheck, endDate: endDateObj });
+        console.log("Invalid end date:", { startDate: body.startDate ? convertToVietnamTime(body.startDate) : startDateToCheck, endDate: endDateObj });
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
@@ -174,8 +175,8 @@ export async function PUT(
         };
       }
     }
-    if (body.startDate !== undefined) updateData.startDate = new Date(body.startDate);
-    if (body.endDate !== undefined) updateData.endDate = body.endDate ? new Date(body.endDate) : null;
+    if (body.startDate !== undefined) updateData.startDate = convertToVietnamTime(body.startDate);
+    if (body.endDate !== undefined) updateData.endDate = body.endDate ? convertToVietnamTime(body.endDate) : null;
     if (body.status !== undefined) updateData.status = body.status;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.crmReferenceCode !== undefined) updateData.crmReferenceCode = body.crmReferenceCode;

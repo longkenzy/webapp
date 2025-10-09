@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
+import { convertToVietnamTime } from "@/lib/date-utils";
 
 export async function PUT(
   request: NextRequest,
@@ -75,7 +76,7 @@ export async function PUT(
       console.log("End <= Start?", endDateObj <= startDateToCheck);
       
       if (endDateObj <= startDateToCheck) {
-        console.log("Invalid end date:", { startDate: startDateToCheck, endDate: endDateObj });
+        console.log("Invalid end date:", { startDate: startDate ? convertToVietnamTime(startDate) : startDateToCheck, endDate: endDateObj });
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
@@ -87,14 +88,14 @@ export async function PUT(
       updatedAt: new Date()
     };
 
-    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (endDate !== undefined) updateData.endDate = endDate ? convertToVietnamTime(endDate) : null;
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
     if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (customerName !== undefined) updateData.customerName = customerName;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
     
     // Handle relations with connect/disconnect
     if (customerId !== undefined) {

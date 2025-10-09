@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { convertToVietnamTime } from "@/lib/date-utils";
 
 export async function DELETE(
   request: NextRequest,
@@ -142,7 +143,7 @@ export async function PUT(
       console.log("End <= Start?", endDateObj <= startDateToCheck);
       
       if (endDateObj <= startDateToCheck) {
-        console.log("Invalid end date:", { startDate: startDateToCheck, endDate: endDateObj });
+        console.log("Invalid end date:", { startDate: startDate ? convertToVietnamTime(startDate) : startDateToCheck, endDate: endDateObj });
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
@@ -155,7 +156,7 @@ export async function PUT(
     };
 
     // Only update fields that are provided
-    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (endDate !== undefined) updateData.endDate = endDate ? convertToVietnamTime(endDate) : null;
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
     if (requesterId !== undefined) updateData.requesterId = requesterId;
@@ -164,7 +165,7 @@ export async function PUT(
     if (form !== undefined) updateData.form = form;
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
     if (userDifficultyLevel !== undefined) updateData.userDifficultyLevel = userDifficultyLevel !== null ? parseInt(userDifficultyLevel) : null;
     if (userEstimatedTime !== undefined) updateData.userEstimatedTime = userEstimatedTime !== null ? parseInt(userEstimatedTime) : null;
     if (userImpactLevel !== undefined) updateData.userImpactLevel = userImpactLevel !== null ? parseInt(userImpactLevel) : null;

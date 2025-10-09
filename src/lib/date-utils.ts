@@ -169,3 +169,11 @@ export const getCurrentTimestamp = (): Date => {
   return new Date();
 };
 
+// Ensure timezone is set correctly for the application
+export const ensureTimezone = (): void => {
+  // Set timezone to Asia/Ho_Chi_Minh if not already set
+  if (!process.env.TZ) {
+    process.env.TZ = 'Asia/Ho_Chi_Minh';
+  }
+};
+

@@ -26,6 +26,7 @@ EXPOSE 8080
 ENV NODE_ENV=development
 ENV HOSTNAME=0.0.0.0
 ENV PORT=8080
+ENV TZ=Asia/Ho_Chi_Minh
 
 # Lệnh chạy server dev
 CMD ["npm", "run", "dev"]

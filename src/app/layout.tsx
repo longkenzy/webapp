@@ -5,6 +5,10 @@ import Topbar from "@/components/shared/layout/Topbar";
 import Providers from "@/components/shared/layout/Providers";
 import { Toaster } from "react-hot-toast";
 import GlobalErrorHandler from "@/components/shared/common/GlobalErrorHandler";
+import { ensureTimezone } from "@/lib/date-utils";
+
+// Ensure timezone is set correctly on server startup
+ensureTimezone();
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

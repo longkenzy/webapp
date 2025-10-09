@@ -110,8 +110,8 @@ export async function POST(request: NextRequest) {
         warrantyTypeId: warrantyTypeRecord.id,
         customerId: customerId || null,
         customerName,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate,
+        endDate: endDate || null,
         status: status || WarrantyStatus.RECEIVED,
         notes: notes || null,
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM

@@ -128,8 +128,8 @@ export async function POST(request: NextRequest) {
         handlerId,
         incidentTypeId,
         customerId: customerId || null,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate,
+        endDate: endDate || null,
         status: status || IncidentStatus.RECEIVED,
         notes: notes || null,
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM

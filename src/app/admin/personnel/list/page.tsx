@@ -246,7 +246,7 @@ export default function PersonnelListPage() {
   };
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    return new Date(date).toLocaleDateString('vi-VN');
   };
 
   const getYearOfBirth = (dateOfBirth: Date) => {

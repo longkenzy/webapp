@@ -1177,7 +1177,7 @@ export default function UserDashboardPage() {
                           minute: '2-digit',
                           hour12: false,
                           timeZone: 'Asia/Ho_Chi_Minh'
-                        }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                        }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN')}
                       </div>
                       {case_.endDate && (
                         <>
@@ -1191,7 +1191,7 @@ export default function UserDashboardPage() {
                               minute: '2-digit',
                               hour12: false,
                               timeZone: 'Asia/Ho_Chi_Minh'
-                            }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                            }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN')}
               </div>
                         </>
             )}

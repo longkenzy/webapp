@@ -131,8 +131,8 @@ export async function POST(request: NextRequest) {
         deploymentTypeId,
         customerName,
         customerId: customerId || null,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate,
+        endDate: endDate || null,
         status: status || DeploymentCaseStatus.RECEIVED,
         notes: notes || null,
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM

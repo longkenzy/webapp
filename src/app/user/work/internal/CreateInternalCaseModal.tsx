@@ -381,8 +381,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         handlerId: formData.handler,
         caseType: formData.caseType,
         form: formData.form,
-        startDate: convertLocalInputToISO(formData.startDate),
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        startDate: formData.startDate,
+        endDate: formData.endDate || null,
         status: formData.status,
         notes: formData.notes || null,
         // User self-assessment data

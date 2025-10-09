@@ -93,7 +93,7 @@ export default function NotificationDropdown() {
     if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
     if (diffInHours < 24) return `${diffInHours} giờ trước`;
     if (diffInDays < 7) return `${diffInDays} ngày trước`;
-    return date.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    return date.toLocaleDateString('vi-VN');
   };
 
   // Close dropdown when clicking outside

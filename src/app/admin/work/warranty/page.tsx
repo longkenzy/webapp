@@ -458,9 +458,9 @@ export default function AdminWarrantyWorkPage() {
       'Loại bảo hành': typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType?.name || 'Unknown',
       'Khách hàng': warranty.customer?.fullCompanyName || 'N/A',
       'Trạng thái': warranty.status,
-      'Ngày bắt đầu': new Date(warranty.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-      'Ngày kết thúc': warranty.endDate ? new Date(warranty.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa hoàn thành',
-      'Ngày tạo': new Date(warranty.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      'Ngày bắt đầu': new Date(warranty.startDate).toLocaleDateString('vi-VN'),
+      'Ngày kết thúc': warranty.endDate ? new Date(warranty.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
+      'Ngày tạo': new Date(warranty.createdAt).toLocaleDateString('vi-VN'),
       'Độ khó (User)': warranty.userDifficultyLevel || 'N/A',
       'Thời gian ước tính (User)': warranty.userEstimatedTime || 'N/A',
       'Tác động (User)': warranty.userImpactLevel || 'N/A',
@@ -1103,13 +1103,13 @@ export default function AdminWarrantyWorkPage() {
                           {dateFrom && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
                               <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
-                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
                             </span>
                           )}
                           {dateTo && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
                               <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
-                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
                             </span>
                           )}
                         </div>

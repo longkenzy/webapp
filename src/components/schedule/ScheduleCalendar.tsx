@@ -277,7 +277,7 @@ export default function ScheduleCalendar({
             eventContent={(eventInfo) => (
               <div 
                 className="bg-white bg-opacity-95 shadow-sm border border-gray-200 rounded px-1 py-0.5 text-xs h-auto min-h-[20px] cursor-pointer group relative"
-                title={`${eventInfo.event.title}${eventInfo.event.extendedProps.description ? '\n\n' + eventInfo.event.extendedProps.description : ''}${eventInfo.event.extendedProps.location ? '\n\n🏢 ' + eventInfo.event.extendedProps.location : ''}\n\n⏰ ${eventInfo.event.start ? new Date(eventInfo.event.start).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''} - ${eventInfo.event.end ? new Date(eventInfo.event.end).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : ''}\n\n👤 Tạo bởi: ${eventInfo.event.extendedProps.user?.name || eventInfo.event.extendedProps.user?.username || 'Unknown'}`}
+                title={`${eventInfo.event.title}${eventInfo.event.extendedProps.description ? '\n\n' + eventInfo.event.extendedProps.description : ''}${eventInfo.event.extendedProps.location ? '\n\n🏢 ' + eventInfo.event.extendedProps.location : ''}\n\n⏰ ${eventInfo.event.start ? new Date(eventInfo.event.start).toLocaleString('vi-VN') : ''} - ${eventInfo.event.end ? new Date(eventInfo.event.end).toLocaleString('vi-VN') : ''}\n\n👤 Tạo bởi: ${eventInfo.event.extendedProps.user?.name || eventInfo.event.extendedProps.user?.username || 'Unknown'}`}
               >
                 <div className="flex items-center gap-1">
                   {eventInfo.event.extendedProps.isPublic ? (
@@ -321,7 +321,7 @@ export default function ScheduleCalendar({
                   )}
                   
                   <div className="mb-1 text-yellow-300">
-                    ⏰ {eventInfo.event.start && new Date(eventInfo.event.start).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} - {eventInfo.event.end && new Date(eventInfo.event.end).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                    ⏰ {eventInfo.event.start && new Date(eventInfo.event.start).toLocaleString('vi-VN')} - {eventInfo.event.end && new Date(eventInfo.event.end).toLocaleString('vi-VN')}
                   </div>
                   
                   <div className="text-gray-400">

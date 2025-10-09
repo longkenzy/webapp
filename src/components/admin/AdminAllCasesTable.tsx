@@ -148,7 +148,7 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
             minute: '2-digit',
             hour12: false,
             timeZone: 'Asia/Ho_Chi_Minh'
-          }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+          }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN')}
         </div>
         {case_.endDate && (
           <>
@@ -162,7 +162,7 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
                 minute: '2-digit',
                 hour12: false,
                 timeZone: 'Asia/Ho_Chi_Minh'
-              }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+              }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN')}
             </div>
           </>
         )}
@@ -1071,7 +1071,7 @@ function AdminAllCasesTable() {
               )}
               {filters.dateFrom && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  Từ: {new Date(filters.dateFrom + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                  Từ: {new Date(filters.dateFrom + 'T00:00:00').toLocaleDateString('vi-VN')}
                   <button
                     onClick={() => handleFilterChange('dateFrom', '')}
                     className="ml-2 text-purple-600 hover:text-purple-800"
@@ -1082,7 +1082,7 @@ function AdminAllCasesTable() {
               )}
               {filters.dateTo && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  Đến: {new Date(filters.dateTo + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                  Đến: {new Date(filters.dateTo + 'T00:00:00').toLocaleDateString('vi-VN')}
                   <button
                     onClick={() => handleFilterChange('dateTo', '')}
                     className="ml-2 text-purple-600 hover:text-purple-800"

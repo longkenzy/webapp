@@ -795,7 +795,7 @@ export default function DeliveryCaseTable({
                   <div>
                     <span>Kết thúc: </span>
                     <span className="font-medium">
-                      {new Date(caseItem.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                      {new Date(caseItem.endDate).toLocaleDateString('vi-VN')}
                     </span>
                   </div>
                 )}

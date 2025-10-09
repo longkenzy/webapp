@@ -470,13 +470,13 @@ export default function InternalCasePage() {
                         {dateFrom && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
-                            Từ: {new Date(dateFrom + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                            Từ: {new Date(dateFrom + 'T00:00:00').toLocaleDateString('vi-VN')}
                           </span>
                         )}
                         {dateTo && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
                             <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
-                            Đến: {new Date(dateTo + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                            Đến: {new Date(dateTo + 'T00:00:00').toLocaleDateString('vi-VN')}
                           </span>
                         )}
                       </div>

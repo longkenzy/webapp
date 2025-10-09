@@ -466,9 +466,9 @@ export default function AdminIncidentWorkPage() {
       'Loại sự cố': incident.incidentType,
       'Khách hàng': incident.customer?.fullCompanyName || 'N/A',
       'Trạng thái': incident.status,
-      'Ngày bắt đầu': new Date(incident.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-      'Ngày kết thúc': incident.endDate ? new Date(incident.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa hoàn thành',
-      'Ngày tạo': new Date(incident.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      'Ngày bắt đầu': new Date(incident.startDate).toLocaleDateString('vi-VN'),
+      'Ngày kết thúc': incident.endDate ? new Date(incident.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
+      'Ngày tạo': new Date(incident.createdAt).toLocaleDateString('vi-VN'),
       'Độ khó (User)': incident.userDifficultyLevel || 'N/A',
       'Thời gian ước tính (User)': incident.userEstimatedTime || 'N/A',
       'Tác động (User)': incident.userImpactLevel || 'N/A',
@@ -1083,13 +1083,13 @@ export default function AdminIncidentWorkPage() {
                           {dateFrom && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
                               <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
-                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
                             </span>
                           )}
                           {dateTo && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
                               <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
-                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
                             </span>
                           )}
                         </div>

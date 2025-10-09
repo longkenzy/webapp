@@ -449,8 +449,8 @@ export default function CreateIncidentModal({
         handlerId: formData.handler,
         incidentType: incidentTypeName,
         customerId: formData.customer || null,
-        startDate: convertLocalInputToISO(formData.startDate),
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        startDate: formData.startDate,
+        endDate: formData.endDate || null,
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

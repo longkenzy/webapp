@@ -518,9 +518,9 @@ export default function AdminMaintenanceWorkPage() {
       'Người xử lý': case_.handler.fullName,
       'Loại bảo trì': case_.maintenanceCaseType?.name || case_.maintenanceType,
       'Trạng thái': case_.status,
-      'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-      'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
-      'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN'),
+      'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN') : '',
+      'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN'),
       'Ghi chú': case_.notes || '',
       'Đánh giá khó (User)': case_.userDifficultyLevel || '',
       'Thời gian ước tính (User)': case_.userEstimatedTime || '',
@@ -1024,13 +1024,13 @@ export default function AdminMaintenanceWorkPage() {
                           {dateFrom && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
                               <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
-                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
                             </span>
                           )}
                           {dateTo && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
                               <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
-                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
                             </span>
                           )}
                         </div>

@@ -176,8 +176,8 @@ export async function PUT(
     if (handlerId !== undefined) updateData.handlerId = handlerId;
     if (supplierId !== undefined) updateData.supplierId = supplierId;
     if (form !== undefined) updateData.form = form;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
-    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+    if (startDate !== undefined) updateData.startDate = startDate;
+    if (endDate !== undefined) updateData.endDate = endDate || null;
     
     // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED
     let finalStatus = status;

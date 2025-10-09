@@ -382,8 +382,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         handlerId: formData.handler,
         maintenanceTypeId: formData.maintenanceType, // Send the ID instead of the name
         customerId: formData.customer || null,
-        startDate: convertLocalInputToISO(formData.startDate),
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        startDate: formData.startDate,
+        endDate: formData.endDate || null,
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

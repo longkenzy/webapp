@@ -71,8 +71,8 @@ export const POST = withErrorHandling(
         handlerId: handler.id,
         caseType,
         form: form || "Onsite",
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate,
+        endDate: endDate || null,
         status: status || InternalCaseStatus.RECEIVED,
         notes: notes || null,
         ...userAssessment

@@ -270,7 +270,7 @@ export default function EditReceivingCaseModal({
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        endDate: formData.endDate || null,
         status: finalStatus,
         inProgressAt: inProgressAt,
         crmReferenceCode: formData.crmReferenceCode || null,

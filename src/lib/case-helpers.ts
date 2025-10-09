@@ -1,14 +1,20 @@
 import { db } from "@/lib/db";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 // Common case validation
 export function validateCaseDates(startDate: string, endDate?: string) {
   if (!endDate) return null;
   
-  const startDateObj = new Date(startDate);
-  const endDateObj = new Date(endDate);
+  const startDateObj = dayjs(startDate).tz('Asia/Ho_Chi_Minh');
+  const endDateObj = dayjs(endDate).tz('Asia/Ho_Chi_Minh');
   
-  if (endDateObj <= startDateObj) {
+  if (endDateObj.isBefore(startDateObj) || endDateObj.isSame(startDateObj)) {
     return "Ngày kết thúc phải lớn hơn ngày bắt đầu";
   }
   
@@ -28,7 +34,7 @@ export function processUserAssessment(body: any) {
       ? parseInt(body.userUrgencyLevel) : null,
     userFormScore: body.userFormScore !== undefined && body.userFormScore !== null 
       ? parseInt(body.userFormScore) : null,
-    userAssessmentDate: new Date()
+    userAssessmentDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
   };
 }
 

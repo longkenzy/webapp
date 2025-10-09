@@ -6,7 +6,7 @@ import { X, User, AlertTriangle, FileText, Calendar, Settings, CheckCircle, Refr
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
-import { getCurrentVietnamDateTime, convertLocalInputToISO } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertLocalInputToISO, convertISOToLocalInput } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -265,28 +265,14 @@ export default function CreateIncidentModal({
       console.log('Editing incident:', editingIncident);
       console.log('Resolved incidentTypeId:', incidentTypeId);
 
-      // Convert datetime to local timezone for datetime-local input
-      let startDateLocal = '';
-      if (editingIncident.startDate) {
-        const startDateObj = new Date(editingIncident.startDate);
-        const year = startDateObj.getFullYear();
-        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(startDateObj.getDate()).padStart(2, '0');
-        const hours = String(startDateObj.getHours()).padStart(2, '0');
-        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
-        startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
-
-      let endDateLocal = '';
-      if (editingIncident.endDate) {
-        const endDateObj = new Date(editingIncident.endDate);
-        const year = endDateObj.getFullYear();
-        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(endDateObj.getDate()).padStart(2, '0');
-        const hours = String(endDateObj.getHours()).padStart(2, '0');
-        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
-        endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
+      // Convert datetime to local timezone for datetime-local input using dayjs helper
+      const startDateLocal = editingIncident.startDate 
+        ? convertISOToLocalInput(editingIncident.startDate)
+        : '';
+      
+      const endDateLocal = editingIncident.endDate 
+        ? convertISOToLocalInput(editingIncident.endDate)
+        : '';
 
       setFormData({
         customerTitle,
@@ -460,7 +446,7 @@ export default function CreateIncidentModal({
         userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
         userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
         userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
-        userAssessmentDate: new Date().toISOString()
+        userAssessmentDate: convertLocalInputToISO(getCurrentVietnamDateTime())
       };
 
       // Send to API

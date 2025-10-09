@@ -5,6 +5,14 @@ import { atLeast } from '@/lib/auth/rbac';
 import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -65,7 +73,7 @@ export async function PUT(
     const updateData: { role?: Role; status?: string; username?: string; password?: string; updatedAt: Date } = {
       role: role as Role,
       status,
-      updatedAt: new Date()
+      updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
 
     // Add username if provided

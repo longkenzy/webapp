@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 // GET /api/evaluation-configs/[id] - Get specific evaluation configuration
 export async function GET(
   request: NextRequest,
@@ -53,7 +61,7 @@ export async function PUT(
       where: { id },
       data: {
         isActive: isActive !== undefined ? isActive : undefined,
-        updatedAt: new Date(),
+        updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
       },
     });
 
@@ -111,7 +119,7 @@ export async function DELETE(
       where: { id },
       data: {
         isActive: false,
-        updatedAt: new Date(),
+        updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
       },
     });
 
@@ -120,7 +128,7 @@ export async function DELETE(
       where: { configId: id },
       data: {
         isActive: false,
-        updatedAt: new Date(),
+        updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
       },
     });
 

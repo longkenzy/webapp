@@ -1,15 +1,20 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { InternalCaseStatus } from "@prisma/client";
-import { withAuth, withErrorHandling, successResponse, setNoCacheHeaders } from "@/lib/api-middleware";
-import { commonCaseIncludes } from "@/lib/case-helpers";
+import { withAuth, withErrorHandling } from "@/lib/api-middleware";
+import { createOptimizedResponse, INCLUDE_PATTERNS } from "@/lib/api-optimization";
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export const GET = withErrorHandling(
   withAuth(async (request: NextRequest) => {
     // Get today's date range
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const startOfDay = dayjs().tz('Asia/Ho_Chi_Minh').startOf('day').toDate();
+    const endOfDay = dayjs().tz('Asia/Ho_Chi_Minh').endOf('day').toDate();
 
     const cases = await db.internalCase.findMany({
       where: {
@@ -17,23 +22,29 @@ export const GET = withErrorHandling(
           {
             createdAt: {
               gte: startOfDay,
-              lt: endOfDay
+              lte: endOfDay
             }
           },
           {
             status: {
-              notIn: [InternalCaseStatus.RECEIVED, InternalCaseStatus.IN_PROGRESS]
+              in: [InternalCaseStatus.COMPLETED, InternalCaseStatus.CANCELLED]
+            },
+            updatedAt: {
+              gte: dayjs().tz('Asia/Ho_Chi_Minh').subtract(7, 'days').toDate()
             }
           }
         ]
       },
-      include: commonCaseIncludes,
+      include: INCLUDE_PATTERNS.caseWithBasicRelations,
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      take: 50 // Limit results for better performance
     });
 
-    const response = successResponse(cases);
-    return setNoCacheHeaders(response);
+    return createOptimizedResponse(cases, {
+      cache: 'REALTIME', // Fresh data for dashboard
+      status: 200
+    });
   })
 );

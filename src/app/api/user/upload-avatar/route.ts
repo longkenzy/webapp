@@ -6,6 +6,14 @@ import { writeFile, unlink, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -123,12 +131,12 @@ export async function POST(request: NextRequest) {
       const newEmployee = await db.employee.create({
         data: {
           fullName: user.name || "Unknown",
-          dateOfBirth: new Date(),
+          dateOfBirth: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
           gender: "Unknown",
           hometown: "Unknown",
           religion: "Unknown",
           ethnicity: "Unknown",
-          startDate: new Date(),
+          startDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
           primaryPhone: user.phone || "",
           secondaryPhone: null, // Optional field
           personalEmail: user.email,

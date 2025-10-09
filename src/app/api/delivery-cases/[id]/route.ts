@@ -4,6 +4,14 @@ import { authOptions } from '@/lib/auth/options';
 import { db } from '@/lib/db';
 import { convertToVietnamTime } from "@/lib/date-utils";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -138,8 +146,8 @@ export async function PUT(
 
     // Validate end date (only if both dates exist) - allow any past/future dates
     if (endDate && endDate !== null && endDate !== '') {
-      const startDateToCheck = startDate ? new Date(startDate) : new Date(existingCase.startDate);
-      const endDateObj = new Date(endDate);
+      const startDateToCheck = startDate ? dayjs(startDate).tz('Asia/Ho_Chi_Minh').toDate() : dayjs(existingCase.startDate).tz('Asia/Ho_Chi_Minh').toDate();
+      const endDateObj = dayjs(endDate).tz('Asia/Ho_Chi_Minh').toDate();
       
       if (endDateObj <= startDateToCheck) {
         return NextResponse.json({ 
@@ -149,7 +157,7 @@ export async function PUT(
       
       // Validate end date with inProgressAt if it exists
       if (existingCase.inProgressAt) {
-        const inProgressDate = new Date(existingCase.inProgressAt);
+        const inProgressDate = dayjs(existingCase.inProgressAt).tz('Asia/Ho_Chi_Minh').toDate();
         if (endDateObj <= inProgressDate) {
           return NextResponse.json({ 
             error: "Ngày kết thúc phải lớn hơn thời gian đang xử lý" 
@@ -160,7 +168,7 @@ export async function PUT(
 
     // Build update data dynamically
     const updateData: any = {
-      updatedAt: new Date()
+      updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
     
     if (title !== undefined) updateData.title = title;
@@ -185,7 +193,7 @@ export async function PUT(
     // Handle inProgressAt field
     if (inProgressAt !== undefined && inProgressAt !== null) {
       try {
-        updateData.inProgressAt = new Date(inProgressAt);
+        updateData.inProgressAt = dayjs(inProgressAt).tz('Asia/Ho_Chi_Minh').toDate();
       } catch (error) {
         // Skip this field if there's an error
       }
@@ -231,13 +239,13 @@ export async function PUT(
     // Set user assessment date if any user field is updated
     if (userDifficultyLevel !== undefined || userEstimatedTime !== undefined || 
         userImpactLevel !== undefined || userUrgencyLevel !== undefined || userFormScore !== undefined) {
-      updateData.userAssessmentDate = new Date();
+      updateData.userAssessmentDate = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
     }
     
     // Set admin assessment date if any admin field is updated
     if (adminDifficultyLevel !== undefined || adminEstimatedTime !== undefined || 
         adminImpactLevel !== undefined || adminUrgencyLevel !== undefined) {
-      updateData.adminAssessmentDate = new Date();
+      updateData.adminAssessmentDate = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
     }
 
     // Update delivery case
@@ -308,7 +316,7 @@ export async function PUT(
             code: product.code || null,
             quantity: product.quantity,
             serialNumber: product.serialNumber || null,
-            inProgressAt: product.inProgressAt ? new Date(product.inProgressAt) : null
+            inProgressAt: product.inProgressAt ? dayjs(product.inProgressAt).tz('Asia/Ho_Chi_Minh').toDate() : null
           }))
         });
       }

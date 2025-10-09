@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { convertToVietnamTime } from '@/lib/date-utils';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const prisma = new PrismaClient();
 
@@ -117,8 +123,8 @@ export async function PUT(
 
     // Validate end date (only if both dates exist) - allow any past/future dates
     if (body.endDate && (body.startDate || existingCase.startDate)) {
-      const startDateToCheck = body.startDate ? new Date(body.startDate) : new Date(existingCase.startDate);
-      const endDateObj = new Date(body.endDate);
+      const startDateToCheck = body.startDate ? dayjs(body.startDate).tz('Asia/Ho_Chi_Minh').toDate() : dayjs(existingCase.startDate).tz('Asia/Ho_Chi_Minh').toDate();
+      const endDateObj = dayjs(body.endDate).tz('Asia/Ho_Chi_Minh').toDate();
       
       console.log("=== API Maintenance Date Validation ===");
       console.log("Start Date to check:", startDateToCheck);
@@ -135,7 +141,7 @@ export async function PUT(
 
     // Build update data object dynamically
     const updateData: any = {
-      updatedAt: new Date()
+      updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
 
     // Only update fields that are provided and not undefined
@@ -186,7 +192,7 @@ export async function PUT(
     if (body.adminEstimatedTime !== undefined) updateData.adminEstimatedTime = parseInt(body.adminEstimatedTime);
     if (body.adminImpactLevel !== undefined) updateData.adminImpactLevel = parseInt(body.adminImpactLevel);
     if (body.adminUrgencyLevel !== undefined) updateData.adminUrgencyLevel = parseInt(body.adminUrgencyLevel);
-    if (body.adminAssessmentDate !== undefined) updateData.adminAssessmentDate = new Date(body.adminAssessmentDate);
+    if (body.adminAssessmentDate !== undefined) updateData.adminAssessmentDate = dayjs(body.adminAssessmentDate).tz('Asia/Ho_Chi_Minh').toDate();
     if (body.adminAssessmentNotes !== undefined) updateData.adminAssessmentNotes = body.adminAssessmentNotes;
 
     // User evaluation fields

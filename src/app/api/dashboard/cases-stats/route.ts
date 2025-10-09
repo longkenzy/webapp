@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { InternalCaseStatus } from "@prisma/client";
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,33 +17,33 @@ export async function GET(request: NextRequest) {
     }
 
     // Get current month date range
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const now = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
+    const startOfMonth = dayjs().tz('Asia/Ho_Chi_Minh').startOf('month').toDate();
+    const endOfMonth = dayjs().tz('Asia/Ho_Chi_Minh').endOf('month').toDate();
 
-    // Fetch cases for current month
-    const monthlyCases = await db.internalCase.findMany({
-      where: {
-        createdAt: {
-          gte: startOfMonth,
-          lte: endOfMonth
+    // Use groupBy for better performance - fetch counts directly from DB
+    const [monthlyStats, totalStats] = await Promise.all([
+      db.internalCase.groupBy({
+        by: ['status'],
+        where: {
+          createdAt: {
+            gte: startOfMonth,
+            lte: endOfMonth
+          }
+        },
+        _count: {
+          status: true
         }
-      },
-      select: {
-        status: true,
-        createdAt: true
-      }
-    });
+      }),
+      db.internalCase.groupBy({
+        by: ['status'],
+        _count: {
+          status: true
+        }
+      })
+    ]);
 
-    // Fetch all cases for total stats
-    const allCases = await db.internalCase.findMany({
-      select: {
-        status: true,
-        createdAt: true
-      }
-    });
-
-    // Count monthly cases by status
+    // Process monthly status counts from groupBy result
     const monthlyStatusCounts = {
       [InternalCaseStatus.RECEIVED]: 0,
       [InternalCaseStatus.IN_PROGRESS]: 0,
@@ -45,13 +51,11 @@ export async function GET(request: NextRequest) {
       [InternalCaseStatus.CANCELLED]: 0
     };
 
-    monthlyCases.forEach(case_ => {
-      if (case_.status in monthlyStatusCounts) {
-        monthlyStatusCounts[case_.status as keyof typeof monthlyStatusCounts]++;
-      }
+    monthlyStats.forEach(stat => {
+      monthlyStatusCounts[stat.status as keyof typeof monthlyStatusCounts] = stat._count.status;
     });
 
-    // Count all cases by status
+    // Process total status counts from groupBy result
     const totalStatusCounts = {
       [InternalCaseStatus.RECEIVED]: 0,
       [InternalCaseStatus.IN_PROGRESS]: 0,
@@ -59,18 +63,16 @@ export async function GET(request: NextRequest) {
       [InternalCaseStatus.CANCELLED]: 0
     };
 
-    allCases.forEach(case_ => {
-      if (case_.status in totalStatusCounts) {
-        totalStatusCounts[case_.status as keyof typeof totalStatusCounts]++;
-      }
+    totalStats.forEach(stat => {
+      totalStatusCounts[stat.status as keyof typeof totalStatusCounts] = stat._count.status;
     });
 
     // Calculate completion rates
-    const monthlyTotalCases = monthlyCases.length;
+    const monthlyTotalCases = Object.values(monthlyStatusCounts).reduce((sum, count) => sum + count, 0);
     const monthlyCompletedCases = monthlyStatusCounts[InternalCaseStatus.COMPLETED];
     const monthlyCompletionRate = monthlyTotalCases > 0 ? (monthlyCompletedCases / monthlyTotalCases) * 100 : 0;
 
-    const totalCases = allCases.length;
+    const totalCases = Object.values(totalStatusCounts).reduce((sum, count) => sum + count, 0);
     const totalCompletedCases = totalStatusCounts[InternalCaseStatus.COMPLETED];
     const totalCompletionRate = totalCases > 0 ? (totalCompletedCases / totalCases) * 100 : 0;
 

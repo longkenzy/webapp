@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -90,12 +97,12 @@ export async function PUT(
       },
       data: {
         fullName,
-        dateOfBirth: new Date(dateOfBirth),
+        dateOfBirth: dayjs(dateOfBirth).tz('Asia/Ho_Chi_Minh').toDate(),
         gender,
         hometown,
         religion,
         ethnicity,
-        startDate: new Date(startDate),
+        startDate: dayjs(startDate).tz('Asia/Ho_Chi_Minh').toDate(),
         primaryPhone,
         secondaryPhone: secondaryPhone || null,
         personalEmail,

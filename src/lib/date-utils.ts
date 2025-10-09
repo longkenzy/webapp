@@ -1,10 +1,22 @@
 /**
  * Date and Time Utility Functions
  * All dates/times are in Asia/Ho_Chi_Minh timezone (UTC+7)
+ * Using Day.js for date handling
  */
 
-import { format, parseISO } from 'date-fns';
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/vi';
+
+// Extend dayjs with plugins
+dayjs.extend(utc);
+dayjs.extend(timezone);
+dayjs.extend(customParseFormat);
+dayjs.extend(relativeTime);
+dayjs.locale('vi');
 
 const VIETNAM_TIMEZONE = 'Asia/Ho_Chi_Minh';
 
@@ -13,9 +25,7 @@ const VIETNAM_TIMEZONE = 'Asia/Ho_Chi_Minh';
  * Returns format: "YYYY-MM-DDTHH:mm" (compatible with datetime-local input)
  */
 export const getCurrentVietnamDateTime = (): string => {
-  const now = new Date();
-  const vietnamTime = toZonedTime(now, VIETNAM_TIMEZONE);
-  return format(vietnamTime, "yyyy-MM-dd'T'HH:mm");
+  return dayjs().tz(VIETNAM_TIMEZONE).format('YYYY-MM-DDTHH:mm');
 };
 
 /**
@@ -23,9 +33,7 @@ export const getCurrentVietnamDateTime = (): string => {
  * Returns format: "YYYY-MM-DD" (compatible with date input)
  */
 export const getCurrentVietnamDate = (): string => {
-  const now = new Date();
-  const vietnamTime = toZonedTime(now, VIETNAM_TIMEZONE);
-  return format(vietnamTime, 'yyyy-MM-dd');
+  return dayjs().tz(VIETNAM_TIMEZONE).format('YYYY-MM-DD');
 };
 
 /**
@@ -35,9 +43,7 @@ export const getCurrentVietnamDate = (): string => {
  */
 export const formatVietnamDateTime = (dateString: string | Date): string => {
   try {
-    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    const vietnamTime = toZonedTime(date, VIETNAM_TIMEZONE);
-    return format(vietnamTime, 'dd/MM/yyyy HH:mm');
+    return dayjs(dateString).tz(VIETNAM_TIMEZONE).format('DD/MM/YYYY HH:mm');
   } catch (error) {
     console.error('Error formatting date:', error);
     return 'Invalid date';
@@ -51,9 +57,7 @@ export const formatVietnamDateTime = (dateString: string | Date): string => {
  */
 export const formatVietnamDate = (dateString: string | Date): string => {
   try {
-    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    const vietnamTime = toZonedTime(date, VIETNAM_TIMEZONE);
-    return format(vietnamTime, 'dd/MM/yyyy');
+    return dayjs(dateString).tz(VIETNAM_TIMEZONE).format('DD/MM/YYYY');
   } catch (error) {
     console.error('Error formatting date:', error);
     return 'Invalid date';
@@ -69,18 +73,8 @@ export const convertLocalInputToISO = (localDateTimeString: string): string => {
   if (!localDateTimeString) return '';
   
   try {
-    // Parse the string as Vietnam time (interpret the string as GMT+7)
-    // The input is "YYYY-MM-DDTHH:mm" which we treat as Vietnam local time
-    const [datePart, timePart] = localDateTimeString.split('T');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute] = timePart.split(':').map(Number);
-    
-    // Create a date object with Vietnam timezone
-    const vietnamTime = new Date(year, month - 1, day, hour, minute, 0);
-    
-    // Convert from Vietnam timezone to UTC
-    const utcTime = fromZonedTime(vietnamTime, VIETNAM_TIMEZONE);
-    return utcTime.toISOString();
+    // Parse the string as Vietnam time and convert to UTC
+    return dayjs.tz(localDateTimeString, VIETNAM_TIMEZONE).toISOString();
   } catch (error) {
     console.error('Error converting local input to ISO:', error);
     return '';
@@ -96,9 +90,7 @@ export const convertISOToLocalInput = (isoString: string): string => {
   if (!isoString) return '';
   
   try {
-    const date = parseISO(isoString);
-    const vietnamTime = toZonedTime(date, VIETNAM_TIMEZONE);
-    return format(vietnamTime, "yyyy-MM-dd'T'HH:mm");
+    return dayjs(isoString).tz(VIETNAM_TIMEZONE).format('YYYY-MM-DDTHH:mm');
   } catch (error) {
     console.error('Error converting ISO to local input:', error);
     return '';
@@ -118,11 +110,9 @@ export const getVietnamTimezoneOffset = (): string => {
  */
 export const isDateInPast = (dateString: string | Date): boolean => {
   try {
-    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    const now = new Date();
-    const vietnamNow = toZonedTime(now, VIETNAM_TIMEZONE);
-    const vietnamDate = toZonedTime(date, VIETNAM_TIMEZONE);
-    return vietnamDate < vietnamNow;
+    const date = dayjs(dateString).tz(VIETNAM_TIMEZONE);
+    const now = dayjs().tz(VIETNAM_TIMEZONE);
+    return date.isBefore(now);
   } catch (error) {
     console.error('Error checking date:', error);
     return false;
@@ -134,19 +124,18 @@ export const isDateInPast = (dateString: string | Date): boolean => {
  */
 export const getRelativeTime = (dateString: string | Date): string => {
   try {
-    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+    const date = dayjs(dateString);
+    const now = dayjs();
+    const diffMins = now.diff(date, 'minute');
+    const diffHours = now.diff(date, 'hour');
+    const diffDays = now.diff(date, 'day');
 
     if (diffMins < 1) return 'Vừa xong';
     if (diffMins < 60) return `${diffMins} phút trước`;
     if (diffHours < 24) return `${diffHours} giờ trước`;
     if (diffDays < 30) return `${diffDays} ngày trước`;
     
-    return formatVietnamDate(date);
+    return formatVietnamDate(date.toDate());
   } catch (error) {
     console.error('Error getting relative time:', error);
     return 'Invalid date';
@@ -158,7 +147,7 @@ export const getRelativeTime = (dateString: string | Date): string => {
  * Since server runs in Asia/Ho_Chi_Minh timezone, no conversion needed
  */
 export const getCurrentDateForFilename = (): string => {
-  return new Date().toLocaleDateString('sv-SE');
+  return dayjs().tz(VIETNAM_TIMEZONE).format('YYYY-MM-DD');
 };
 
 /**
@@ -166,7 +155,7 @@ export const getCurrentDateForFilename = (): string => {
  * Since server runs in Asia/Ho_Chi_Minh timezone, no conversion needed
  */
 export const getCurrentTimestamp = (): Date => {
-  return new Date();
+  return dayjs().tz(VIETNAM_TIMEZONE).toDate();
 };
 
 // Ensure timezone is set correctly for the application
@@ -186,14 +175,11 @@ export const ensureTimezone = (): void => {
  */
 export const convertToVietnamTime = (dateTimeString: string): string => {
   try {
-    // Parse the datetime string as if it's in Vietnam timezone
-    const localDate = parseISO(dateTimeString);
-    // Convert from Vietnam timezone to UTC for database storage
-    const utcDate = fromZonedTime(localDate, VIETNAM_TIMEZONE);
-    return utcDate.toISOString();
+    // Parse the datetime string as if it's in Vietnam timezone and convert to UTC
+    return dayjs.tz(dateTimeString, VIETNAM_TIMEZONE).toISOString();
   } catch (error) {
     console.error('Error converting to Vietnam time:', error);
-    return new Date().toISOString();
+    return dayjs().toISOString();
   }
 };
 
@@ -201,8 +187,5 @@ export const convertToVietnamTime = (dateTimeString: string): string => {
  * Get current timestamp in Vietnam timezone for database storage
  */
 export const getCurrentVietnamTimestamp = (): string => {
-  const now = new Date();
-  const vietnamTime = toZonedTime(now, VIETNAM_TIMEZONE);
-  return vietnamTime.toISOString();
+  return dayjs().tz(VIETNAM_TIMEZONE).toISOString();
 };
-

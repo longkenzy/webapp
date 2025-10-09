@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -38,7 +46,7 @@ export async function PUT(
         adminEstimatedTime: parseInt(adminEstimatedTime),
         adminImpactLevel: parseInt(adminImpactLevel),
         adminUrgencyLevel: parseInt(adminUrgencyLevel),
-        adminAssessmentDate: new Date()
+        adminAssessmentDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
       },
       select: {
         id: true,

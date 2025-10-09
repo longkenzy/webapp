@@ -3,6 +3,14 @@ import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 const createScheduleSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
@@ -31,8 +39,8 @@ export async function GET(request: NextRequest) {
 
     if (start && end) {
       whereClause.startAt = {
-        gte: new Date(start),
-        lte: new Date(end)
+        gte: dayjs(start).tz('Asia/Ho_Chi_Minh').toDate(),
+        lte: dayjs(end).tz('Asia/Ho_Chi_Minh').toDate()
       };
     }
 
@@ -68,9 +76,9 @@ export async function POST(request: NextRequest) {
     const validatedData = createScheduleSchema.parse(body);
 
     // Kiểm tra thời gian bắt đầu không được trong quá khứ
-    const startDate = new Date(validatedData.startAt);
-    const endDate = new Date(validatedData.endAt);
-    const now = new Date();
+    const startDate = dayjs(validatedData.startAt).tz('Asia/Ho_Chi_Minh').toDate();
+    const endDate = dayjs(validatedData.endAt).tz('Asia/Ho_Chi_Minh').toDate();
+    const now = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
 
     if (startDate < now) {
       return NextResponse.json({ error: "Không thể tạo sự kiện cho thời gian trong quá khứ" }, { status: 400 });
@@ -84,8 +92,8 @@ export async function POST(request: NextRequest) {
       data: {
         title: validatedData.title,
         description: validatedData.description,
-        startAt: new Date(validatedData.startAt),
-        endAt: new Date(validatedData.endAt),
+        startAt: dayjs(validatedData.startAt).tz('Asia/Ho_Chi_Minh').toDate(),
+        endAt: dayjs(validatedData.endAt).tz('Asia/Ho_Chi_Minh').toDate(),
         color: validatedData.color,
         location: validatedData.company || "",
         allDay: false,

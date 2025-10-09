@@ -3,6 +3,14 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { convertToVietnamTime } from "@/lib/date-utils";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -59,8 +67,8 @@ export async function PUT(
 
     // Validate end date (only if both dates exist) - allow any past/future dates
     if (endDate && (startDate || existingIncident.startDate)) {
-      const startDateToCheck = startDate ? new Date(startDate) : new Date(existingIncident.startDate);
-      const endDateObj = new Date(endDate);
+      const startDateToCheck = startDate ? dayjs(startDate).tz('Asia/Ho_Chi_Minh').toDate() : dayjs(existingIncident.startDate).tz('Asia/Ho_Chi_Minh').toDate();
+      const endDateObj = dayjs(endDate).tz('Asia/Ho_Chi_Minh').toDate();
       
       console.log("=== API Incident Date Validation ===");
       console.log("Start Date to check:", startDateToCheck);
@@ -77,7 +85,7 @@ export async function PUT(
 
     // Prepare update data
     const updateData: any = {
-      updatedAt: new Date()
+      updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
     
     if (endDate !== undefined) updateData.endDate = endDate ? convertToVietnamTime(endDate) : null;
@@ -126,7 +134,7 @@ export async function PUT(
                               adminAssessmentNotes !== undefined;
     
     if (hasAdminAssessment) {
-      updateData.adminAssessmentDate = new Date();
+      updateData.adminAssessmentDate = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
     }
 
     console.log("Updating incident with data:", updateData);

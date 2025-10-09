@@ -5,6 +5,14 @@ import { ReceivingCaseStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
 import { convertToVietnamTime } from "@/lib/date-utils";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 interface Product {
   name: string;
   code?: string;
@@ -129,7 +137,7 @@ export async function GET(request: NextRequest) {
       { 
         error: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date()
+        timestamp: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
       },
       { status: 500 }
     );
@@ -275,7 +283,7 @@ export async function POST(request: NextRequest) {
       userImpactLevel: parseInt(userImpactLevel),
       userUrgencyLevel: parseInt(userUrgencyLevel),
       userFormScore: parseInt(userFormScore),
-      userAssessmentDate: new Date()
+      userAssessmentDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
 
     console.log('Creating receiving case with data:', caseData);

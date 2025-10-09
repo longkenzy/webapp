@@ -4,6 +4,13 @@ import { db } from '@/lib/db';
 import { DeliveryCaseStatus } from '@prisma/client';
 import { createCaseCreatedNotification, getAdminUsers } from '@/lib/notifications';
 import { convertToVietnamTime } from "@/lib/date-utils";
+import { validateCaseDates } from "@/lib/case-helpers";
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 interface Product {
   name: string;
@@ -181,21 +188,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate end date (only if both dates exist) - allow any past/future dates
+    // Validate end date using dayjs helper
+    const dateValidationError = validateCaseDates(startDate, endDate);
+    if (dateValidationError) {
+      console.log("Invalid date:", dateValidationError);
+      return NextResponse.json({ 
+        error: dateValidationError 
+      }, { status: 400 });
+    }
+    
     if (startDate && endDate) {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      
       console.log("=== API Delivery Date Validation (Create) ===");
-      console.log("Start Date:", startDateObj);
-      console.log("End Date:", endDateObj);
-      console.log("End <= Start?", endDateObj <= startDateObj);
-      
-      if (endDateObj <= startDateObj) {
-        return NextResponse.json({ 
-          error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
-        }, { status: 400 });
-      }
+      console.log("Start Date:", startDate);
+      console.log("End Date:", endDate);
     }
 
     // Validate employees and partner existence
@@ -237,7 +242,7 @@ export async function POST(request: NextRequest) {
         userImpactLevel: userImpactLevel ? parseInt(userImpactLevel) : null,
         userUrgencyLevel: userUrgencyLevel ? parseInt(userUrgencyLevel) : null,
         userFormScore: userFormScore ? parseInt(userFormScore) : null,
-        userAssessmentDate: userAssessmentDate ? new Date(userAssessmentDate) : null,
+        userAssessmentDate: userAssessmentDate ? dayjs(userAssessmentDate).tz('Asia/Ho_Chi_Minh').toDate() : null,
         products: products && products.length > 0 ? {
           create: products.map((product: Product) => ({
             name: product.name,

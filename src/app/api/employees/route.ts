@@ -4,6 +4,12 @@ import { getSession } from "@/lib/auth/session";
 import { Role } from "@prisma/client";
 import { atLeast } from "@/lib/auth/rbac";
 import bcrypt from "bcryptjs";
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export async function GET() {
   try {
@@ -95,12 +101,12 @@ export async function POST(request: Request) {
     const newEmployee = await db.employee.create({
       data: {
         fullName: name,
-        dateOfBirth: new Date(dateOfBirth),
+        dateOfBirth: dayjs(dateOfBirth).tz('Asia/Ho_Chi_Minh').toDate(),
         gender,
         hometown,
         religion,
         ethnicity,
-        startDate: new Date(startDate),
+        startDate: dayjs(startDate).tz('Asia/Ho_Chi_Minh').toDate(),
         primaryPhone: phone,
         personalEmail: email, // Use email as personal email
         companyEmail: email, // Use same email as company email

@@ -356,13 +356,13 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       return;
     }
     
-    // Validate end date
+    // Validate end date using dayjs
     if (formData.endDate) {
-      const startDate = new Date(formData.startDate);
-      const endDate = new Date(formData.endDate);
+      const { validateCaseDates } = await import('@/lib/case-helpers');
+      const validationError = validateCaseDates(formData.startDate, formData.endDate);
       
-      if (endDate <= startDate) {
-        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+      if (validationError) {
+        toast.error(validationError, {
           duration: 3000,
           position: 'top-right',
         });
@@ -393,7 +393,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
         userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
         userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
-        userAssessmentDate: new Date().toISOString()
+        userAssessmentDate: convertLocalInputToISO(getCurrentVietnamDateTime())
       };
 
       console.log('=== Submitting Maintenance Case ===');

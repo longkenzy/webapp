@@ -680,8 +680,9 @@ export default function AdminDeploymentWorkPage() {
         },
       });
       if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
+        const result = await response.json();
+        // API returns { success: true, data: [...] }
+        setEmployees(result.data || result);
         setEmployeesLoaded(true);
       }
     } catch (error) {

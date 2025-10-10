@@ -52,6 +52,7 @@ interface ReceivingCase {
   form: string;
   startDate: string;
   endDate: string | null;
+  inProgressAt: string | null;
   status: ReceivingCaseStatus;
   notes: string | null;
   crmReferenceCode: string | null;
@@ -529,12 +530,10 @@ export default function ReceivingCaseTable({
     const currentStep = caseItem.status === 'RECEIVED' ? 1 : 
                       caseItem.status === 'IN_PROGRESS' ? 2 : 3;
 
-    // Determine timestamps for each step
-    const receivedTime = caseItem.createdAt; // Case được tạo = tiếp nhận
-    const inProgressTime = caseItem.status === 'IN_PROGRESS' || caseItem.status === 'COMPLETED' ? 
-                          caseItem.updatedAt : null; // Có thể cần thêm field riêng
-    const completedTime = caseItem.status === 'COMPLETED' ? 
-                         caseItem.endDate || caseItem.updatedAt : null;
+    // Determine timestamps for each step - sử dụng đúng các cột trong database
+    const receivedTime = caseItem.startDate; // Thời gian tiếp nhận từ cột startDate
+    const inProgressTime = caseItem.inProgressAt; // Thời gian đang xử lý từ cột inProgressAt
+    const completedTime = caseItem.endDate; // Thời gian hoàn thành từ cột endDate
 
     return (
       <div className="py-1">
@@ -777,21 +776,14 @@ export default function ReceivingCaseTable({
                 <div>
                   <span>Bắt đầu: </span>
                   <span className="font-medium">
-                    {new Date(caseItem.startDate).toLocaleString('vi-VN', { 
-                      day: '2-digit', 
-                      month: '2-digit', 
-                      year: 'numeric', 
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      timeZone: 'Asia/Ho_Chi_Minh' 
-                    })}
+                    {formatVietnamDateTime(caseItem.startDate)}
                   </span>
                 </div>
                 {caseItem.endDate && (
                   <div>
                     <span>Kết thúc: </span>
                     <span className="font-medium">
-                      {new Date(caseItem.endDate).toLocaleDateString('vi-VN')}
+                      {formatVietnamDateTime(caseItem.endDate)}
                     </span>
                   </div>
                 )}

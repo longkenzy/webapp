@@ -16,6 +16,7 @@ interface ReceivingCase {
   form: string;
   startDate: string;
   endDate: string | null;
+  inProgressAt: string | null;
   status: ReceivingCaseStatus;
   notes: string | null;
   crmReferenceCode: string | null;

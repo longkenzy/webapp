@@ -110,8 +110,9 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         },
       });
       if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
+        const result = await response.json();
+        // API returns { success: true, data: [...] }
+        setEmployees(result.data || result);
       } else {
         console.error('Failed to fetch employees:', response.status, response.statusText);
         setEmployees([]);

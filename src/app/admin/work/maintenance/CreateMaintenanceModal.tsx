@@ -118,10 +118,12 @@ export default function CreateMaintenanceModal({
         },
       });
       if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
+        const result = await response.json();
+        // API returns { success: true, data: [...] }
+        const employeesData = result.data || result;
+        setEmployees(employeesData);
         // Cache the data
-        localStorage.setItem(cacheKey, JSON.stringify(data));
+        localStorage.setItem(cacheKey, JSON.stringify(employeesData));
         localStorage.setItem(`${cacheKey}-time`, now.toString());
       } else {
         console.error('Failed to fetch employees:', response.status, response.statusText);

@@ -169,12 +169,12 @@ export async function PUT(
     if (customerName !== undefined) updateData.customerName = customerName;
     if (caseType !== undefined) updateData.caseType = caseType;
     if (form !== undefined) updateData.form = form;
-    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     if (endDate !== undefined) {
       if (endDate === null || endDate === '') {
         updateData.endDate = null;
       } else {
-        updateData.endDate = convertToVietnamTime(endDate);
+        updateData.endDate = new Date(endDate);
       }
     }
     if (status !== undefined) updateData.status = status;

@@ -96,14 +96,14 @@ export async function PUT(
       updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
 
-    if (endDate !== undefined) updateData.endDate = endDate ? convertToVietnamTime(endDate) : null;
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
     if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (customerName !== undefined) updateData.customerName = customerName;
-    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     
     // Handle relations with connect/disconnect
     if (customerId !== undefined) {

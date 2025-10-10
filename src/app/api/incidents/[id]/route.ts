@@ -88,7 +88,7 @@ export async function PUT(
       updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
     
-    if (endDate !== undefined) updateData.endDate = endDate ? convertToVietnamTime(endDate) : null;
+    if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
     if (status !== undefined) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
     if (crmReferenceCode !== undefined) updateData.crmReferenceCode = crmReferenceCode;
@@ -97,7 +97,7 @@ export async function PUT(
     if (customerName !== undefined) updateData.customerName = customerName;
     if (customerId !== undefined) updateData.customerId = customerId;
     if (handlerId !== undefined) updateData.handlerId = handlerId;
-    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     
     // Handle incidentType - need to find incidentTypeId by name
     if (incidentType !== undefined && incidentType) {

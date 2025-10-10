@@ -126,8 +126,8 @@ export async function POST(request: NextRequest) {
         handlerId,
         incidentTypeId,
         customerId: customerId || null,
-        startDate: convertToVietnamTime(startDate),
-        endDate: endDate ? convertToVietnamTime(endDate) : null,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        endDate: endDate ? new Date(endDate) : null,
         status: status || IncidentStatus.RECEIVED,
         notes: notes || null,
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM

@@ -174,12 +174,12 @@ export async function PUT(
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (form !== undefined) updateData.form = form;
-    if (startDate !== undefined) updateData.startDate = convertToVietnamTime(startDate);
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     if (endDate !== undefined) {
       if (endDate === null || endDate === '') {
         updateData.endDate = null;
       } else {
-        updateData.endDate = convertToVietnamTime(endDate);
+        updateData.endDate = new Date(endDate);
       }
     }
     // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED

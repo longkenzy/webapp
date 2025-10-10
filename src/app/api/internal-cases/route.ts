@@ -72,8 +72,8 @@ export const POST = withErrorHandling(
         handlerId: handler.id,
         caseType,
         form: form || "Onsite",
-        startDate: convertToVietnamTime(startDate),
-        endDate: endDate ? convertToVietnamTime(endDate) : null,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        endDate: endDate ? new Date(endDate) : null,
         status: status || InternalCaseStatus.RECEIVED,
         notes: notes || null,
         ...userAssessment

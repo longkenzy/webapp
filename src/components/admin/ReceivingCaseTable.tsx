@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ReceivingCaseStatus, EvaluationType, EvaluationCategory } from '@prisma/client';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
+import { formatVietnamDateTime } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -450,15 +451,7 @@ export default function ReceivingCaseTable({
   }, [propAllCases]);
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Ho_Chi_Minh'
-    });
+    return formatVietnamDateTime(dateString);
   };
 
   const formatDateRange = (startDate: string, endDate: string | null) => {

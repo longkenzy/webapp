@@ -7,7 +7,7 @@ import ReceivingCaseTable from '@/components/admin/ReceivingCaseTable';
 import CreateReceivingCaseModal from './CreateReceivingCaseModal';
 import * as XLSX from 'xlsx';
 import { ReceivingCaseStatus } from '@prisma/client';
-import { getCurrentDateForFilename } from '@/lib/date-utils';
+import { getCurrentDateForFilename, formatVietnamDate, formatVietnamDateTime } from '@/lib/date-utils';
 
 interface ReceivingCase {
   id: string;
@@ -361,10 +361,10 @@ export default function ReceivingCasesPage() {
           'Trạng thái': case_.status === 'RECEIVED' ? 'Tiếp nhận' : 
                        case_.status === 'IN_PROGRESS' ? 'Đang xử lý' :
                        case_.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy',
-          'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN'),
-          'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
-          'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN'),
-          'Ngày cập nhật': new Date(case_.updatedAt).toLocaleDateString('vi-VN'),
+          'Ngày bắt đầu': formatVietnamDateTime(case_.startDate),
+          'Ngày kết thúc': case_.endDate ? formatVietnamDateTime(case_.endDate) : 'Chưa hoàn thành',
+          'Ngày tạo': formatVietnamDate(case_.createdAt),
+          'Ngày cập nhật': formatVietnamDate(case_.updatedAt),
           'Ghi chú': case_.notes || '',
           // User evaluation
           'User - Mức độ khó': case_.userDifficultyLevel ? 
@@ -412,7 +412,7 @@ export default function ReceivingCasesPage() {
              case_.adminUrgencyLevel === 3 ? 'Trung bình' :
              case_.adminUrgencyLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
           'Admin - Tổng điểm': adminTotalScore || 'Chưa đánh giá',
-          'Admin - Ngày đánh giá': case_.adminAssessmentDate ? new Date(case_.adminAssessmentDate).toLocaleDateString('vi-VN') : 'Chưa đánh giá',
+          'Admin - Ngày đánh giá': case_.adminAssessmentDate ? formatVietnamDate(case_.adminAssessmentDate) : 'Chưa đánh giá',
           'Admin - Ghi chú đánh giá': case_.adminAssessmentNotes || '',
           // Total score
           'Tổng điểm cuối cùng': grandTotal,
@@ -761,13 +761,13 @@ export default function ReceivingCasesPage() {
                         {startDate && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                             <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></div>
-                            Từ: {new Date(startDate).toLocaleDateString('vi-VN')}
+                            Từ: {formatVietnamDate(startDate)}
                           </span>
                         )}
                         {endDate && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
-                            Đến: {new Date(endDate).toLocaleDateString('vi-VN')}
+                            Đến: {formatVietnamDate(endDate)}
                           </span>
                         )}
                       </div>

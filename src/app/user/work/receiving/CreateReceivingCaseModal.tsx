@@ -281,8 +281,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         handlerId: currentEmployee.id,
         supplierId: formData.supplierId,
         form: formData.form,
-        startDate: formData.deliveryDateTime || null,
-        endDate: formData.completionDateTime || null,
+        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
+        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
         status: ReceivingCaseStatus.RECEIVED,
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

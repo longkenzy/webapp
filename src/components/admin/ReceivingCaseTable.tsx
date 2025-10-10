@@ -533,7 +533,26 @@ export default function ReceivingCaseTable({
     // Determine timestamps for each step - sử dụng đúng các cột trong database
     const receivedTime = caseItem.startDate; // Thời gian tiếp nhận từ cột startDate
     const inProgressTime = caseItem.inProgressAt; // Thời gian đang xử lý từ cột inProgressAt
-    const completedTime = caseItem.endDate; // Thời gian hoàn thành từ cột endDate
+    
+    // Validation: Thời gian hoàn thành phải lớn hơn thời gian tiếp nhận và đang xử lý
+    let completedTime = null;
+    if (caseItem.status === 'COMPLETED' && caseItem.endDate) {
+      const endDate = new Date(caseItem.endDate);
+      const startDate = new Date(caseItem.startDate);
+      
+      // Kiểm tra nếu endDate hợp lệ (lớn hơn startDate)
+      if (endDate > startDate) {
+        // Nếu có inProgressTime, cũng kiểm tra endDate > inProgressTime
+        if (inProgressTime) {
+          const inProgressDate = new Date(inProgressTime);
+          if (endDate > inProgressDate) {
+            completedTime = caseItem.endDate;
+          }
+        } else {
+          completedTime = caseItem.endDate;
+        }
+      }
+    }
 
     return (
       <div className="py-1">

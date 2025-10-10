@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string  }> }
@@ -13,7 +21,7 @@ export async function PUT(
     }
 
     const { id: caseId } = await params;
-    const currentTime = new Date();
+    const currentTime = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
 
     console.log(`=== Closing Receiving Case ===`);
     console.log(`Case ID: ${caseId}`);

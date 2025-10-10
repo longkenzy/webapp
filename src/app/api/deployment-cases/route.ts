@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { DeploymentCaseStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
+import { convertToVietnamTime } from "@/lib/date-utils";
+import { validateCaseDates, processUserAssessment } from "@/lib/case-helpers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,21 +50,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate end date (only if both dates exist) - allow any past/future dates
+    // Validate end date using dayjs helper
+    const dateValidationError = validateCaseDates(startDate, endDate);
+    if (dateValidationError) {
+      console.log("Invalid date:", dateValidationError);
+      return NextResponse.json({ 
+        error: dateValidationError 
+      }, { status: 400 });
+    }
+    
     if (startDate && endDate) {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      
       console.log("=== API Deployment Date Validation (Create) ===");
-      console.log("Start Date:", startDateObj);
-      console.log("End Date:", endDateObj);
-      console.log("End <= Start?", endDateObj <= startDateObj);
-      
-      if (endDateObj <= startDateObj) {
-        return NextResponse.json({ 
-          error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
-        }, { status: 400 });
-      }
+      console.log("Start Date:", startDate);
+      console.log("End Date:", endDate);
     }
 
     // Validate reporter and handler exist
@@ -131,18 +131,13 @@ export async function POST(request: NextRequest) {
         deploymentTypeId,
         customerName,
         customerId: customerId || null,
-        startDate: new Date(startDate),
+        startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
         status: status || DeploymentCaseStatus.RECEIVED,
         notes: notes || null,
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
         // User assessment fields
-        userDifficultyLevel: userDifficultyLevel !== undefined && userDifficultyLevel !== null ? parseInt(userDifficultyLevel) : null,
-        userEstimatedTime: userEstimatedTime !== undefined && userEstimatedTime !== null ? parseInt(userEstimatedTime) : null,
-        userImpactLevel: userImpactLevel !== undefined && userImpactLevel !== null ? parseInt(userImpactLevel) : null,
-        userUrgencyLevel: userUrgencyLevel !== undefined && userUrgencyLevel !== null ? parseInt(userUrgencyLevel) : null,
-        userFormScore: userFormScore !== undefined && userFormScore !== null ? parseInt(userFormScore) : null,
-        userAssessmentDate: new Date()
+        ...processUserAssessment(body)
       },
       include: {
         reporter: {

@@ -392,8 +392,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess }: 
         handlerId: employeeId,
         customerId: formData.customerId,
         form: formData.form || 'Giao hàng',
-        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
-        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
+        startDate: formData.deliveryDateTime || null,
+        endDate: formData.completionDateTime || null,
         status: formData.status as ReceivingCaseStatus,
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Users, ChevronDown, Phone, Mail, Briefcase } from "lucide-react";
 import Link from "next/link";
 import DeleteConfirmationModal from '@/components/shared/common/DeleteConfirmationModal';
+import { formatVietnamDate } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -246,7 +247,7 @@ export default function PersonnelListPage() {
   };
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    return formatVietnamDate(date);
   };
 
   const getYearOfBirth = (dateOfBirth: Date) => {

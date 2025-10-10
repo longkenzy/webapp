@@ -2,12 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { MaintenanceCaseStatus } from '@prisma/client';
 import { createCaseCreatedNotification, getAdminUsers } from '@/lib/notifications';
+import { convertToVietnamTime } from "@/lib/date-utils";
+import { 
+  withAuth, 
+  withErrorHandling, 
+  successResponse, 
+  errorResponse, 
+  validateRequiredFields,
+  setNoCacheHeaders
+} from '@/lib/api-middleware';
+import { 
+  validateCaseDates, 
+  processUserAssessment, 
+  sendCaseNotifications
+} from '@/lib/case-helpers';
 
-export async function GET(request: NextRequest) {
-  try {
-    // Temporarily disable authentication for testing in production
-    console.log('Maintenance cases API called');
-
+export const GET = withErrorHandling(
+  withAuth(async (request: NextRequest) => {
     const maintenanceCases = await db.maintenanceCase.findMany({
       include: {
         reporter: {
@@ -49,42 +60,13 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
-      success: true,
-      data: maintenanceCases
-    }, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching maintenance cases:', error);
-    return NextResponse.json(
-      { 
-        success: false,
-        error: 'Failed to fetch maintenance cases',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
-}
+    const response = successResponse(maintenanceCases);
+    return setNoCacheHeaders(response);
+  })
+);
 
-export async function POST(request: NextRequest) {
-  try {
-    // Temporarily disable authentication for testing
-    // const session = await getServerSession(authOptions);
-    
-    // if (!session?.user?.id) {
-    //   return NextResponse.json(
-    //     { error: 'Unauthorized' },
-    //     { status: 401 }
-    //   );
-    // }
-
+export const POST = withErrorHandling(
+  withAuth(async (request: NextRequest) => {
     const body = await request.json();
     const { 
       title, 
@@ -97,30 +79,32 @@ export async function POST(request: NextRequest) {
       endDate, 
       status, 
       notes,
-      crmReferenceCode, // Thêm trường Mã CRM
-      userDifficultyLevel,
-      userEstimatedTime,
-      userImpactLevel,
-      userUrgencyLevel,
-      userFormScore
+      crmReferenceCode
     } = body;
 
     // Validate required fields
-    if (!title || !description || !handlerId || !customerName || !startDate || !maintenanceTypeId) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    const missingFields = validateRequiredFields(body, [
+      'title', 'description', 'handlerId', 'customerName', 'startDate', 'maintenanceTypeId'
+    ]);
+
+    if (missingFields.length > 0) {
+      return errorResponse(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Get first employee as default reporter (for now)
+    // Validate dates
+    const dateError = validateCaseDates(startDate, endDate);
+    if (dateError) {
+      return errorResponse(dateError);
+    }
+
+    // Get default employee as reporter
     const defaultEmployee = await db.employee.findFirst();
     if (!defaultEmployee) {
-      return NextResponse.json(
-        { error: 'No employees found' },
-        { status: 400 }
-      );
+      return errorResponse('No employees found');
     }
+
+    // Process user assessment data
+    const userAssessment = processUserAssessment(body);
 
     const newMaintenanceCase = await db.maintenanceCase.create({
       data: {
@@ -130,19 +114,14 @@ export async function POST(request: NextRequest) {
         handlerId,
         customerName,
         customerId: customerId || null,
-        maintenanceType: 'PREVENTIVE', // Default enum value - this field should be set based on business logic
-        maintenanceTypeId: maintenanceTypeId,
-        startDate: new Date(startDate),
+        maintenanceType: 'PREVENTIVE',
+        maintenanceTypeId,
+        startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
         notes: notes || '',
         status: status || MaintenanceCaseStatus.RECEIVED,
-        crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
-        // User evaluation data - convert strings to integers
-        userDifficultyLevel: userDifficultyLevel ? parseInt(userDifficultyLevel) : null,
-        userEstimatedTime: userEstimatedTime ? parseInt(userEstimatedTime) : null,
-        userImpactLevel: userImpactLevel ? parseInt(userImpactLevel) : null,
-        userUrgencyLevel: userUrgencyLevel ? parseInt(userUrgencyLevel) : null,
-        userFormScore: userFormScore ? parseInt(userFormScore) : null
+        crmReferenceCode: crmReferenceCode || null,
+        ...userAssessment
       },
       include: {
         reporter: {
@@ -172,45 +151,9 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Create notifications for admin users
-    try {
-      const adminUsers = await getAdminUsers();
-      const requesterName = defaultEmployee.fullName;
-      
-      for (const admin of adminUsers) {
-        await createCaseCreatedNotification(
-          'maintenance',
-          newMaintenanceCase.id,
-          newMaintenanceCase.title,
-          requesterName,
-          admin.id
-        );
-      }
-      console.log(`Notifications sent to ${adminUsers.length} admin users`);
-    } catch (notificationError) {
-      console.error('Error creating notifications:', notificationError);
-      // Don't fail the case creation if notifications fail
-    }
+    // Send notifications asynchronously
+    sendCaseNotifications('maintenance', newMaintenanceCase.id, newMaintenanceCase.title, defaultEmployee.fullName);
 
-    return NextResponse.json({
-      success: true,
-      message: 'Maintenance case created successfully',
-      data: newMaintenanceCase
-    }, { 
-      status: 201,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
-      }
-    });
-  } catch (error) {
-    console.error('Error creating maintenance case:', error);
-    return NextResponse.json(
-      { 
-        success: false,
-        error: 'Failed to create maintenance case',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
-  }
-}
+    return successResponse(newMaintenanceCase, 'Maintenance case created successfully');
+  })
+);

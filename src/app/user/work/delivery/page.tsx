@@ -645,138 +645,162 @@ export default function DeliveryCasePage() {
           </div>
 
         {/* Search and Filter Section */}
-        <div className="bg-white rounded-lg border border-gray-200 mb-4 md:mb-6 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 md:mb-6">
           {/* Header */}
-          <div className="flex items-center justify-between p-3 border-b border-gray-100">
-            <button 
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 flex-1 md:pointer-events-none"
-            >
-              <div className="p-1 bg-green-50 rounded">
-                <Search className="h-3.5 w-3.5 text-green-600" />
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 md:px-6 py-3 md:py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-1.5 md:p-2 bg-green-100 rounded-lg">
+                  <Search className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-lg font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
+                  <p className="text-xs text-gray-600 hidden md:block">Tìm kiếm và lọc case giao hàng theo nhiều tiêu chí</p>
+                </div>
               </div>
-              <span className="text-sm font-medium text-gray-900">Tìm kiếm & Lọc</span>
-              {(searchTerm || hasActiveFilters()) && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-xs font-medium text-white">
-                  {[searchTerm, ...Object.values(filters)].filter(Boolean).length}
-                </span>
-              )}
-              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform md:hidden ml-auto ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
-            <div className="flex items-center gap-2">
-              {(searchTerm || hasActiveFilters()) && (
-                <button
-                  onClick={() => {
-                    setSearchTerm('');
-                    clearFilters();
-                  }}
-                  className="text-xs font-medium text-green-600 hover:text-green-700 px-2 py-1"
-                >
-                  Xóa hết
-                </button>
-              )}
               <button 
                 onClick={refreshCases}
                 disabled={refreshing}
-                className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 text-xs md:text-sm"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 text-xs md:text-sm"
               >
-                <RefreshCw className={`h-3 w-3 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Làm mới</span>
+                <RefreshCw className={`h-3.5 w-3.5 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden md:inline">Làm mới</span>
               </button>
             </div>
           </div>
 
           {/* Content */}
-          <div className={`${showFilters ? 'block' : 'hidden md:block'}`}>
-            <div className="p-3 space-y-2.5">
+          <div className="p-3 md:p-4">
+            <div className="space-y-2 md:space-y-3">
               {/* Search Section */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Tìm kiếm</label>
+                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-1.5">
+                  Tìm kiếm
+                </label>
                 <div className="relative">
+                  <Search className="absolute left-2.5 md:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Tìm kiếm case..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow placeholder:text-gray-400"
+                    className="w-full pl-8 md:pl-10 pr-2.5 md:pr-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                   />
                 </div>
               </div>
 
               {/* Filters Section */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Bộ lọc</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2.5">
-                  {/* Người giao hàng */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Người giao hàng</label>
-                    <select
-                      value={filters.deliveryPerson}
-                      onChange={(e) => setFilters(prev => ({ ...prev, deliveryPerson: e.target.value }))}
-                      className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow"
-                    >
-                      <option value="">Tất cả</option>
-                      {getUniqueDeliveryPersons().map(person => (
-                        <option key={person} value={person}>{person}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Khách hàng */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Khách hàng</label>
-                    <select
-                      value={filters.customer}
-                      onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
-                      className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow"
-                    >
-                      <option value="">Tất cả</option>
-                      {getUniqueCustomers().map(customer => (
-                        <option key={customer} value={customer}>{customer}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Trạng thái */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Trạng thái</label>
-                    <select
-                      value={filters.status}
-                      onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                      className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow"
-                    >
-                      <option value="">Tất cả</option>
-                      {getUniqueStatuses().map(status => (
-                        <option key={status} value={status}>{getStatusText(status)}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Từ ngày */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Từ ngày</label>
-                    <input
-                      type="date"
-                      value={filters.startDate}
-                      onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow"
-                    />
-                  </div>
-
-                  {/* Đến ngày */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Đến ngày</label>
-                    <input
-                      type="date"
-                      value={filters.endDate}
-                      onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                      className={`w-full px-2.5 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-shadow ${
-                        !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
-                      }`}
-                    />
-                    {!isDateRangeValid() && (
-                      <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
+                {/* Collapsible Filter Header */}
+                <div className="flex items-center justify-between mb-2">
+                  <div 
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 cursor-pointer flex-1"
+                  >
+                    <label className="text-xs md:text-sm font-medium text-gray-700 cursor-pointer flex-shrink-0">
+                      Bộ lọc
+                    </label>
+                    {hasActiveFilters() && (
+                      <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-green-100 text-green-600 text-xs font-medium">
+                        {Object.values(filters).filter(Boolean).length}
+                      </span>
                     )}
+                    <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform md:hidden ${showFilters ? 'rotate-180' : ''}`} />
+                  </div>
+                  {hasActiveFilters() && (
+                    <button
+                      onClick={clearFilters}
+                      className="text-xs text-gray-600 hover:text-gray-800 font-medium px-2 py-1 hover:bg-gray-100 rounded transition-colors"
+                    >
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+
+                {/* Filters Grid */}
+                <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                    {/* Người giao hàng */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Người giao
+                      </label>
+                      <select
+                        value={filters.deliveryPerson}
+                        onChange={(e) => setFilters(prev => ({ ...prev, deliveryPerson: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      >
+                        <option value="">Tất cả</option>
+                        {getUniqueDeliveryPersons().map(person => (
+                          <option key={person} value={person}>{person}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Khách hàng */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Khách hàng
+                      </label>
+                      <select
+                        value={filters.customer}
+                        onChange={(e) => setFilters(prev => ({ ...prev, customer: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      >
+                        <option value="">Tất cả</option>
+                        {getUniqueCustomers().map(customer => (
+                          <option key={customer} value={customer}>{customer}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Trạng thái */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Trạng thái
+                      </label>
+                      <select
+                        value={filters.status}
+                        onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      >
+                        <option value="">Tất cả</option>
+                        {getUniqueStatuses().map(status => (
+                          <option key={status} value={status}>{getStatusText(status)}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Từ ngày */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Từ ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={filters.startDate}
+                        onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
+                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      />
+                    </div>
+
+                    {/* Đến ngày */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Đến ngày
+                      </label>
+                      <input
+                        type="date"
+                        value={filters.endDate}
+                        onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
+                        className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${
+                          !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
+                        }`}
+                      />
+                      {!isDateRangeValid() && (
+                        <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

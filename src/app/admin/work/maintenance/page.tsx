@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import CreateMaintenanceModal from './CreateMaintenanceModal';
+import { getCurrentDateForFilename, formatVietnamDateTime } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -177,7 +178,8 @@ export default function AdminMaintenanceWorkPage() {
         headers: { 'Cache-Control': 'max-age=600' }
       });
       if (response.ok) {
-        const data = await response.json();
+        const result = await response.json();
+        const data = result.data || result;
         setEmployees(data || []);
         setEmployeesLoaded(true);
       }
@@ -324,7 +326,7 @@ export default function AdminMaintenanceWorkPage() {
           adminEstimatedTime: parseInt(evaluationForm.adminEstimatedTime),
           adminImpactLevel: parseInt(evaluationForm.adminImpactLevel),
           adminUrgencyLevel: parseInt(evaluationForm.adminUrgencyLevel),
-          adminAssessmentDate: new Date().toISOString(),
+          adminAssessmentDate: new Date(),
           adminAssessmentNotes: 'Admin evaluation completed'
         }),
       });
@@ -516,9 +518,9 @@ export default function AdminMaintenanceWorkPage() {
       'Người xử lý': case_.handler.fullName,
       'Loại bảo trì': case_.maintenanceCaseType?.name || case_.maintenanceType,
       'Trạng thái': case_.status,
-      'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-      'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : '',
-      'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+      'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN'),
+      'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN') : '',
+      'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN'),
       'Ghi chú': case_.notes || '',
       'Đánh giá khó (User)': case_.userDifficultyLevel || '',
       'Thời gian ước tính (User)': case_.userEstimatedTime || '',
@@ -533,7 +535,7 @@ export default function AdminMaintenanceWorkPage() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Maintenance Cases');
-    XLSX.writeFile(wb, `maintenance-cases-${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.writeFile(wb, `maintenance-cases-${getCurrentDateForFilename()}.xlsx`);
     toast.success('Xuất file Excel thành công!');
   };
 
@@ -1022,13 +1024,13 @@ export default function AdminMaintenanceWorkPage() {
                           {dateFrom && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
                               <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
-                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
                             </span>
                           )}
                           {dateTo && (
                             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
                               <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
-                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
                             </span>
                           )}
                         </div>
@@ -1137,7 +1139,7 @@ export default function AdminMaintenanceWorkPage() {
                                 {case_.title}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Tạo: {new Date(case_.createdAt).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                                Tạo: {formatVietnamDateTime(case_.createdAt)}
                               </div>
                             </div>
                           </td>
@@ -1169,8 +1171,7 @@ export default function AdminMaintenanceWorkPage() {
                               month: '2-digit', 
                               day: '2-digit', 
                               hour: '2-digit', 
-                              minute: '2-digit',
-                              timeZone: 'Asia/Ho_Chi_Minh'
+                              minute: '2-digit'
                             })}</div>
                             {case_.endDate && (
                               <div>Kết thúc: {new Date(case_.endDate).toLocaleString('vi-VN', { 
@@ -1178,8 +1179,7 @@ export default function AdminMaintenanceWorkPage() {
                                 month: '2-digit', 
                                 day: '2-digit', 
                                 hour: '2-digit', 
-                                minute: '2-digit',
-                                timeZone: 'Asia/Ho_Chi_Minh'
+                                minute: '2-digit'
                               })}</div>
                             )}
                           </td>

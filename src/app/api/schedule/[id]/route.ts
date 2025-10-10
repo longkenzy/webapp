@@ -3,6 +3,14 @@ import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 const updateScheduleSchema = z.object({
   title: z.string().min(1, "Title is required").optional(),
   description: z.string().optional(),
@@ -83,10 +91,10 @@ export async function PUT(
 
     const updateData: any = { ...validatedData };
     if (validatedData.startAt) {
-      updateData.startAt = new Date(validatedData.startAt);
+      updateData.startAt = dayjs(validatedData.startAt).tz('Asia/Ho_Chi_Minh').toDate();
     }
     if (validatedData.endAt) {
-      updateData.endAt = new Date(validatedData.endAt);
+      updateData.endAt = dayjs(validatedData.endAt).tz('Asia/Ho_Chi_Minh').toDate();
     }
     if (validatedData.company) {
       updateData.location = validatedData.company;

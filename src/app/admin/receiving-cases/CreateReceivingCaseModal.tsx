@@ -8,6 +8,7 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import { useSession } from 'next-auth/react';
 import { ReceivingCaseStatus } from '@prisma/client';
 import toast from 'react-hot-toast';
+import { convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -122,28 +123,9 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   // Populate form data when in edit mode
   useEffect(() => {
     if (editData && isOpen) {
-      // Convert datetime to local timezone for datetime-local input
-      let deliveryDateTimeLocal = '';
-      if (editData.startDate) {
-        const startDateObj = new Date(editData.startDate);
-        const year = startDateObj.getFullYear();
-        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(startDateObj.getDate()).padStart(2, '0');
-        const hours = String(startDateObj.getHours()).padStart(2, '0');
-        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
-        deliveryDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
-
-      let completionDateTimeLocal = '';
-      if (editData.endDate) {
-        const endDateObj = new Date(editData.endDate);
-        const year = endDateObj.getFullYear();
-        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(endDateObj.getDate()).padStart(2, '0');
-        const hours = String(endDateObj.getHours()).padStart(2, '0');
-        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
-        completionDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
+      // Convert datetime to local timezone for datetime-local input using timezone-aware function
+      const deliveryDateTimeLocal = editData.startDate ? convertISOToLocalInput(editData.startDate) : '';
+      const completionDateTimeLocal = editData.endDate ? convertISOToLocalInput(editData.endDate) : '';
 
       setFormData({
         supplierId: editData.supplier?.id || '',
@@ -162,6 +144,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
       });
 
       console.log('✅ Edit Mode - Handler ID from editData:', editData.handler?.id);
+      console.log('✅ Edit Mode - Form value from editData:', editData.form);
+      console.log('✅ Edit Mode - Form Score from editData:', editData.userFormScore);
 
       // Set selected partner
       if (editData.supplier) {
@@ -217,14 +201,16 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     { value: 'CANCELLED', label: 'Hủy' }
   ];
 
-  // Fetch partners, employees and current employee when modal opens
+  // Fetch partners, employees, current employee and evaluation configs when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchPartners();
       fetchEmployees();
       fetchCurrentEmployee();
+      // Fetch evaluation configurations
+      fetchConfigs();
     }
-  }, [isOpen, session?.user?.email]);
+  }, [isOpen, session?.user?.email, fetchConfigs]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -286,7 +272,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     try {
       const response = await fetch('/api/employees/list');
       if (response.ok) {
-        const data = await response.json();
+        const dataResult = await response.json();
+        const data = dataResult.data || dataResult;
         setEmployees(data);
         console.log('✅ Fetched employees:', data.length);
       } else {
@@ -303,7 +290,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     try {
       const response = await fetch('/api/employees/list');
       if (response.ok) {
-        const employees = await response.json();
+        const employeesResult = await response.json();
+        const employees = employeesResult.data || employeesResult;
         const employee = employees.find((emp: Employee) => 
           emp.companyEmail === session.user.email
         );
@@ -466,8 +454,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         handlerId: handlerId, // Use handler selected from dropdown
         supplierId: formData.supplierId,
         form: formData.form,
-        startDate: formData.deliveryDateTime,
-        endDate: formData.completionDateTime || null,
+        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
+        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
         status: formData.status || ReceivingCaseStatus.RECEIVED, // Use status from form
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null,
@@ -1242,11 +1230,15 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
                     required
                   >
                     <option value="">Chọn hình thức làm việc</option>
-                    {getFieldOptions(EvaluationCategory.FORM).map((option) => (
-                      <option key={option.id} value={option.label}>
-                        {option.label} ({option.points} điểm)
-                      </option>
-                    ))}
+                    {getFieldOptions(EvaluationCategory.FORM).length > 0 ? (
+                      getFieldOptions(EvaluationCategory.FORM).map((option) => (
+                        <option key={option.id} value={option.label}>
+                          {option.label} ({option.points} điểm)
+                        </option>
+                      ))
+                    ) : (
+                      <option value="Onsite">Onsite (2 điểm)</option>
+                    )}
                   </select>
                   {errors.form && (
                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">

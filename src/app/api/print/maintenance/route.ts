@@ -5,6 +5,14 @@ import PizZip from 'pizzip';
 import fs from 'fs';
 import path from 'path';
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
@@ -75,7 +83,7 @@ export async function POST(request: NextRequest) {
     // Set response headers for file download
     const headers = new Headers();
     headers.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    headers.set('Content-Disposition', `attachment; filename="bien-ban-bao-tri-${new Date().toISOString().split('T')[0]}.docx"`);
+    headers.set('Content-Disposition', `attachment; filename="bien-ban-bao-tri-${dayjs().tz('Asia/Ho_Chi_Minh').toDate().toISOString().split('T')[0]}.docx"`);
     headers.set('Content-Length', buffer.length.toString());
 
     return new NextResponse(buffer as any, {

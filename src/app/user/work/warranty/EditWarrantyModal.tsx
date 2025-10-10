@@ -199,7 +199,7 @@ export default function EditWarrantyModal({
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        endDate: formData.endDate || null,
         status: formData.status,
         notes: formData.notes || null, // Thêm Ghi chú
         crmReferenceCode: formData.crmReferenceCode || null // Thêm Mã CRM

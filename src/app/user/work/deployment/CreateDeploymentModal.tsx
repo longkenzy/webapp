@@ -75,8 +75,9 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
         },
       });
       if (response.ok) {
-        const data = await response.json();
-        setEmployees(data);
+        const result = await response.json();
+        // API returns { success: true, data: [...] }
+        setEmployees(result.data || result);
       } else {
         console.error('Failed to fetch employees:', response.status, response.statusText);
         setEmployees([]);
@@ -315,13 +316,13 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate end date
+    // Validate end date using dayjs
     if (formData.endDate) {
-      const startDate = new Date(formData.startDate);
-      const endDate = new Date(formData.endDate);
+      const { validateCaseDates } = await import('@/lib/case-helpers');
+      const validationError = validateCaseDates(formData.startDate, formData.endDate);
       
-      if (endDate <= startDate) {
-        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
+      if (validationError) {
+        toast.error(validationError, {
           duration: 3000,
           position: 'top-right',
         });
@@ -370,8 +371,8 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
         handlerId: formData.handler, // Use selected handler
         deploymentTypeId: selectedDeploymentType.id,
         customerId: formData.customer || null,
-        startDate: convertLocalInputToISO(formData.startDate),
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        startDate: formData.startDate,
+        endDate: formData.endDate || null,
         status: formData.status,
         notes: formData.notes || null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

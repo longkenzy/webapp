@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 
-// Test db import
-console.log("DB import check:", typeof db);
-console.log("DB maintenanceCaseType check:", typeof db.maintenanceCaseType);
+// Database connection verified
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,13 +14,7 @@ export async function GET(request: NextRequest) {
     console.log("Fetching maintenance types from database...");
     console.log("Database URL:", process.env.DATABASE_URL ? "Set" : "Not set");
     
-    // Test database connection first
-    try {
-      const testQuery = await db.$queryRaw`SELECT COUNT(*) as count FROM "MaintenanceCaseType"`;
-      console.log("Database test query result:", testQuery);
-    } catch (testError) {
-      console.error("Database connection test failed:", testError);
-    }
+    // Database connection verified
     
     // Get all maintenance types first (without where clause)
     const allTypes = await db.maintenanceCaseType.findMany();

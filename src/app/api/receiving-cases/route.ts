@@ -3,6 +3,15 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { ReceivingCaseStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
+import { convertToVietnamTime } from "@/lib/date-utils";
+
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 
 interface Product {
   name: string;
@@ -128,7 +137,7 @@ export async function GET(request: NextRequest) {
       { 
         error: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
+        timestamp: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
       },
       { status: 500 }
     );
@@ -264,8 +273,8 @@ export async function POST(request: NextRequest) {
       handlerId,
       supplierId,
       form: form || 'Onsite',
-      startDate: new Date(startDate),
-      endDate: endDate ? new Date(endDate) : null,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        endDate: endDate ? new Date(endDate) : null,
       status: (status as ReceivingCaseStatus) || ReceivingCaseStatus.RECEIVED,
       notes: notes || null,
       crmReferenceCode: crmReferenceCode || null,
@@ -274,7 +283,7 @@ export async function POST(request: NextRequest) {
       userImpactLevel: parseInt(userImpactLevel),
       userUrgencyLevel: parseInt(userUrgencyLevel),
       userFormScore: parseInt(userFormScore),
-      userAssessmentDate: new Date()
+      userAssessmentDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
 
     console.log('Creating receiving case with data:', caseData);

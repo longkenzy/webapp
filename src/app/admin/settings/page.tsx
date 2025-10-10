@@ -5,8 +5,22 @@ import { getSession } from "@/lib/auth/session";
 
 export default async function SettingsPage() {
   const session = await getSession();
-  if (!atLeast(session?.user.role, Role.IT_LEAD)) return null;
-  const cfg = await db.kPIConfig.findFirst();
+  if (!session || !atLeast(session.user.role, Role.IT_LEAD)) {
+    return (
+      <div>
+        <h1 className="text-xl font-semibold mb-4">Access Denied</h1>
+        <p>You don't have permission to access this page.</p>
+      </div>
+    );
+  }
+
+  let cfg = null;
+  try {
+    cfg = await db.kPIConfig.findFirst();
+  } catch (error) {
+    console.error('Error fetching KPI config:', error);
+  }
+
   return (
     <div>
       <h1 className="text-xl font-semibold mb-4">Settings</h1>

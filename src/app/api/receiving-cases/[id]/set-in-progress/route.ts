@@ -3,6 +3,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { db } from '@/lib/db';
 
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,8 +49,8 @@ export async function PUT(
       where: { id: caseId },
       data: {
         status: 'IN_PROGRESS',
-        inProgressAt: new Date(),
-        updatedAt: new Date(),
+        inProgressAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
+        updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
       },
       include: {
         requester: true,

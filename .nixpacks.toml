@@ -1,0 +1,11 @@
+[phases.install]
+cmd = "npm ci"
+
+[phases.build]
+cmds = [
+  "npx prisma generate --schema src/prisma/schema.prisma",
+  "npm run build"
+]
+
+[start]
+cmd = "npx prisma generate --schema src/prisma/schema.prisma && npm run prisma:deploy && npm run start"

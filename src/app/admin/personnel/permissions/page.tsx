@@ -9,6 +9,7 @@ import { Plus, Search, Filter, UserCheck, Users, Shield, Key, Edit, Trash2 } fro
 import Link from "next/link";
 import EditPermissionsModal from "@/components/shared/common/EditPermissionsModal";
 import Notification from "@/components/shared/common/Notification";
+import { formatVietnamDate } from "@/lib/date-utils";
 
 interface User {
   id: string;
@@ -417,7 +418,7 @@ export default function PermissionsPage() {
                         {getStatusBadge(user.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(user.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                        {formatVietnamDate(user.createdAt)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">

@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { convertToVietnamTime } from "@/lib/date-utils";
+
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 
 export async function PUT(
   request: NextRequest,
@@ -58,8 +67,8 @@ export async function PUT(
 
     // Validate end date (only if both dates exist) - allow any past/future dates
     if (endDate && (startDate || existingIncident.startDate)) {
-      const startDateToCheck = startDate ? new Date(startDate) : new Date(existingIncident.startDate);
-      const endDateObj = new Date(endDate);
+      const startDateToCheck = startDate ? dayjs(startDate).tz('Asia/Ho_Chi_Minh').toDate() : dayjs(existingIncident.startDate).tz('Asia/Ho_Chi_Minh').toDate();
+      const endDateObj = dayjs(endDate).tz('Asia/Ho_Chi_Minh').toDate();
       
       console.log("=== API Incident Date Validation ===");
       console.log("Start Date to check:", startDateToCheck);
@@ -67,7 +76,7 @@ export async function PUT(
       console.log("End <= Start?", endDateObj <= startDateToCheck);
       
       if (endDateObj <= startDateToCheck) {
-        console.log("Invalid end date:", { startDate: startDateToCheck, endDate: endDateObj });
+        console.log("Invalid end date:", { startDate: startDate ? convertToVietnamTime(startDate) : startDateToCheck, endDate: endDateObj });
         return NextResponse.json({ 
           error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
         }, { status: 400 });
@@ -76,7 +85,7 @@ export async function PUT(
 
     // Prepare update data
     const updateData: any = {
-      updatedAt: new Date()
+      updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
     
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
@@ -88,7 +97,7 @@ export async function PUT(
     if (customerName !== undefined) updateData.customerName = customerName;
     if (customerId !== undefined) updateData.customerId = customerId;
     if (handlerId !== undefined) updateData.handlerId = handlerId;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     
     // Handle incidentType - need to find incidentTypeId by name
     if (incidentType !== undefined && incidentType) {
@@ -125,7 +134,7 @@ export async function PUT(
                               adminAssessmentNotes !== undefined;
     
     if (hasAdminAssessment) {
-      updateData.adminAssessmentDate = new Date();
+      updateData.adminAssessmentDate = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
     }
 
     console.log("Updating incident with data:", updateData);

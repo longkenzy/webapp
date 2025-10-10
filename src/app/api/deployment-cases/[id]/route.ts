@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { convertToVietnamTime } from "@/lib/date-utils";
+
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 
 export async function GET(
   request: NextRequest,
@@ -135,8 +144,8 @@ export async function PUT(
 
     // Validate end date (only if both dates exist) - allow any past/future dates
     if (endDate && endDate !== null && endDate !== '') {
-      const startDateToCheck = startDate ? new Date(startDate) : new Date(currentCase.startDate);
-      const endDateObj = new Date(endDate);
+      const startDateToCheck = startDate ? dayjs(startDate).tz('Asia/Ho_Chi_Minh').toDate() : dayjs(currentCase.startDate).tz('Asia/Ho_Chi_Minh').toDate();
+      const endDateObj = dayjs(endDate).tz('Asia/Ho_Chi_Minh').toDate();
       
       console.log("=== API Deployment Date Validation (Update) ===");
       console.log("Start Date:", startDateToCheck);
@@ -152,7 +161,7 @@ export async function PUT(
 
     // Build update data dynamically
     const updateData: any = {
-      updatedAt: new Date()
+      updatedAt: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
     };
     
     if (title !== undefined) updateData.title = title;
@@ -160,7 +169,7 @@ export async function PUT(
     if (customerName !== undefined) updateData.customerName = customerName;
     if (caseType !== undefined) updateData.caseType = caseType;
     if (form !== undefined) updateData.form = form;
-    if (startDate !== undefined) updateData.startDate = new Date(startDate);
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     if (endDate !== undefined) {
       if (endDate === null || endDate === '') {
         updateData.endDate = null;
@@ -205,7 +214,7 @@ export async function PUT(
     
     // Set admin assessment date if any admin field is being updated
     if (Object.keys(updateData).some(key => key.startsWith('admin'))) {
-      updateData.adminAssessmentDate = new Date();
+      updateData.adminAssessmentDate = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
     }
     
     console.log('Update data to be sent to Prisma:', updateData);

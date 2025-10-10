@@ -367,7 +367,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       console.log('Loading employees from API...');
       const response = await fetch('/api/employees/list');
       if (response.ok) {
-        const data = await response.json();
+        const dataResult = await response.json();
+        const data = dataResult.data || dataResult;
         setEmployees(data);
         console.log('✅ Fetched employees:', data.length);
       } else {
@@ -611,8 +612,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         handlerId: handlerId, // Use handler selected from dropdown
         customerId: formData.customerId,
         form: formData.form || 'Giao hàng',
-        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
-        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
+        startDate: formData.deliveryDateTime || null,
+        endDate: formData.completionDateTime || null,
         status: formData.status || 'RECEIVED', // Use status from form
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null,

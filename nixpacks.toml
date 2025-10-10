@@ -1,0 +1,18 @@
+[phases.install]
+cmds = [
+  "npm install"
+]
+
+[variables]
+TZ = "Asia/Ho_Chi_Minh"
+
+[phases.build]
+cmds = [
+  "npx prisma generate --schema src/prisma/schema.prisma",
+  "npm run build"
+]
+
+[start]
+cmd = "npx prisma generate --schema src/prisma/schema.prisma && npm run prisma:deploy && npm run start"
+
+

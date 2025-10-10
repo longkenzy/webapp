@@ -6,12 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "8080:8080"
     environment:
       - NODE_ENV=development
+      - TZ=Asia/Ho_Chi_Minh
       - DATABASE_URL=postgresql://postgres:password@db:5432/it_web_dev
       - NEXTAUTH_SECRET=your-development-secret
-      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_URL=http://localhost:8080
     volumes:
       - .:/app
       - /app/node_modules

@@ -10,6 +10,13 @@ import toast from 'react-hot-toast';
 import EditInternalCaseModal from './EditInternalCaseModal';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import CreateInternalCaseModal from '../../../user/work/internal/CreateInternalCaseModal';
+import { formatVietnamDateTime } from '@/lib/date-utils';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 interface CaseType {
   id: string;
@@ -804,21 +811,13 @@ export default function AdminInternalWorkPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Ho_Chi_Minh'
-    });
+    return formatVietnamDateTime(dateString);
   };
 
   const calculateDuration = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffMs = end.getTime() - start.getTime();
+    const start = dayjs(startDate).tz('Asia/Ho_Chi_Minh');
+    const end = dayjs(endDate).tz('Asia/Ho_Chi_Minh');
+    const diffMs = end.diff(start);
     
     if (diffMs < 0) return '0h 0m';
     
@@ -1404,13 +1403,13 @@ export default function AdminInternalWorkPage() {
                             {dateFrom && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                                 <Calendar className="h-2.5 w-2.5 mr-1" />
-                                Từ: {new Date(dateFrom + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                                Từ: {new Date(dateFrom + 'T00:00:00').toLocaleDateString('vi-VN')}
                               </span>
                             )}
                             {dateTo && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
                                 <Calendar className="h-2.5 w-2.5 mr-1" />
-                                Đến: {new Date(dateTo + 'T00:00:00').toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                                Đến: {new Date(dateTo + 'T00:00:00').toLocaleDateString('vi-VN')}
                               </span>
                             )}
                           </div>

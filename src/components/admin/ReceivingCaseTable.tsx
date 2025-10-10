@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ReceivingCaseStatus, EvaluationType, EvaluationCategory } from '@prisma/client';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
+import { formatVietnamDateTime } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -51,6 +52,7 @@ interface ReceivingCase {
   form: string;
   startDate: string;
   endDate: string | null;
+  inProgressAt: string | null;
   status: ReceivingCaseStatus;
   notes: string | null;
   crmReferenceCode: string | null;
@@ -450,15 +452,7 @@ export default function ReceivingCaseTable({
   }, [propAllCases]);
 
   const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Ho_Chi_Minh'
-    });
+    return formatVietnamDateTime(dateString);
   };
 
   const formatDateRange = (startDate: string, endDate: string | null) => {
@@ -536,12 +530,29 @@ export default function ReceivingCaseTable({
     const currentStep = caseItem.status === 'RECEIVED' ? 1 : 
                       caseItem.status === 'IN_PROGRESS' ? 2 : 3;
 
-    // Determine timestamps for each step
-    const receivedTime = caseItem.createdAt; // Case được tạo = tiếp nhận
-    const inProgressTime = caseItem.status === 'IN_PROGRESS' || caseItem.status === 'COMPLETED' ? 
-                          caseItem.updatedAt : null; // Có thể cần thêm field riêng
-    const completedTime = caseItem.status === 'COMPLETED' ? 
-                         caseItem.endDate || caseItem.updatedAt : null;
+    // Determine timestamps for each step - sử dụng đúng các cột trong database
+    const receivedTime = caseItem.startDate; // Thời gian tiếp nhận từ cột startDate
+    const inProgressTime = caseItem.inProgressAt; // Thời gian đang xử lý từ cột inProgressAt
+    
+    // Validation: Thời gian hoàn thành phải lớn hơn thời gian tiếp nhận và đang xử lý
+    let completedTime = null;
+    if (caseItem.status === 'COMPLETED' && caseItem.endDate) {
+      const endDate = new Date(caseItem.endDate);
+      const startDate = new Date(caseItem.startDate);
+      
+      // Kiểm tra nếu endDate hợp lệ (lớn hơn startDate)
+      if (endDate > startDate) {
+        // Nếu có inProgressTime, cũng kiểm tra endDate > inProgressTime
+        if (inProgressTime) {
+          const inProgressDate = new Date(inProgressTime);
+          if (endDate > inProgressDate) {
+            completedTime = caseItem.endDate;
+          }
+        } else {
+          completedTime = caseItem.endDate;
+        }
+      }
+    }
 
     return (
       <div className="py-1">
@@ -784,21 +795,14 @@ export default function ReceivingCaseTable({
                 <div>
                   <span>Bắt đầu: </span>
                   <span className="font-medium">
-                    {new Date(caseItem.startDate).toLocaleString('vi-VN', { 
-                      day: '2-digit', 
-                      month: '2-digit', 
-                      year: 'numeric', 
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      timeZone: 'Asia/Ho_Chi_Minh' 
-                    })}
+                    {formatVietnamDateTime(caseItem.startDate)}
                   </span>
                 </div>
                 {caseItem.endDate && (
                   <div>
                     <span>Kết thúc: </span>
                     <span className="font-medium">
-                      {new Date(caseItem.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                      {formatVietnamDateTime(caseItem.endDate)}
                     </span>
                   </div>
                 )}

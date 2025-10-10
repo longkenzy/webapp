@@ -134,7 +134,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
     try {
       const response = await fetch('/api/employees/list');
       if (response.ok) {
-        const employees = await response.json();
+        const employeesResult = await response.json();
+        const employees = employeesResult.data || employeesResult;
         // Find current user's employee record
         const employee = employees.find((emp: Employee) => 
           emp.companyEmail === session.user.email

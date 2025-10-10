@@ -339,8 +339,8 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
         handlerId: formData.handler,
         warrantyTypeId: formData.warrantyType,
         customerId: formData.customer || null,
-        startDate: convertLocalInputToISO(formData.startDate),
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        startDate: formData.startDate,
+        endDate: formData.endDate || null,
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
@@ -350,7 +350,7 @@ export default function CreateWarrantyModal({ isOpen, onClose, onSuccess }: Crea
         userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
         userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
         userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
-        userAssessmentDate: new Date().toISOString()
+        userAssessmentDate: new Date()
       };
 
       console.log('=== Submitting Warranty ===');

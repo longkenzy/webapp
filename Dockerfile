@@ -1,45 +1,40 @@
-FROM node:18-alpine AS base
-RUN apk add --no-cache libc6-compat openssl
+# Multi-stage Dockerfile for Next.js 15 + Prisma on Dokploy
+
+FROM node:18-bullseye-slim AS deps
 WORKDIR /app
 
-FROM base AS deps
-COPY package.json package-lock.json* ./
-RUN npm install --ignore-scripts
-RUN npm install @tailwindcss/postcss
+# Install dependencies (use npm install to avoid strict lockfile errors on CI)
+COPY package*.json ./
+RUN npm install --no-audit --no-fund
 
-
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+# Copy source and generate Prisma client before build
 COPY . .
-
-# ⚡ Dùng Webpack build thay vì Turbopack
-RUN sed -i 's/--turbopack//g' package.json
-# Thiết lập biến môi trường cho Prisma trong lúc build
-ARG DATABASE_URL
-ENV DATABASE_URL=${DATABASE_URL}
-
 RUN npx prisma generate --schema src/prisma/schema.prisma
+
+# Build Next.js in standalone mode
 RUN npm run build
 
-FROM base AS runner
+
+FROM node:18-bullseye-slim AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
-ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
+ENV PORT=8080
+ENV TZ=Asia/Ho_Chi_Minh
 
-RUN addgroup --system --gid 1001 nodejs \
- && adduser --system --uid 1001 nextjs
+# You may uncomment if you see OpenSSL issues at runtime (Prisma)
+# RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/public ./public
-RUN mkdir .next && chown nextjs:nodejs .next
+# Copy standalone server output, static assets, and runtime necessities
+COPY --from=deps /app/.next/standalone ./
+COPY --from=deps /app/.next/static ./.next/static
+COPY --from=deps /app/public ./public
 
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/src/prisma ./src/prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+# Prisma runtime and schema (needed if we run migrations on start)
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/package.json ./package.json
+COPY --from=deps /app/src/prisma ./src/prisma
 
-USER nextjs
-EXPOSE 3000
-CMD ["node", "server.js"]
+# Run migrations (if any) then start the server
+CMD sh -c "npx prisma migrate deploy --schema src/prisma/schema.prisma || true; node server.js"
+
+

@@ -20,12 +20,13 @@ COPY . .
 RUN npx prisma generate --schema=src/prisma/schema.prisma
 
 # Expose port cho server dev
-EXPOSE 3000
+EXPOSE 8080
 
 # Biến môi trường cơ bản
 ENV NODE_ENV=development
 ENV HOSTNAME=0.0.0.0
-ENV PORT=3000
+ENV PORT=8080
+ENV TZ=Asia/Ho_Chi_Minh
 
 # Lệnh chạy server dev
 CMD ["npm", "run", "dev"]

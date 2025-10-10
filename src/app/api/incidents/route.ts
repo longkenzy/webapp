@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { IncidentStatus } from "@prisma/client";
 import { createCaseCreatedNotification, getAdminUsers } from "@/lib/notifications";
+import { convertToVietnamTime } from "@/lib/date-utils";
+import { validateCaseDates, processUserAssessment } from "@/lib/case-helpers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,17 +78,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate end date
-    if (endDate) {
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(endDate);
-      
-      if (endDateObj <= startDateObj) {
-        console.log("Invalid end date:", { startDate, endDate });
-        return NextResponse.json({ 
-          error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
-        }, { status: 400 });
-      }
+    // Validate end date using dayjs helper
+    const dateValidationError = validateCaseDates(startDate, endDate);
+    if (dateValidationError) {
+      console.log("Invalid date:", dateValidationError);
+      return NextResponse.json({ 
+        error: dateValidationError 
+      }, { status: 400 });
     }
 
     // Validate handler exists
@@ -128,18 +126,13 @@ export async function POST(request: NextRequest) {
         handlerId,
         incidentTypeId,
         customerId: customerId || null,
-        startDate: new Date(startDate),
+        startDate: startDate ? new Date(startDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
         status: status || IncidentStatus.RECEIVED,
         notes: notes || null,
         crmReferenceCode: crmReferenceCode || null, // Thêm Mã CRM
         // User assessment fields
-        userDifficultyLevel: userDifficultyLevel !== undefined && userDifficultyLevel !== null ? parseInt(userDifficultyLevel) : null,
-        userEstimatedTime: userEstimatedTime !== undefined && userEstimatedTime !== null ? parseInt(userEstimatedTime) : null,
-        userImpactLevel: userImpactLevel !== undefined && userImpactLevel !== null ? parseInt(userImpactLevel) : null,
-        userUrgencyLevel: userUrgencyLevel !== undefined && userUrgencyLevel !== null ? parseInt(userUrgencyLevel) : null,
-        userFormScore: userFormScore !== undefined && userFormScore !== null ? parseInt(userFormScore) : null,
-        userAssessmentDate: new Date()
+        ...processUserAssessment(body)
       },
       include: {
         reporter: {

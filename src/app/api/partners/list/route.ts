@@ -1,34 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/options";
+import { withAuth, withErrorHandling, successResponse } from "@/lib/api-middleware";
+import { createOptimizedResponse, SELECT_FIELDS } from "@/lib/api-optimization";
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+export const GET = withErrorHandling(
+  withAuth(async (request: NextRequest) => {
     // Lấy danh sách partners cho user (không cần quyền admin)
     const partners = await db.partner.findMany({ 
       select: {
-        id: true,
-        fullCompanyName: true,
-        shortName: true,
-        address: true,
-        contactPerson: true,
-        contactPhone: true
+        ...SELECT_FIELDS.partner,
+        address: true
       },
       orderBy: { shortName: "asc" } 
     });
 
-    return NextResponse.json(partners);
-  } catch (error) {
-    console.error("Error fetching partners list:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+    return createOptimizedResponse(partners, {
+      cache: 'STATIC', // Partners change rarely
+      status: 200
+    });
+  })
+);

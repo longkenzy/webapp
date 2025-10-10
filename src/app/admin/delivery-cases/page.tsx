@@ -7,6 +7,7 @@ import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
 import CreateDeliveryCaseModal from './CreateDeliveryCaseModal';
 import * as XLSX from 'xlsx';
 import { DeliveryCaseStatus } from '@prisma/client';
+import { getCurrentDateForFilename } from '@/lib/date-utils';
 
 interface DeliveryCase {
   id: string;
@@ -118,7 +119,9 @@ export default function DeliveryCasesPage() {
       // Fetch delivery persons (employees)
       const deliveryPersonsResponse = await fetch('/api/employees/list');
       if (deliveryPersonsResponse.ok) {
-        const deliveryPersonsData = await deliveryPersonsResponse.json();
+        const deliveryPersonsResult = await deliveryPersonsResponse.json();
+        // Handle both old and new API response formats
+        const deliveryPersonsData = deliveryPersonsResult.data || deliveryPersonsResult;
         setDeliveryPersons(deliveryPersonsData.map((emp: any) => ({
           id: emp.id,
           fullName: emp.fullName
@@ -388,10 +391,10 @@ export default function DeliveryCasesPage() {
           'Trạng thái': case_.status === 'RECEIVED' ? 'Tiếp nhận' : 
                        case_.status === 'IN_PROGRESS' ? 'Đang xử lý' :
                        case_.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy',
-          'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-          'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa hoàn thành',
-          'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
-          'Ngày cập nhật': new Date(case_.updatedAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+          'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN'),
+          'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
+          'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN'),
+          'Ngày cập nhật': new Date(case_.updatedAt).toLocaleDateString('vi-VN'),
           'Ghi chú': case_.notes || '',
           // User evaluation
           'User - Mức độ khó': case_.userDifficultyLevel ? 
@@ -439,7 +442,7 @@ export default function DeliveryCasesPage() {
              case_.adminUrgencyLevel === 3 ? 'Trung bình' :
              case_.adminUrgencyLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
           'Admin - Tổng điểm': adminTotalScore || 'Chưa đánh giá',
-          'Admin - Ngày đánh giá': case_.adminAssessmentDate ? new Date(case_.adminAssessmentDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }) : 'Chưa đánh giá',
+          'Admin - Ngày đánh giá': case_.adminAssessmentDate ? new Date(case_.adminAssessmentDate).toLocaleDateString('vi-VN') : 'Chưa đánh giá',
           'Admin - Ghi chú đánh giá': case_.adminAssessmentNotes || '',
           // Total score
           'Tổng điểm cuối cùng': grandTotal,
@@ -495,7 +498,7 @@ export default function DeliveryCasesPage() {
       XLSX.utils.book_append_sheet(wb, ws, "Case Giao Hàng");
 
       // Generate filename with current date
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = getCurrentDateForFilename();
       const filename = `Case_Giao_Hang_${currentDate}.xlsx`;
 
       // Save file
@@ -795,13 +798,13 @@ export default function DeliveryCasesPage() {
                         {startDate && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                             <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></div>
-                            Từ: {new Date(startDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                            Từ: {new Date(startDate).toLocaleDateString('vi-VN')}
                           </span>
                         )}
                         {endDate && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
                             <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
-                            Đến: {new Date(endDate).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
+                            Đến: {new Date(endDate).toLocaleDateString('vi-VN')}
                           </span>
                         )}
                       </div>

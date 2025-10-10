@@ -10,6 +10,13 @@ import toast from 'react-hot-toast';
 import EditInternalCaseModal from './EditInternalCaseModal';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import CreateInternalCaseModal from '../../../user/work/internal/CreateInternalCaseModal';
+import { formatVietnamDateTime } from '@/lib/date-utils';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 interface CaseType {
   id: string;
@@ -804,21 +811,13 @@ export default function AdminInternalWorkPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Ho_Chi_Minh'
-    });
+    return formatVietnamDateTime(dateString);
   };
 
   const calculateDuration = (startDate: string, endDate: string) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffMs = end.getTime() - start.getTime();
+    const start = dayjs(startDate).tz('Asia/Ho_Chi_Minh');
+    const end = dayjs(endDate).tz('Asia/Ho_Chi_Minh');
+    const diffMs = end.diff(start);
     
     if (diffMs < 0) return '0h 0m';
     

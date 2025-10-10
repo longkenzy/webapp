@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, CheckCircle, Plus, Trash2, Package, Truck } from 'lucide-react';
+import { X, Calendar, CheckCircle, Plus, Trash2, Package, Truck, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 
@@ -341,8 +341,8 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
           color: #9ca3af !important;
         }
       `}} />
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4">
-        <div className="ios-input-fix bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-4xl h-[95vh] md:max-h-[90vh] flex flex-col">
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-6">
+        <div className="ios-input-fix bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-5xl h-[95vh] md:max-h-[85vh] flex flex-col">
           {/* Header */}
           <div className="sticky top-0 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-t-2xl md:rounded-t-lg z-40 flex-shrink-0">
             <div className="flex items-center justify-between">
@@ -362,7 +362,7 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-3 md:p-6 space-y-4 md:space-y-6 flex-1 overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-3 md:p-8 space-y-4 md:space-y-8 flex-1 overflow-y-auto">
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-3">
               <X className="h-5 w-5 text-red-600 flex-shrink-0" />
@@ -644,21 +644,22 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
 
 
 
-          {/* Buttons */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 md:px-0 py-3 md:py-0 md:relative md:border-t-0 mt-4 md:mt-0 md:pt-4 -mx-3 md:mx-0">
-            <div className="flex gap-2 md:gap-3 md:justify-end">
+          {/* Buttons - Desktop optimized layout */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 md:px-0 py-3 md:py-4 md:relative md:border-t-0 mt-6 md:mt-8 -mx-3 md:mx-0">
+            <div className="flex gap-3 md:gap-4 md:justify-end">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 md:flex-none px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                className="flex-1 md:flex-none px-6 py-2.5 md:px-8 md:py-3 text-sm md:text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 md:flex-none px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 md:flex-none px-6 py-2.5 md:px-8 md:py-3 text-sm md:text-base font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
+                <Save className="h-4 w-4 md:h-5 md:w-5" />
                 {loading ? 'Đang cập nhật...' : 'Cập nhật'}
               </button>
             </div>

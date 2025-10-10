@@ -9,7 +9,7 @@ import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import CreateMaintenanceModal from './CreateMaintenanceModal';
-import { getCurrentDateForFilename } from '@/lib/date-utils';
+import { getCurrentDateForFilename, formatVietnamDateTime } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -1139,7 +1139,7 @@ export default function AdminMaintenanceWorkPage() {
                                 {case_.title}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Tạo: {new Date(case_.createdAt).toLocaleString('vi-VN')}
+                                Tạo: {formatVietnamDateTime(case_.createdAt)}
                               </div>
                             </div>
                           </td>

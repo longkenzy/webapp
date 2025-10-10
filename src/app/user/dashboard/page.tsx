@@ -733,7 +733,7 @@ export default function UserDashboardPage() {
       </div>
 
       {/* Filters - Minimal Design */}
-      <div className="bg-white rounded-lg border border-gray-200 mb-3 md:mb-6 overflow-hidden">
+      <div className="bg-white rounded-lg border border-gray-200 mb-3 md:mb-6">
         {/* Filter Header */}
         <div className="flex items-center justify-between p-3 border-b border-gray-100">
           <button 
@@ -812,7 +812,7 @@ export default function UserDashboardPage() {
             </div>
 
             {/* Customer */}
-            <div className="relative">
+            <div className="relative customer-dropdown-container">
               <label className="block text-xs font-medium text-gray-700 mb-1">Khách hàng</label>
               <div className="relative">
                 <input
@@ -825,7 +825,7 @@ export default function UserDashboardPage() {
                   className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-shadow placeholder:text-gray-400"
                 />
                 {showCustomerDropdown && filteredCustomers.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
                     {filteredCustomers.map((customer, index) => (
                       <button
                         key={index}

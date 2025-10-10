@@ -162,6 +162,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
       });
 
       console.log('✅ Edit Mode - Handler ID from editData:', editData.handler?.id);
+      console.log('✅ Edit Mode - Form value from editData:', editData.form);
+      console.log('✅ Edit Mode - Form Score from editData:', editData.userFormScore);
 
       // Set selected partner
       if (editData.supplier) {
@@ -217,14 +219,16 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     { value: 'CANCELLED', label: 'Hủy' }
   ];
 
-  // Fetch partners, employees and current employee when modal opens
+  // Fetch partners, employees, current employee and evaluation configs when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchPartners();
       fetchEmployees();
       fetchCurrentEmployee();
+      // Fetch evaluation configurations
+      fetchConfigs();
     }
-  }, [isOpen, session?.user?.email]);
+  }, [isOpen, session?.user?.email, fetchConfigs]);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -1244,11 +1248,15 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
                     required
                   >
                     <option value="">Chọn hình thức làm việc</option>
-                    {getFieldOptions(EvaluationCategory.FORM).map((option) => (
-                      <option key={option.id} value={option.label}>
-                        {option.label} ({option.points} điểm)
-                      </option>
-                    ))}
+                    {getFieldOptions(EvaluationCategory.FORM).length > 0 ? (
+                      getFieldOptions(EvaluationCategory.FORM).map((option) => (
+                        <option key={option.id} value={option.label}>
+                          {option.label} ({option.points} điểm)
+                        </option>
+                      ))
+                    ) : (
+                      <option value="Onsite">Onsite (2 điểm)</option>
+                    )}
                   </select>
                   {errors.form && (
                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">

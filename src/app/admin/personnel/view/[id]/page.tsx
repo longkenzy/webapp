@@ -5,6 +5,7 @@ import { atLeast } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { ArrowLeft, Edit, Calendar, Phone, Mail, MapPin, User, Building, FileText, Clock, BadgeCheck } from "lucide-react";
 import Link from "next/link";
+import { formatVietnamDate } from "@/lib/date-utils";
 
 interface PageProps {
   params: Promise<{
@@ -31,7 +32,7 @@ export default async function EmployeeViewPage({ params }: PageProps) {
   }
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('vi-VN');
+    return formatVietnamDate(date);
   };
 
   const getAge = (dateOfBirth: Date) => {

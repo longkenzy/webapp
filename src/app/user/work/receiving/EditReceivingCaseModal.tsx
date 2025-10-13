@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Calendar, CheckCircle, Plus, Trash2, Package, Save } from 'lucide-react';
+import { X, Calendar, CheckCircle, Plus, Trash2, Package, Save, User, Truck, FileText, AlertCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO, formatVietnamDateTime } from '@/lib/date-utils';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -88,18 +90,20 @@ export default function EditReceivingCaseModal({
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [formData, setFormData] = useState({
-    endDate: '',
+    endDate: null as Date | null,
     status: 'RECEIVED',
-    crmReferenceCode: ''
+    crmReferenceCode: '',
+    notes: ''
   });
 
   // Initialize form data when modal opens
   useEffect(() => {
     if (isOpen && caseData) {
       setFormData({
-        endDate: caseData.endDate ? convertISOToLocalInput(caseData.endDate) : '',
+        endDate: caseData.endDate ? new Date(caseData.endDate) : null,
         status: caseData.status,
-        crmReferenceCode: caseData.crmReferenceCode || ''
+        crmReferenceCode: caseData.crmReferenceCode || '',
+        notes: caseData.notes || ''
       });
       
       // Initialize products from caseData
@@ -142,7 +146,7 @@ export default function EditReceivingCaseModal({
     }
   }, [isOpen]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | Date | null) => {
     setFormData(prev => {
       const newData = {
         ...prev,
@@ -151,7 +155,7 @@ export default function EditReceivingCaseModal({
       
       // Auto-fill endDate when status is set to COMPLETED
       if (field === 'status' && value === 'COMPLETED' && !prev.endDate) {
-        newData.endDate = getCurrentVietnamDateTime();
+        newData.endDate = new Date();
       }
       
       return newData;
@@ -203,22 +207,20 @@ export default function EditReceivingCaseModal({
     // Validate end date
     if (formData.endDate) {
       const startDate = new Date(caseData.startDate);
-      const endDate = new Date(formData.endDate);
       
-      if (endDate <= startDate) {
+      if (formData.endDate <= startDate) {
         toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
           duration: 3000,
           position: 'top-right',
         });
         return;
       }
-      
 
       // Validate end date with case status timeline
       // If case has inProgressAt, end date should be after the time it was set to IN_PROGRESS
       if (caseData.inProgressAt) {
         const inProgressTime = new Date(caseData.inProgressAt);
-        if (endDate <= inProgressTime) {
+        if (formData.endDate <= inProgressTime) {
           toast.error('Ngày kết thúc phải lớn hơn thời gian đang xử lý!', {
             duration: 3000,
             position: 'top-right',
@@ -251,7 +253,6 @@ export default function EditReceivingCaseModal({
       }
       
       // Auto-set inProgressAt if status is changed to IN_PROGRESS
-      
       if (formData.status === 'IN_PROGRESS' && caseData.status !== 'IN_PROGRESS') {
         inProgressAt = convertLocalInputToISO(getCurrentVietnamDateTime());
         
@@ -265,15 +266,37 @@ export default function EditReceivingCaseModal({
           },
           icon: '🕐',
         });
-      } else {
+      }
+      
+      // Validate and convert endDate
+      let endDateISO: string | null = null;
+      if (formData.endDate) {
+        try {
+          const endDate = formData.endDate instanceof Date 
+            ? formData.endDate 
+            : new Date(formData.endDate);
+          
+          if (isNaN(endDate.getTime())) {
+            throw new Error('Invalid date');
+          }
+          endDateISO = endDate.toISOString();
+        } catch (error) {
+          toast.error('Ngày giờ kết thúc không hợp lệ', {
+            duration: 3000,
+            position: 'top-right',
+          });
+          setLoading(false);
+          return;
+        }
       }
       
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate || null,
+        endDate: endDateISO,
         status: finalStatus,
         inProgressAt: inProgressAt,
         crmReferenceCode: formData.crmReferenceCode || null,
+        notes: formData.notes || null,
         products: products.map(product => ({
           id: product.id,
           name: product.name,
@@ -282,6 +305,8 @@ export default function EditReceivingCaseModal({
           serialNumber: product.serialNumber
         }))
       };
+
+      console.log('Update data:', updateData);
 
 
       // Send to API
@@ -316,8 +341,10 @@ export default function EditReceivingCaseModal({
         let errorData;
         try {
           errorData = await response.json();
+          console.error('API Error:', errorData);
         } catch (parseError) {
           errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+          console.error('Parse Error:', parseError);
         }
         
         // Show error notification with more details
@@ -332,9 +359,10 @@ export default function EditReceivingCaseModal({
         });
       }
     } catch (error) {
+      console.error('Update case error:', error);
       
       // Show error notification
-      toast.error('Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại.', {
+      toast.error(`Có lỗi xảy ra khi cập nhật case. Vui lòng thử lại. ${error instanceof Error ? error.message : ''}`, {
         duration: 4000,
         position: 'top-right',
         style: {
@@ -349,9 +377,10 @@ export default function EditReceivingCaseModal({
 
   const handleClose = () => {
     setFormData({
-      endDate: '',
+      endDate: null,
       status: 'RECEIVED',
-      crmReferenceCode: ''
+      crmReferenceCode: '',
+      notes: ''
     });
     setProducts([]);
     onClose();
@@ -376,142 +405,181 @@ export default function EditReceivingCaseModal({
           color: #9ca3af !important;
         }
       `}} />
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-6">
-        <div className="ios-input-fix bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-5xl h-[95vh] md:max-h-[85vh] flex flex-col">
-          {/* Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-t-2xl md:rounded-t-lg z-40 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="p-1.5 md:p-2 bg-white/20 rounded-md">
-                  <Package className="h-4 w-4 md:h-5 md:w-5" />
-                </div>
-                <div>
-                  <h2 className="text-base md:text-lg font-semibold">Chỉnh sửa Case Nhận Hàng</h2>
-                  <p className="text-blue-100 text-xs hidden sm:block">Cập nhật thông tin case</p>
-                </div>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="ios-input-fix bg-white rounded shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          {/* Header - Màu xanh lá cây để phân biệt với Admin */}
+          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded">
+                <Package className="h-5 w-5 text-white" />
               </div>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div>
+                <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chỉnh sửa Case Nhận Hàng</h2>
+                <p className="text-emerald-50 text-xs mt-0.5">Cập nhật thông tin case nhận hàng</p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="p-1.5 text-white/90 hover:text-white hover:bg-white/20 rounded transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-3 md:p-8 space-y-4 md:space-y-8 flex-1 overflow-y-auto">
-          {/* Case Info Display */}
-          <div className="bg-gray-50 rounded-lg p-3 md:p-4 space-y-2 md:space-y-3">
-            <h3 className="text-sm md:text-base font-medium text-gray-900">Thông tin Case</h3>
-            <div className="space-y-1.5 md:space-y-2 text-xs md:text-sm">
-              <div>
-                <span className="font-medium text-gray-600">Tiêu đề:</span>
-                <span className="ml-2 text-gray-900">{caseData.title}</span>
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto bg-gray-50">
+            <div className="p-5 space-y-4">
+              {/* Section 1: Thông tin Case */}
+              <div className="bg-white rounded border border-gray-200">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-emerald-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thông tin Case</h3>
+                </div>
+                
+                <div className="p-3 space-y-2 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="font-medium text-gray-600 min-w-[120px]">Tiêu đề:</span>
+                    <span className="text-gray-900 flex-1">{caseData.title}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-medium text-gray-600 min-w-[120px]">Nhà cung cấp:</span>
+                    <span className="text-gray-900 flex-1">{caseData.supplier?.shortName || 'Không xác định'}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-medium text-gray-600 min-w-[120px]">Người nhận:</span>
+                    <span className="text-gray-900 flex-1">{caseData.requester.fullName}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-medium text-gray-600 min-w-[120px]">Ngày bắt đầu:</span>
+                    <span className="text-gray-900 flex-1">{formatVietnamDateTime(caseData.startDate)}</span>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="font-medium text-gray-600">Nhà cung cấp:</span>
-                <span className="ml-2 text-gray-900">{caseData.supplier?.shortName || 'Không xác định'}</span>
+
+              {/* Section 2: Thời gian & Trạng thái */}
+              <div className="bg-white rounded border border-gray-200">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-emerald-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian & Trạng thái</h3>
+                </div>
+                
+                <div className="p-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* End Date */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Ngày giờ kết thúc
+                    </label>
+                    <DateTimePicker
+                      value={formData.endDate}
+                      onChange={(value) => handleInputChange('endDate', value)}
+                      placeholder="Chọn ngày giờ kết thúc"
+                      locale="vi"
+                      valueFormat="DD/MM/YYYY HH:mm"
+                      clearable
+                      minDate={new Date(caseData.startDate)}
+                      withSeconds={false}
+                      styles={{
+                        input: {
+                          fontSize: '0.875rem',
+                          padding: '0.375rem 0.625rem',
+                          borderColor: '#d1d5db',
+                          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                          borderRadius: '0.25rem',
+                        }
+                      }}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Để trống nếu chưa hoàn thành
+                    </p>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Trạng thái
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => handleInputChange('status', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    >
+                      <option value="RECEIVED">Tiếp nhận</option>
+                      <option value="IN_PROGRESS">Đang xử lý</option>
+                      <option value="COMPLETED">Hoàn thành</option>
+                      <option value="CANCELLED">Hủy</option>
+                    </select>
+                  </div>
+
+                  {/* CRM Reference Code */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Mã CRM
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.crmReferenceCode}
+                      onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      placeholder="Nhập mã CRM"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="font-medium text-gray-600">Người nhận:</span>
-                <span className="ml-2 text-gray-900">{caseData.requester.fullName}</span>
+
+              {/* Section 3: Ghi chú */}
+              <div className="bg-white rounded border border-gray-200">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-emerald-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Ghi chú</h3>
+                </div>
+                
+                <div className="p-3">
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                    placeholder="Nhập ghi chú cho case nhận hàng..."
+                    rows={3}
+                  />
+                </div>
               </div>
-              <div>
-                <span className="font-medium text-gray-600">Ngày bắt đầu:</span>
-                <span className="ml-2 text-gray-900">
-                  {formatVietnamDateTime(caseData.startDate)}
-                </span>
-              </div>
-            </div>
-          </div>
 
-          {/* End Date, Status and CRM Code */}
-          <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
-            {/* End Date */}
-            <div className="min-w-0 overflow-hidden">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Ngày kết thúc
-              </label>
-              <input
-                type="datetime-local"
-                value={formData.endDate}
-                onChange={(e) => handleInputChange('endDate', e.target.value)}
-                className="w-full px-1.5 md:px-2.5 py-1.5 text-[11px] md:text-sm text-gray-900 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                style={{ minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none', opacity: 1, color: '#111827' }}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Để trống nếu chưa hoàn thành
-              </p>
-            </div>
-
-            {/* Status */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Trạng thái
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => handleInputChange('status', e.target.value)}
-                className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              >
-                <option value="RECEIVED">Tiếp nhận</option>
-                <option value="IN_PROGRESS">Đang xử lý</option>
-                <option value="COMPLETED">Hoàn thành</option>
-                <option value="CANCELLED">Hủy</option>
-              </select>
-            </div>
-
-            {/* CRM Reference Code */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Mã CRM
-              </label>
-              <input
-                type="text"
-                value={formData.crmReferenceCode}
-                onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
-                className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                placeholder="Mã CRM"
-              />
-            </div>
-          </div>
-
-          {/* Products */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <label className="block text-xs md:text-sm font-medium text-gray-700">
-                <Package className="inline h-3.5 w-3.5 md:h-4 md:w-4 mr-1" />
-                Chi tiết hàng hóa
-              </label>
-              <button
-                type="button"
-                onClick={addProduct}
-                className="flex items-center gap-1 px-2 md:px-3 py-1 text-xs md:text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="h-3 w-3 md:h-4 md:w-4" />
-                <span>Thêm</span>
-              </button>
-            </div>
-            
-            {products.length > 0 ? (
-              <div className="space-y-2 md:space-y-3">
-                {products.map((product, index) => (
-                  <div key={product.id} className="bg-gray-50 rounded-lg p-3 md:p-4 border border-gray-200">
-                    <div className="flex items-center justify-between mb-2 md:mb-3">
-                      <h4 className="text-xs md:text-sm font-medium text-gray-900">Sản phẩm #{index + 1}</h4>
-                      <button
-                        type="button"
-                        onClick={() => removeProduct(product.id)}
-                        className="text-red-600 hover:text-red-800 transition-colors p-1"
-                      >
-                        <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      </button>
-                    </div>
-                    
-                    {/* Desktop Grid */}
-                    <div className="hidden md:grid md:grid-cols-4 md:gap-3">
+              {/* Section 4: Chi tiết hàng hóa */}
+              <div className="bg-white rounded border border-gray-200">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-emerald-600" />
+                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết hàng hóa</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addProduct}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors font-medium"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Thêm sản phẩm</span>
+                  </button>
+                </div>
+                
+                <div className="p-3">
+                  {products.length > 0 ? (
+                    <div className="space-y-3">
+                      {products.map((product, index) => (
+                        <div key={product.id} className="bg-gray-50 rounded border border-gray-200 p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-gray-700">Sản phẩm #{index + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeProduct(product.id)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          
+                          {/* Desktop Table View */}
+                          <div className="hidden md:grid md:grid-cols-4 md:gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
                           Tên sản phẩm *
@@ -519,9 +587,9 @@ export default function EditReceivingCaseModal({
                         <input
                           type="text"
                           value={product.name}
-                          onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Nhập tên sản phẩm"
+                              onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="Nhập tên sản phẩm"
                           required
                         />
                       </div>
@@ -533,9 +601,9 @@ export default function EditReceivingCaseModal({
                         <input
                           type="text"
                           value={product.code}
-                          onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Nhập mã sản phẩm"
+                              onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="Mã SP"
                         />
                       </div>
                       
@@ -547,9 +615,9 @@ export default function EditReceivingCaseModal({
                           type="number"
                           min="1"
                           value={product.quantity}
-                          onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Nhập số lượng"
+                              onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="SL"
                           required
                         />
                       </div>
@@ -561,15 +629,15 @@ export default function EditReceivingCaseModal({
                         <input
                           type="text"
                           value={product.serialNumber}
-                          onChange={(e) => updateProduct(product.id, 'serialNumber', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Nhập S/N"
+                              onChange={(e) => updateProduct(product.id, 'serialNumber', e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="S/N"
                         />
-                      </div>
-                    </div>
+                            </div>
+                          </div>
 
-                    {/* Mobile View */}
-                    <div className="md:hidden space-y-2">
+                          {/* Mobile Card View */}
+                          <div className="md:hidden space-y-2">
                       {/* Tên sản phẩm */}
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -578,9 +646,9 @@ export default function EditReceivingCaseModal({
                         <input
                           type="text"
                           value={product.name}
-                          onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                          placeholder="Nhập tên sản phẩm"
+                              onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="Nhập tên sản phẩm"
                           required
                         />
                       </div>
@@ -592,9 +660,9 @@ export default function EditReceivingCaseModal({
                           <input
                             type="text"
                             value={product.code}
-                            onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
-                            className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                            placeholder="Mã"
+                                onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                placeholder="Mã"
                           />
                         </div>
                         <div>
@@ -605,9 +673,9 @@ export default function EditReceivingCaseModal({
                             type="number"
                             min="1"
                             value={product.quantity}
-                            onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
-                            className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                            placeholder="SL"
+                                onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
+                                className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                placeholder="SL"
                             required
                           />
                         </div>
@@ -619,45 +687,56 @@ export default function EditReceivingCaseModal({
                         <input
                           type="text"
                           value={product.serialNumber}
-                          onChange={(e) => updateProduct(product.id, 'serialNumber', e.target.value)}
-                          className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                          placeholder="S/N (tùy chọn)"
+                              onChange={(e) => updateProduct(product.id, 'serialNumber', e.target.value)}
+                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                              placeholder="Serial Number"
                         />
-                      </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Package className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">Chưa có sản phẩm nào</p>
+                      <p className="text-xs text-gray-400 mt-1">Nhấn &quot;Thêm sản phẩm&quot; để bắt đầu</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-6 md:py-8 bg-gray-50 rounded-lg border border-gray-200">
-                <Package className="h-8 w-8 md:h-12 md:w-12 text-gray-400 mx-auto mb-2 md:mb-3" />
-                <p className="text-xs md:text-sm text-gray-500">Chưa có sản phẩm nào</p>
-                <p className="text-xs text-gray-400 mt-1 hidden md:block">Nhấn &quot;Thêm&quot; để bắt đầu</p>
-              </div>
-            )}
-          </div>
+            </div>
 
-          {/* Buttons - Desktop optimized layout */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 md:px-0 py-3 md:py-4 md:relative md:border-t-0 mt-6 md:mt-8 -mx-3 md:mx-0">
-            <div className="flex gap-3 md:gap-4 md:justify-end">
+            {/* Actions */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-300 px-5 py-3 flex items-center justify-end gap-3 flex-shrink-0">
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex-1 md:flex-none px-6 py-2.5 md:px-8 md:py-3 text-sm md:text-base font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
+                className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
               >
-                Hủy
+                Hủy bỏ
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 md:flex-none px-6 py-2.5 md:px-8 md:py-3 text-sm md:text-base font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="px-5 py-2 text-sm bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2"
+                style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
               >
-                <Save className="h-4 w-4 md:h-5 md:w-5" />
-                {loading ? 'Đang cập nhật...' : 'Cập nhật'}
+                {loading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Đang cập nhật...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Cập nhật Case</span>
+                  </>
+                )}
               </button>
             </div>
-          </div>
-        </form>
+          </form>
         </div>
       </div>
     </>

@@ -104,6 +104,10 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
     
+    console.log('=== Received PUT request ===');
+    console.log('Case ID:', id);
+    console.log('Body:', JSON.stringify(body, null, 2));
+    
     const {
       title,
       description,
@@ -376,8 +380,13 @@ export async function PUT(
 
   } catch (error) {
     console.error('Error updating delivery case:', error);
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

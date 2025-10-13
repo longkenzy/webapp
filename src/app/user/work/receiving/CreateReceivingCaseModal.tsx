@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Package, Truck, Calendar, User, FileText, AlertCircle, Search, ChevronDown, CheckCircle, RefreshCw, Plus, Trash2 } from 'lucide-react';
+import { X, Package, Truck, Calendar, User, FileText, AlertCircle, Search, ChevronDown, CheckCircle, RefreshCw, Plus, Trash2, Building2, Clock, Star, Zap, TrendingUp, Target, Briefcase, Save } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import { useSession } from 'next-auth/react';
 import { ReceivingCaseStatus } from '@prisma/client';
 import toast from 'react-hot-toast';
-import { convertLocalInputToISO } from '@/lib/date-utils';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -46,10 +47,11 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
   const [formData, setFormData] = useState({
     supplierId: '',
     productDetails: '',
-    deliveryDateTime: '',
-    completionDateTime: '',
+    deliveryDateTime: null as Date | null,
+    completionDateTime: null as Date | null,
     status: 'RECEIVED',
     crmReferenceCode: '', // Thêm trường Mã CRM
+    notes: '', // Thêm trường ghi chú
     // User self-assessment fields
     difficultyLevel: '',
     estimatedTime: '',
@@ -98,6 +100,31 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
       fetchCurrentEmployee();
     }
   }, [isOpen, session?.user?.email]);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      
+      // Lock body scroll
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        // Restore body scroll
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -210,22 +237,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
 
     // Validate date relationships
     if (formData.deliveryDateTime && formData.completionDateTime) {
-      const deliveryDate = new Date(formData.deliveryDateTime);
-      const completionDate = new Date(formData.completionDateTime);
-      
-      if (completionDate <= deliveryDate) {
+      if (formData.completionDateTime <= formData.deliveryDateTime) {
         newErrors.completionDateTime = 'Ngày hoàn thành phải lớn hơn ngày giao';
-      }
-    }
-
-
-    // Validate delivery date is not in the future
-    if (formData.deliveryDateTime) {
-      const deliveryDate = new Date(formData.deliveryDateTime);
-      const now = new Date();
-      
-      if (deliveryDate > now) {
-        newErrors.deliveryDateTime = 'Ngày giao không thể là thời gian tương lai';
       }
     }
 
@@ -258,6 +271,10 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
     e.preventDefault();
     
     if (!validateForm()) {
+      toast.error('Vui lòng kiểm tra lại các trường bắt buộc', {
+        duration: 3000,
+        position: 'top-right',
+      });
       return;
     }
 
@@ -270,7 +287,60 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
           duration: 4000,
           position: 'top-right',
         });
+        setLoading(false);
         return;
+      }
+
+      // Validate and convert Date objects
+      let startDateISO: string | null = null;
+      let endDateISO: string | null = null;
+
+      if (formData.deliveryDateTime) {
+        try {
+          // Check if it's already a Date or can be converted to Date
+          const deliveryDate = formData.deliveryDateTime instanceof Date 
+            ? formData.deliveryDateTime 
+            : new Date(formData.deliveryDateTime);
+          
+          if (isNaN(deliveryDate.getTime())) {
+            throw new Error('Invalid date');
+          }
+          startDateISO = deliveryDate.toISOString();
+        } catch (error) {
+          toast.error('Ngày giờ giao không hợp lệ', {
+            duration: 3000,
+            position: 'top-right',
+          });
+          setLoading(false);
+          return;
+        }
+      } else {
+        toast.error('Vui lòng chọn ngày giờ giao', {
+          duration: 3000,
+          position: 'top-right',
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (formData.completionDateTime) {
+        try {
+          const completionDate = formData.completionDateTime instanceof Date 
+            ? formData.completionDateTime 
+            : new Date(formData.completionDateTime);
+          
+          if (isNaN(completionDate.getTime())) {
+            throw new Error('Invalid date');
+          }
+          endDateISO = completionDate.toISOString();
+        } catch (error) {
+          toast.error('Ngày giờ hoàn thành không hợp lệ', {
+            duration: 3000,
+            position: 'top-right',
+          });
+          setLoading(false);
+          return;
+        }
       }
 
       // Prepare data for API
@@ -281,10 +351,10 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
         handlerId: currentEmployee.id,
         supplierId: formData.supplierId,
         form: formData.form,
-        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
-        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
+        startDate: startDateISO,
+        endDate: endDateISO,
         status: ReceivingCaseStatus.RECEIVED,
-        notes: null,
+        notes: formData.notes || null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
         userDifficultyLevel: formData.difficultyLevel,
         userEstimatedTime: formData.estimatedTime,
@@ -367,10 +437,11 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
     setFormData({
       supplierId: '',
       productDetails: '',
-      deliveryDateTime: '',
-      completionDateTime: '',
+      deliveryDateTime: null,
+      completionDateTime: null,
       status: 'RECEIVED',
       crmReferenceCode: '', // Reset Mã CRM
+      notes: '', // Reset ghi chú
       // User self-assessment fields
       difficultyLevel: '',
       estimatedTime: '',
@@ -388,7 +459,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
     onClose();
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | Date | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -436,637 +507,677 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
           color: #9ca3af !important;
         }
       `}} />
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4">
-        <div className="ios-input-fix bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full md:max-w-4xl h-[95vh] md:max-h-[90vh] overflow-y-auto md:my-8 flex flex-col">
-         {/* Header */}
-         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-t-2xl md:rounded-t-lg z-40 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-white/20 rounded-md">
-                <Package className="h-4 w-4 md:h-5 md:w-5" />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="ios-input-fix bg-white rounded shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+         {/* Header - Màu xanh lá cây để phân biệt với Admin */}
+         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded">
+                <Package className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-base md:text-lg font-semibold">Tạo Case Nhận Hàng</h2>
-                <p className="text-blue-100 text-xs md:text-sm hidden sm:block">Hệ thống quản lý nhận hàng</p>
+                <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Tạo Case Nhận Hàng</h2>
+                <p className="text-emerald-50 text-xs mt-0.5">Quản lý nhận hàng từ nhà cung cấp</p>
               </div>
             </div>
             <button
               type="button"
               onClick={handleClose}
-              className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
+              className="p-1.5 text-white/90 hover:text-white hover:bg-white/20 rounded transition-colors cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-3 md:p-6 flex-1 overflow-y-auto">
-          <div className="space-y-6">
-            {/* Section 1: Người thực hiện */}
-            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
-              <div className="flex items-center gap-2 mb-3 md:mb-4">
-                <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
-                  <User className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
-                </div>
-                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Người thực hiện</h3>
-              </div>
-              <div className="text-sm text-gray-600">
-                <span className="font-medium text-gray-900">
-                  {currentEmployee ? currentEmployee.fullName : 'Đang tải...'}
-                </span>
-                {currentEmployee && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {currentEmployee.position} - {currentEmployee.department}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="p-5 space-y-4">
+            {/* Row 1: Người thực hiện + Nhà cung cấp */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Section 1: Người thực hiện */}
+              <div className="bg-white rounded border border-gray-200">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-emerald-600" />
+                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Người thực hiện</h3>
                   </div>
-                )}
-                {errors.employee && (
-                  <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
-                    <AlertCircle className="h-3 w-3" />
-                    <span>{errors.employee}</span>
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Section 2: Nhà cung cấp */}
-            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
-              <div className="flex items-center gap-2 mb-3 md:mb-4">
-                <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
-                  <Truck className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
+                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded">Auto</span>
                 </div>
-                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Nhà cung cấp</h3>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600 flex items-center">
-                  <span className="w-24">Nhà cung cấp</span>
-                  <span className="text-red-500 ml-1">*</span>
-                </label>
-                <div className="relative" ref={dropdownRef}>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Search className="h-4 w-4 text-gray-400" />
+                
+                <div className="p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-semibold shadow">
+                      {currentEmployee ? currentEmployee.fullName.charAt(0).toUpperCase() : '?'}
                     </div>
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      onFocus={() => setIsDropdownOpen(true)}
-                      className={`w-full pl-10 pr-10 py-2 text-sm border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                        errors.supplierId ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                      placeholder={loadingPartners ? 'Đang tải...' : 'Tìm kiếm nhà cung cấp...'}
-                      disabled={loadingPartners}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      disabled={loadingPartners}
-                    >
-                      <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm">
+                        {currentEmployee ? currentEmployee.fullName : 'Đang tải...'}
+                      </div>
+                      {currentEmployee && (
+                        <div className="text-xs text-gray-600 mt-0.5 truncate">
+                          {currentEmployee.position} • {currentEmployee.department}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  
-                   {isDropdownOpen && !loadingPartners && (
-                     <div className="absolute z-[9999] w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                       {filteredPartners.length > 0 ? (
-                         filteredPartners.map(partner => (
-                           <div
-                             key={partner.id}
-                             onClick={() => handlePartnerSelect(partner)}
-                             className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                           >
-                             <div className="flex flex-col">
-                               <div className="font-medium text-sm text-gray-900">
-                                 {partner.shortName}
-                               </div>
-                               <div className="text-xs text-gray-500">
-                                 {partner.fullCompanyName}
-                               </div>
-                               {partner.contactPerson && (
-                                 <div className="text-xs text-gray-400 mt-1">
-                                   Liên hệ: {partner.contactPerson}
-                                   {partner.contactPhone && ` - ${partner.contactPhone}`}
-                                 </div>
-                               )}
-                             </div>
-                           </div>
-                         ))
-                       ) : (
-                         <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                           Không tìm thấy nhà cung cấp nào
-                         </div>
-                       )}
-                     </div>
-                   )}
+                  {errors.employee && (
+                    <div className="mt-2 p-2 bg-red-50 border-l-2 border-red-500 text-xs text-red-700 flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{errors.employee}</span>
+                    </div>
+                  )}
                 </div>
-                {errors.supplierId && (
-                  <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
-                    <AlertCircle className="h-3 w-3" />
-                    <span>{errors.supplierId}</span>
-                  </p>
-                )}
+              </div>
+
+              {/* Section 2: Nhà cung cấp */}
+              <div className="bg-white rounded border border-gray-200">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-emerald-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Nhà cung cấp</h3>
+                  <span className="text-red-500 text-sm ml-1">*</span>
+                </div>
+                
+                <div className="p-3">
+                  <div className="relative" ref={dropdownRef}>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <input
+                        ref={inputRef}
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onFocus={() => setIsDropdownOpen(true)}
+                        className={`w-full pl-9 pr-9 py-2 text-sm border rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all ${
+                          errors.supplierId ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
+                        placeholder={loadingPartners ? 'Đang tải...' : 'Tìm kiếm nhà cung cấp...'}
+                        disabled={loadingPartners}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center"
+                        disabled={loadingPartners}
+                      >
+                        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+                    
+                    {isDropdownOpen && !loadingPartners && (
+                      <div className="absolute z-[9999] w-full mt-1.5 bg-white border border-gray-200 rounded shadow-lg max-h-56 overflow-auto">
+                        {filteredPartners.length > 0 ? (
+                          filteredPartners.map(partner => (
+                            <div
+                              key={partner.id}
+                              onClick={() => handlePartnerSelect(partner)}
+                              className="px-3 py-2.5 hover:bg-emerald-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                            >
+                              <div className="font-medium text-sm text-gray-900">{partner.shortName}</div>
+                              <div className="text-xs text-gray-600 mt-0.5">{partner.fullCompanyName}</div>
+                              {partner.contactPerson && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {partner.contactPerson}{partner.contactPhone && ` • ${partner.contactPhone}`}
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-6 text-center text-sm text-gray-500">
+                            Không tìm thấy nhà cung cấp
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {errors.supplierId && (
+                    <div className="mt-2 p-2 bg-red-50 border-l-2 border-red-500 text-xs text-red-700 flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{errors.supplierId}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Section 3: Chi tiết hàng hóa */}
-            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-3 md:mb-4">
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
-                    <Package className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
-                  </div>
-                  <h3 className="text-xs md:text-sm font-semibold text-gray-700">Chi tiết hàng hóa</h3>
+                  <Package className="h-4 w-4 text-emerald-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết hàng hóa</h3>
+                  <span className="text-red-500 text-sm ml-1">*</span>
                 </div>
                 <button
                   type="button"
                   onClick={addProduct}
-                  className="flex items-center gap-1 px-2 md:px-3 py-1 md:py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors font-medium"
                 >
-                  <Plus className="h-3 w-3" />
-                  <span>Thêm</span>
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Thêm sản phẩm</span>
                 </button>
               </div>
               
-              {products.length === 0 ? (
-                <div className="text-center py-6 md:py-8 text-gray-500">
-                  <Package className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-xs md:text-sm">Chưa có sản phẩm nào</p>
-                  <p className="text-xs hidden md:block">Nhấn &quot;Thêm&quot; để bắt đầu</p>
-                </div>
-              ) : (
-                <div className="space-y-3 md:space-y-4">
-                  {/* Desktop Table View */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full bg-white border border-gray-200 rounded-md">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Tên sản phẩm *
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Mã sản phẩm
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Số lượng *
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            S/N
-                          </th>
-                          <th className="px-3 py-2 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            Hành động
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {products.map((product, index) => (
-                          <tr key={product.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2">
+              <div className="p-3">
+                {products.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Package className="h-10 w-10 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm">Chưa có sản phẩm nào</p>
+                    <p className="text-xs text-gray-400 mt-1">Nhấn &quot;Thêm sản phẩm&quot; để bắt đầu</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="min-w-full border border-gray-200 rounded">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Tên sản phẩm *
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Mã sản phẩm
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Số lượng *
+                            </th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              S/N
+                            </th>
+                            <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Thao tác
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white">
+                          {products.map((product, index) => (
+                            <tr key={product.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={product.name}
+                                  onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
+                                  className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                                    errors[`product_${index}_name`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                  }`}
+                                  placeholder="Nhập tên sản phẩm"
+                                />
+                                {errors[`product_${index}_name`] && (
+                                  <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_name`]}</p>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={product.code}
+                                  onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
+                                  className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  placeholder="Mã SP"
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="number"
+                                  value={product.quantity}
+                                  onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
+                                  className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                                    errors[`product_${index}_quantity`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                  }`}
+                                  placeholder="SL"
+                                  min="1"
+                                />
+                                {errors[`product_${index}_quantity`] && (
+                                  <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_quantity`]}</p>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={product.serialNumber}
+                                  onChange={(e) => updateProduct(product.id, 'serialNumber', e.target.value)}
+                                  className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  placeholder="S/N"
+                                />
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeProduct(product.id)}
+                                  className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                  title="Xóa sản phẩm"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-2">
+                      {products.map((product, index) => (
+                        <div key={product.id} className="bg-gray-50 border border-gray-200 rounded p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-gray-700">Sản phẩm #{index + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeProduct(product.id)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {/* Tên sản phẩm */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Tên sản phẩm <span className="text-red-500">*</span>
+                              </label>
                               <input
                                 type="text"
                                 value={product.name}
                                 onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                                className={`w-full px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                  errors[`product_${index}_name`] ? 'border-red-300' : 'border-gray-300'
+                                className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                                  errors[`product_${index}_name`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
                                 }`}
                                 placeholder="Nhập tên sản phẩm"
                               />
                               {errors[`product_${index}_name`] && (
                                 <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_name`]}</p>
                               )}
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="text"
-                                value={product.code}
-                                onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Nhập mã sản phẩm"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                value={product.quantity}
-                                onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
-                                className={`w-full px-2 py-1 text-sm border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                                  errors[`product_${index}_quantity`] ? 'border-red-300' : 'border-gray-300'
-                                }`}
-                                placeholder="Nhập số lượng"
-                                min="1"
-                              />
-                              {errors[`product_${index}_quantity`] && (
-                                <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_quantity`]}</p>
-                              )}
-                            </td>
-                            <td className="px-3 py-2">
+                            </div>
+
+                            {/* 2 columns: Code & Quantity */}
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Mã SP</label>
+                                <input
+                                  type="text"
+                                  value={product.code}
+                                  onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
+                                  className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                  placeholder="Mã"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Số lượng <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  value={product.quantity}
+                                  onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
+                                  className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                                    errors[`product_${index}_quantity`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                  }`}
+                                  placeholder="SL"
+                                  min="1"
+                                />
+                                {errors[`product_${index}_quantity`] && (
+                                  <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_quantity`]}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Serial Number */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">S/N</label>
                               <input
                                 type="text"
                                 value={product.serialNumber}
                                 onChange={(e) => updateProduct(product.id, 'serialNumber', e.target.value)}
-                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Nhập S/N"
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <button
-                                type="button"
-                                onClick={() => removeProduct(product.id)}
-                                className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
-                                title="Xóa sản phẩm"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Mobile Card View */}
-                  <div className="md:hidden space-y-2">
-                    {products.map((product, index) => (
-                      <div key={product.id} className="bg-white border border-gray-200 rounded-md p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-gray-700">Sản phẩm #{index + 1}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeProduct(product.id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          {/* Tên sản phẩm */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Tên sản phẩm <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              value={product.name}
-                              onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                              className={`w-full px-2.5 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${
-                                errors[`product_${index}_name`] ? 'border-red-300' : 'border-gray-300'
-                              }`}
-                              placeholder="Nhập tên sản phẩm"
-                            />
-                            {errors[`product_${index}_name`] && (
-                              <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_name`]}</p>
-                            )}
-                          </div>
-
-                          {/* 2 columns: Code & Quantity */}
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Mã SP</label>
-                              <input
-                                type="text"
-                                value={product.code}
-                                onChange={(e) => updateProduct(product.id, 'code', e.target.value)}
-                                className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                placeholder="Mã"
+                                className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                placeholder="Serial Number"
                               />
                             </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Số lượng <span className="text-red-500">*</span>
-                              </label>
-                              <input
-                                type="number"
-                                value={product.quantity}
-                                onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
-                                className={`w-full px-2.5 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${
-                                  errors[`product_${index}_quantity`] ? 'border-red-300' : 'border-gray-300'
-                                }`}
-                                placeholder="SL"
-                                min="1"
-                              />
-                              {errors[`product_${index}_quantity`] && (
-                                <p className="text-xs text-red-600 mt-1">{errors[`product_${index}_quantity`]}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Serial Number */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Serial Number</label>
-                            <input
-                              type="text"
-                              value={product.serialNumber}
-                              onChange={(e) => updateProduct(product.id, 'serialNumber', e.target.value)}
-                              className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                              placeholder="S/N (tùy chọn)"
-                            />
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    
+                    {errors.products && (
+                      <p className="text-xs text-red-600 flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <span>{errors.products}</span>
+                      </p>
+                    )}
                   </div>
-                  
-                  {errors.products && (
-                    <p className="text-xs text-red-600 flex items-center space-x-1">
-                      <AlertCircle className="h-3 w-3" />
-                      <span>{errors.products}</span>
-                    </p>
-                  )}
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* Section 4: Thời gian & Mã CRM */}
-            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
-              <div className="flex items-center gap-2 mb-3 md:mb-4">
-                <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
-                  <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
-                </div>
-                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Thời gian & Mã CRM</h3>
+            {/* Section 4: Thời gian */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
               </div>
-              <div className="space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-4">
-                <div className="space-y-1 min-w-0 overflow-hidden">
-                  <label className="block text-xs font-medium text-gray-600">
+              
+              <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
                     Ngày giờ giao <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.deliveryDateTime}
-                    onChange={(e) => handleInputChange('deliveryDateTime', e.target.value)}
-                    className={`w-full px-1.5 md:px-2.5 py-1.5 text-[11px] md:text-sm text-gray-900 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${
-                      errors.deliveryDateTime ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    style={{ minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none', MozAppearance: 'textfield', opacity: 1, color: '#111827' }}
+                    onChange={(value) => handleInputChange('deliveryDateTime', value)}
+                    placeholder="Chọn ngày giờ giao"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.375rem 0.625rem',
+                        borderColor: errors.deliveryDateTime ? '#fca5a5' : '#d1d5db',
+                        backgroundColor: errors.deliveryDateTime ? '#fef2f2' : 'white',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                      }
+                    }}
                   />
                   {errors.deliveryDateTime && (
-                    <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
-                      <AlertCircle className="h-3 w-3" />
+                    <p className="text-xs text-red-600 flex items-center gap-1.5 mt-1.5">
+                      <AlertCircle className="h-3.5 w-3.5" />
                       <span>{errors.deliveryDateTime}</span>
                     </p>
                   )}
                 </div>
 
-                <div className="space-y-1 min-w-0 overflow-hidden">
-                  <label className="block text-xs font-medium text-gray-600">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
                     Ngày giờ hoàn thành
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.completionDateTime}
-                    onChange={(e) => handleInputChange('completionDateTime', e.target.value)}
-                    className={`w-full px-1.5 md:px-2.5 py-1.5 text-[11px] md:text-sm text-gray-900 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${
-                      errors.completionDateTime ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    style={{ minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none', MozAppearance: 'textfield', opacity: 1, color: '#111827' }}
+                    onChange={(value) => handleInputChange('completionDateTime', value)}
+                    placeholder="Chọn ngày giờ hoàn thành"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    minDate={formData.deliveryDateTime || undefined}
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.375rem 0.625rem',
+                        borderColor: errors.completionDateTime ? '#fca5a5' : '#d1d5db',
+                        backgroundColor: errors.completionDateTime ? '#fef2f2' : 'white',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                      }
+                    }}
                   />
                   {errors.completionDateTime && (
-                    <p className="text-xs text-red-600 flex items-center gap-1 mt-1">
-                      <AlertCircle className="h-3 w-3" />
+                    <p className="text-xs text-red-600 flex items-center gap-1.5 mt-1.5">
+                      <AlertCircle className="h-3.5 w-3.5" />
                       <span>{errors.completionDateTime}</span>
                     </p>
                   )}
                 </div>
+              </div>
+            </div>
 
-                <div className="space-y-1 min-w-0">
-                  <label className="block text-xs font-medium text-gray-600">
-                    Mã CRM
-                  </label>
+            {/* Section 5: Trạng thái & Mã CRM */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Mã CRM</h3>
+              </div>
+              
+              <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Trạng thái case</label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => handleInputChange('status', e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  >
+                    {statusOptions.map(status => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Mã CRM</label>
                   <input
                     type="text"
                     value={formData.crmReferenceCode}
                     onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    placeholder="Mã CRM"
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="Nhập mã CRM"
                   />
                 </div>
               </div>
             </div>
 
-             {/* Section 5: Trạng thái */}
-             <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
-               <div className="flex items-center gap-2 mb-3 md:mb-4">
-                 <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
-                   <FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
-                 </div>
-                 <h3 className="text-xs md:text-sm font-semibold text-gray-700">Trạng thái</h3>
-               </div>
-               <div className="space-y-1">
-                 <label className="text-xs font-medium text-gray-600">
-                   <span className="w-24">Trạng thái</span>
-                 </label>
-                 <select
-                   value={formData.status}
-                   onChange={(e) => handleInputChange('status', e.target.value)}
-                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                 >
-                   {statusOptions.map(status => (
-                     <option key={status.value} value={status.value}>
-                       {status.label}
-                     </option>
-                   ))}
-                 </select>
-               </div>
-             </div>
+            {/* Section 6: Ghi chú */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Ghi chú</h3>
+              </div>
+              
+              <div className="p-3">
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                  placeholder="Nhập ghi chú cho case nhận hàng..."
+                  rows={3}
+                />
+              </div>
+            </div>
 
-             {/* Section 6: Đánh giá của User */}
-             <div className="bg-yellow-50 rounded-md p-3 md:p-4 border border-yellow-200">
-               <div className="flex items-center justify-between mb-3 md:mb-4">
-                 <div className="flex items-center gap-2">
-                   <div className="p-1 md:p-1.5 bg-yellow-100 rounded-md">
-                     <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-yellow-600" />
-                   </div>
-                   <h3 className="text-xs md:text-sm font-semibold text-yellow-700">Đánh giá</h3>
-                 </div>
-                 <button
-                   type="button"
-                   onClick={fetchConfigs}
-                   className="flex items-center gap-1 px-2 py-1 text-xs text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100 rounded transition-colors"
-                   title="Làm mới"
-                 >
-                   <RefreshCw className="h-3 w-3" />
-                   <span className="hidden sm:inline">Làm mới</span>
-                 </button>
-               </div>
-               
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                 {/* Mức độ khó */}
-                 <div className="space-y-1">
-                   <label className="text-xs font-medium text-yellow-600 flex items-center">
-                     <span className="w-32">Mức độ khó</span>
-                     <span className="text-red-500 ml-1">*</span>
-                   </label>
-                   <select
-                     value={formData.difficultyLevel}
-                     onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
-                     className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors ${
-                       errors.difficultyLevel ? 'border-red-300' : 'border-yellow-200'
-                     }`}
-                     required
-                   >
-                     <option value="">Chọn mức độ khó</option>
-                     {getFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
-                       <option key={option.id} value={option.points}>
-                         {option.points} - {option.label}
-                       </option>
-                     ))}
-                   </select>
-                   {errors.difficultyLevel && (
-                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
-                       <AlertCircle className="h-3 w-3" />
-                       <span>{errors.difficultyLevel}</span>
-                     </p>
-                   )}
-                 </div>
+            {/* Section 7: Đánh giá của User */}
+            <div className="bg-white rounded border border-amber-200">
+              <div className="bg-amber-50 px-3 py-2 border-b border-amber-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-amber-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Đánh giá công việc</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchConfigs}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors font-medium"
+                  title="Làm mới cấu hình"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Làm mới</span>
+                </button>
+              </div>
+              
+              <div className="p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Mức độ khó */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Mức độ khó <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.difficultyLevel}
+                      onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
+                      className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
+                        errors.difficultyLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      required
+                    >
+                      <option value="">Chọn mức độ khó</option>
+                      {getFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
+                        <option key={option.id} value={option.points}>
+                          {option.points} điểm - {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.difficultyLevel && (
+                      <p className="text-xs text-red-600 flex items-center gap-1.5 mt-1.5">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <span>{errors.difficultyLevel}</span>
+                      </p>
+                    )}
+                  </div>
 
-                 {/* Thời gian ước tính */}
-                 <div className="space-y-1">
-                   <label className="text-xs font-medium text-yellow-600 flex items-center">
-                     <span className="w-32">Thời gian ước tính</span>
-                     <span className="text-red-500 ml-1">*</span>
-                   </label>
-                   <select
-                     value={formData.estimatedTime}
-                     onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
-                     className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors ${
-                       errors.estimatedTime ? 'border-red-300' : 'border-yellow-200'
-                     }`}
-                     required
-                   >
-                     <option value="">Chọn thời gian ước tính</option>
-                     {getFieldOptions(EvaluationCategory.TIME).map((option) => (
-                       <option key={option.id} value={option.points}>
-                         {option.points} - {option.label}
-                       </option>
-                     ))}
-                   </select>
-                   {errors.estimatedTime && (
-                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
-                       <AlertCircle className="h-3 w-3" />
-                       <span>{errors.estimatedTime}</span>
-                     </p>
-                   )}
-                 </div>
+                  {/* Thời gian ước tính */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Thời gian ước tính <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.estimatedTime}
+                      onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
+                      className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
+                        errors.estimatedTime ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      required
+                    >
+                      <option value="">Chọn thời gian ước tính</option>
+                      {getFieldOptions(EvaluationCategory.TIME).map((option) => (
+                        <option key={option.id} value={option.points}>
+                          {option.points} điểm - {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.estimatedTime && (
+                      <p className="text-xs text-red-600 flex items-center gap-1.5 mt-1.5">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <span>{errors.estimatedTime}</span>
+                      </p>
+                    )}
+                  </div>
 
-                 {/* Mức độ ảnh hưởng */}
-                 <div className="space-y-1">
-                   <label className="text-xs font-medium text-yellow-600 flex items-center">
-                     <span className="w-32">Mức độ ảnh hưởng</span>
-                     <span className="text-red-500 ml-1">*</span>
-                   </label>
-                   <select
-                     value={formData.impactLevel}
-                     onChange={(e) => handleInputChange('impactLevel', e.target.value)}
-                     className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors ${
-                       errors.impactLevel ? 'border-red-300' : 'border-yellow-200'
-                     }`}
-                     required
-                   >
-                     <option value="">Chọn mức độ ảnh hưởng</option>
-                     {getFieldOptions(EvaluationCategory.IMPACT).map((option) => (
-                       <option key={option.id} value={option.points}>
-                         {option.points} - {option.label}
-                       </option>
-                     ))}
-                   </select>
-                   {errors.impactLevel && (
-                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
-                       <AlertCircle className="h-3 w-3" />
-                       <span>{errors.impactLevel}</span>
-                     </p>
-                   )}
-                 </div>
+                  {/* Mức độ ảnh hưởng */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Mức độ ảnh hưởng <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.impactLevel}
+                      onChange={(e) => handleInputChange('impactLevel', e.target.value)}
+                      className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
+                        errors.impactLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      required
+                    >
+                      <option value="">Chọn mức độ ảnh hưởng</option>
+                      {getFieldOptions(EvaluationCategory.IMPACT).map((option) => (
+                        <option key={option.id} value={option.points}>
+                          {option.points} điểm - {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.impactLevel && (
+                      <p className="text-xs text-red-600 flex items-center gap-1.5 mt-1.5">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <span>{errors.impactLevel}</span>
+                      </p>
+                    )}
+                  </div>
 
-                 {/* Mức độ khẩn cấp */}
-                 <div className="space-y-1">
-                   <label className="text-xs font-medium text-yellow-600 flex items-center">
-                     <span className="w-32">Mức độ khẩn cấp</span>
-                     <span className="text-red-500 ml-1">*</span>
-                   </label>
-                   <select
-                     value={formData.urgencyLevel}
-                     onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
-                     className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors ${
-                       errors.urgencyLevel ? 'border-red-300' : 'border-yellow-200'
-                     }`}
-                     required
-                   >
-                     <option value="">Chọn mức độ khẩn cấp</option>
-                     {getFieldOptions(EvaluationCategory.URGENCY).map((option) => (
-                       <option key={option.id} value={option.points}>
-                         {option.points} - {option.label}
-                       </option>
-                     ))}
-                   </select>
-                   {errors.urgencyLevel && (
-                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
-                       <AlertCircle className="h-3 w-3" />
-                       <span>{errors.urgencyLevel}</span>
-                     </p>
-                   )}
-                 </div>
+                  {/* Mức độ khẩn cấp */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Mức độ khẩn cấp <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.urgencyLevel}
+                      onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
+                      className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
+                        errors.urgencyLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      required
+                    >
+                      <option value="">Chọn mức độ khẩn cấp</option>
+                      {getFieldOptions(EvaluationCategory.URGENCY).map((option) => (
+                        <option key={option.id} value={option.points}>
+                          {option.points} điểm - {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.urgencyLevel && (
+                      <p className="text-xs text-red-600 flex items-center gap-1.5 mt-1.5">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <span>{errors.urgencyLevel}</span>
+                      </p>
+                    )}
+                  </div>
 
-                 {/* Hình thức làm việc */}
-                 <div className="space-y-1">
-                   <label className="text-xs font-medium text-yellow-600 flex items-center">
-                     <span className="w-32">Hình thức làm việc</span>
-                     <span className="text-red-500 ml-1">*</span>
-                   </label>
-                   <select
-                     value={formData.form}
-                     onChange={(e) => {
-                       handleInputChange('form', e.target.value);
-                       // Auto-set form score based on selection
-                       const selectedOption = getFieldOptions(EvaluationCategory.FORM).find(
-                         option => option.label === e.target.value
-                       );
-                       if (selectedOption) {
-                         handleInputChange('formScore', selectedOption.points.toString());
-                       }
-                     }}
-                     className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors ${
-                       errors.form ? 'border-red-300' : 'border-yellow-200'
-                     }`}
-                     required
-                   >
-                     <option value="">Chọn hình thức làm việc</option>
-                     {getFieldOptions(EvaluationCategory.FORM).map((option) => (
-                       <option key={option.id} value={option.label}>
-                         {option.label} ({option.points} điểm)
-                       </option>
-                     ))}
-                   </select>
-                   {errors.form && (
-                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
-                       <AlertCircle className="h-3 w-3" />
-                       <span>{errors.form}</span>
-                     </p>
-                   )}
-                 </div>
-               </div>
-             </div>
+                  {/* Hình thức làm việc */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Hình thức làm việc <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.form}
+                      onChange={(e) => {
+                        handleInputChange('form', e.target.value);
+                        // Auto-set form score based on selection
+                        const selectedOption = getFieldOptions(EvaluationCategory.FORM).find(
+                          option => option.label === e.target.value
+                        );
+                        if (selectedOption) {
+                          handleInputChange('formScore', selectedOption.points.toString());
+                        }
+                      }}
+                      className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
+                        errors.form ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
+                      required
+                    >
+                      <option value="">Chọn hình thức làm việc</option>
+                      {getFieldOptions(EvaluationCategory.FORM).map((option) => (
+                        <option key={option.id} value={option.label}>
+                          {option.label} ({option.points} điểm)
+                        </option>
+                      ))}
+                    </select>
+                    {errors.form && (
+                      <p className="text-xs text-red-600 flex items-center gap-1.5 mt-1.5">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <span>{errors.form}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Actions */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 md:px-0 py-3 md:py-0 md:relative md:border-t-0 mt-4 md:mt-0 md:pt-6 -mx-3 md:mx-0">
-            <div className="flex gap-2 md:gap-3 md:justify-end">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="flex-1 md:flex-none px-4 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 md:flex-none px-4 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {loading ? 'Đang tạo...' : 'Tạo Case'}
-              </button>
-            </div>
+          <div className="sticky bottom-0 bg-white border-t border-gray-300 px-5 py-3 flex items-center justify-end gap-3 flex-shrink-0">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer"
+              style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
+            >
+              Hủy bỏ
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2 text-sm bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
+              style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Đang tạo...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  <span>Tạo Case Nhận Hàng</span>
+                </>
+              )}
+            </button>
           </div>
         </form>
         </div>

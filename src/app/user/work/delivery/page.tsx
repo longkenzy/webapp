@@ -886,6 +886,11 @@ export default function DeliveryCasePage() {
                               <div className="text-gray-600 text-xs"><span className="font-medium">SL: {p.quantity}</span>{p.code && <span> • Mã: {p.code}</span>}</div>
                             </div>
                           ))}
+                          {case_.notes && (
+                            <div className="text-xs text-gray-600 italic pt-2 border-t border-green-200 mt-2">
+                              <span className="font-medium">Ghi chú:</span> {case_.notes}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1049,6 +1054,11 @@ export default function DeliveryCasePage() {
                                       )}
                                     </div>
                                   ))}
+                                  {case_.notes && (
+                                    <div className="text-xs text-slate-600 italic pt-1 border-t border-slate-200 mt-1">
+                                      <span className="font-medium">Ghi chú:</span> {case_.notes}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             } else {

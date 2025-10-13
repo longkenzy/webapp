@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Bell, Search, Settings, User, LogOut, ChevronDown, Menu, X } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useAvatarRefresh } from "@/contexts/AvatarRefreshContext";
@@ -12,6 +13,7 @@ interface AdminTopbarProps {
 
 export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
   const { data } = useSession();
+  const router = useRouter();
   const { registerRefreshCallback } = useAvatarRefresh();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
@@ -154,7 +156,10 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
               
               <div className="border-t border-gray-100 pt-1">
                 <button
-                  onClick={() => signOut({ callbackUrl: "/login" })}
+                  onClick={async () => {
+                    await signOut({ redirect: false });
+                    router.push("/login");
+                  }}
                   className="flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full transition-colors"
                 >
                   <LogOut className="h-4 w-4" />

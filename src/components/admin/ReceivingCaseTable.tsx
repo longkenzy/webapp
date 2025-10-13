@@ -89,6 +89,7 @@ interface ReceivingCaseTableProps {
   statusFilter?: string;
   receiverFilter?: string;
   supplierFilter?: string;
+  crmCodeFilter?: string;
   startDate?: string;
   endDate?: string;
   allCases?: ReceivingCase[];
@@ -126,6 +127,7 @@ export default function ReceivingCaseTable({
   statusFilter = '', 
   receiverFilter = '', 
   supplierFilter = '',
+  crmCodeFilter = '',
   startDate = '',
   endDate = '',
   allCases: propAllCases = [],
@@ -358,6 +360,14 @@ export default function ReceivingCaseTable({
         return false;
       }
 
+      // CRM code filter
+      if (crmCodeFilter) {
+        const crmCode = case_.crmReferenceCode || '';
+        if (!crmCode.toLowerCase().includes(crmCodeFilter.toLowerCase())) {
+          return false;
+        }
+      }
+
       // Date range filter
       if (startDate || endDate) {
         const caseDate = new Date(case_.createdAt);
@@ -389,7 +399,7 @@ export default function ReceivingCaseTable({
 
       return true;
     });
-  }, [statusFilter, receiverFilter, supplierFilter, startDate, endDate, searchTerm]);
+  }, [statusFilter, receiverFilter, supplierFilter, crmCodeFilter, startDate, endDate, searchTerm]);
 
   // Fetch all cases once
   const fetchAllCases = async () => {
@@ -751,6 +761,11 @@ export default function ReceivingCaseTable({
                       )}
                     </div>
                   ))}
+                  {caseItem.notes && (
+                    <div className="text-[10px] text-gray-600 italic pl-2 pt-1 border-t border-gray-200 mt-1">
+                      <span className="font-medium">Ghi chú:</span> {caseItem.notes}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -934,6 +949,11 @@ export default function ReceivingCaseTable({
                             )}
                           </div>
                         ))}
+                        {caseItem.notes && (
+                          <div className="text-xs text-gray-600 italic pt-1 border-t border-gray-200 mt-1">
+                            <span className="font-medium">Ghi chú:</span> {caseItem.notes}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-xs text-gray-500 italic">

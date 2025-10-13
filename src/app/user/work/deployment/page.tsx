@@ -7,6 +7,8 @@ import CreateDeploymentModal from './CreateDeploymentModal';
 import EditDeploymentModal from './EditDeploymentModal';
 import { useDeploymentCases } from '@/hooks/useDeploymentCases';
 import toast from 'react-hot-toast';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -75,13 +77,20 @@ export default function DeploymentCasePage() {
   const [casesPerPage] = useState(10);
   
   // Filter states
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    handler: string;
+    deploymentType: string;
+    customer: string;
+    status: string;
+    startDate: Date | null;
+    endDate: Date | null;
+  }>({
     handler: '',
     deploymentType: '',
     customer: '',
     status: '',
-    startDate: '',
-    endDate: ''
+    startDate: null,
+    endDate: null
   });
 
   // Mobile states
@@ -201,8 +210,8 @@ export default function DeploymentCasePage() {
       
       // Date range filter
       const caseDate = new Date(case_.startDate);
-      const startDate = filters.startDate ? new Date(filters.startDate) : null;
-      const endDate = filters.endDate ? new Date(filters.endDate) : null;
+      const startDate = filters.startDate;
+      const endDate = filters.endDate;
       
       const matchesDateRange = (!startDate || caseDate >= startDate) && 
         (!endDate || caseDate <= endDate);
@@ -368,26 +377,38 @@ export default function DeploymentCasePage() {
       deploymentType: '',
       customer: '',
       status: '',
-      startDate: '',
-      endDate: ''
+      startDate: null,
+      endDate: null
     });
   };
 
   // Check if any filters are active
   const hasActiveFilters = () => {
-    return Object.values(filters).some(value => value !== '');
+    return filters.handler !== '' || 
+           filters.deploymentType !== '' || 
+           filters.customer !== '' || 
+           filters.status !== '' || 
+           filters.startDate !== null || 
+           filters.endDate !== null;
   };
 
   // Count active filters
   const getActiveFiltersCount = () => {
-    return Object.values(filters).filter(value => value !== '').length;
+    let count = 0;
+    if (filters.handler) count++;
+    if (filters.deploymentType) count++;
+    if (filters.customer) count++;
+    if (filters.status) count++;
+    if (filters.startDate) count++;
+    if (filters.endDate) count++;
+    return count;
   };
 
 
   // Validate date range
   const isDateRangeValid = () => {
     if (filters.startDate && filters.endDate) {
-      return new Date(filters.startDate) <= new Date(filters.endDate);
+      return filters.startDate <= filters.endDate;
     }
     return true;
   };
@@ -443,7 +464,7 @@ export default function DeploymentCasePage() {
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
               <span className="hidden md:inline">Tạo Case Triển Khai</span>
@@ -469,7 +490,7 @@ export default function DeploymentCasePage() {
               <button 
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs md:text-sm"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs md:text-sm"
               >
                 <RefreshCw className={`h-3.5 w-3.5 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Làm mới</span>
@@ -646,11 +667,24 @@ export default function DeploymentCasePage() {
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Từ ngày
                       </label>
-                      <input
-                        type="date"
+                      <DateTimePicker
                         value={filters.startDate}
-                        onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                        onChange={(date) => setFilters(prev => ({ ...prev, startDate: date ? new Date(date) : null }))}
+                        locale="vi"
+                        valueFormat="DD/MM/YYYY HH:mm"
+                        placeholder="Chọn ngày bắt đầu"
+                        clearable
+                        withSeconds={false}
+                        classNames={{
+                          input: 'w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm'
+                        }}
+                        styles={{
+                          input: {
+                            fontSize: 'inherit',
+                            height: 'auto',
+                            minHeight: '38px'
+                          }
+                        }}
                       />
                     </div>
 
@@ -659,13 +693,27 @@ export default function DeploymentCasePage() {
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Đến ngày
                       </label>
-                      <input
-                        type="date"
+                      <DateTimePicker
                         value={filters.endDate}
-                        onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                        className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${
-                          !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        onChange={(date) => setFilters(prev => ({ ...prev, endDate: date ? new Date(date) : null }))}
+                        locale="vi"
+                        valueFormat="DD/MM/YYYY HH:mm"
+                        placeholder="Chọn ngày kết thúc"
+                        clearable
+                        withSeconds={false}
+                        minDate={filters.startDate || undefined}
+                        classNames={{
+                          input: `w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${
+                            !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
+                          }`
+                        }}
+                        styles={{
+                          input: {
+                            fontSize: 'inherit',
+                            height: 'auto',
+                            minHeight: '38px'
+                          }
+                        }}
                       />
                       {!isDateRangeValid() && (
                         <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
@@ -787,11 +835,8 @@ export default function DeploymentCasePage() {
                       <td className="px-2 py-1 w-32">
                         <div className="text-xs text-slate-600 max-w-32">
                           {case_.notes ? (
-                            <div className="bg-green-50 border border-green-200 rounded-md p-2">
-                              <div className="text-xs font-medium text-green-800 mb-1">Ghi chú:</div>
-                              <div className="text-xs text-green-700 line-clamp-3 break-words">
-                                {case_.notes}
-                              </div>
+                            <div className="text-xs text-slate-700 line-clamp-3 break-words">
+                              {case_.notes}
                             </div>
                           ) : (
                             <span className="text-slate-400 text-xs italic">Chưa có ghi chú</span>
@@ -803,7 +848,7 @@ export default function DeploymentCasePage() {
                       <td className="px-2 py-1 w-24">
                         <div className="text-sm text-slate-900">
                           {case_.crmReferenceCode ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                            <span className="text-xs font-bold text-blue-600">
                               {case_.crmReferenceCode}
                             </span>
                           ) : (
@@ -836,7 +881,7 @@ export default function DeploymentCasePage() {
                           {case_.status !== 'COMPLETED' && (
                             <button 
                               onClick={() => handleOpenEditModal(case_)}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 cursor-pointer"
                               title="Chỉnh sửa"
                             >
                               <Edit className="h-4 w-4" />
@@ -847,7 +892,7 @@ export default function DeploymentCasePage() {
                             <button
                               onClick={() => handleCloseCase(case_.id)}
                               disabled={closingCaseId === case_.id}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                               title="Đóng case"
                             >
                               {closingCaseId === case_.id ? (
@@ -896,7 +941,7 @@ export default function DeploymentCasePage() {
                     {getStatusText(case_.status)}
                   </span>
                   {case_.crmReferenceCode && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                    <span className="text-xs font-bold text-blue-600">
                       {case_.crmReferenceCode}
                     </span>
                   )}
@@ -966,9 +1011,9 @@ export default function DeploymentCasePage() {
 
                   {/* Notes */}
                   {case_.notes && (
-                    <div className="bg-green-50 border border-green-200 rounded px-2 py-1.5">
-                      <div className="text-xs font-medium text-green-800 mb-0.5">Ghi chú:</div>
-                      <div className="text-xs text-green-700 line-clamp-2">{case_.notes}</div>
+                    <div className="rounded px-2 py-1.5">
+                      <div className="text-xs font-medium text-slate-700 mb-0.5">Ghi chú:</div>
+                      <div className="text-xs text-slate-600 line-clamp-2">{case_.notes}</div>
                     </div>
                   )}
                 </div>
@@ -978,7 +1023,7 @@ export default function DeploymentCasePage() {
                   <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
                     <button 
                       onClick={() => handleOpenEditModal(case_)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded transition-colors cursor-pointer"
                     >
                       <Edit className="h-3.5 w-3.5" />
                       Sửa
@@ -986,7 +1031,7 @@ export default function DeploymentCasePage() {
                     <button
                       onClick={() => handleCloseCase(case_.id)}
                       disabled={closingCaseId === case_.id}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {closingCaseId === case_.id ? (
                         <RefreshCw className="h-3.5 w-3.5 animate-spin" />

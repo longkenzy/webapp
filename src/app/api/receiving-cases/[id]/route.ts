@@ -304,14 +304,19 @@ export async function PUT(
 
       return NextResponse.json(updatedCase);
     } catch (dbError) {
+      console.error('Database update error:', dbError);
       return NextResponse.json({ 
         error: "Database update failed", 
         details: dbError instanceof Error ? dbError.message : 'Unknown database error' 
       }, { status: 500 });
     }
   } catch (error) {
+    console.error('API error:', error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

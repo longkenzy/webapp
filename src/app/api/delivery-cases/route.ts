@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
+    console.log('=== Received POST request body ===');
+    console.log('Body:', JSON.stringify(body, null, 2));
+    
     const {
       title,
       description,
@@ -324,8 +327,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating delivery case:', error);
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

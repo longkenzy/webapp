@@ -86,6 +86,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     completionDateTime: '',
     status: 'RECEIVED',
     crmReferenceCode: '',
+    notes: '',
     // User self-assessment fields
     difficultyLevel: '',
     estimatedTime: '',
@@ -135,6 +136,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         completionDateTime: completionDateTimeLocal,
         status: editData.status || 'RECEIVED',
         crmReferenceCode: editData.crmReferenceCode || '',
+        notes: editData.notes || '',
         difficultyLevel: editData.userDifficultyLevel?.toString() || '',
         estimatedTime: editData.userEstimatedTime?.toString() || '',
         impactLevel: editData.userImpactLevel?.toString() || '',
@@ -181,6 +183,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         completionDateTime: '',
         status: 'RECEIVED',
         crmReferenceCode: '',
+        notes: '',
         difficultyLevel: '',
         estimatedTime: '',
         impactLevel: '',
@@ -457,7 +460,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
         endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
         status: formData.status || ReceivingCaseStatus.RECEIVED, // Use status from form
-        notes: null,
+        notes: formData.notes || null,
         crmReferenceCode: formData.crmReferenceCode || null,
         userDifficultyLevel: formData.difficultyLevel,
         userEstimatedTime: formData.estimatedTime,
@@ -587,6 +590,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
       completionDateTime: '',
       status: 'RECEIVED',
       crmReferenceCode: '',
+      notes: '',
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
@@ -987,15 +991,15 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
               )}
             </div>
 
-            {/* Section 4: Thời gian & Mã CRM */}
+            {/* Section 4: Thời gian */}
             <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
               <div className="flex items-center gap-2 mb-3 md:mb-4">
                 <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
                   <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                 </div>
-                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Thời gian & Mã CRM</h3>
+                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Thời gian</h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
                     <span className="w-32">Ngày giờ giao</span>
@@ -1028,6 +1032,34 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Section 5: Trạng thái & Mã CRM */}
+            <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
+              <div className="flex items-center gap-2 mb-3 md:mb-4">
+                <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
+                  <FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
+                </div>
+                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Trạng thái & Mã CRM</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-gray-600">
+                    <span className="w-24">Trạng thái</span>
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => handleInputChange('status', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  >
+                    {statusOptions.map(status => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-gray-600 flex items-center">
@@ -1044,33 +1076,24 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
               </div>
             </div>
 
-            {/* Section 5: Trạng thái */}
+            {/* Section 6: Ghi chú */}
             <div className="bg-gray-50 rounded-md p-3 md:p-4 border border-gray-200">
               <div className="flex items-center gap-2 mb-3 md:mb-4">
                 <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
                   <FileText className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
                 </div>
-                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Trạng thái</h3>
+                <h3 className="text-xs md:text-sm font-semibold text-gray-700">Ghi chú</h3>
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">
-                  <span className="w-24">Trạng thái</span>
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
-                  {statusOptions.map(status => (
-                    <option key={status.value} value={status.value}>
-                      {status.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+                placeholder="Nhập ghi chú cho case nhận hàng..."
+                rows={3}
+              />
             </div>
 
-            {/* Section 6: Đánh giá của User */}
+            {/* Section 7: Đánh giá của User */}
             <div className="bg-yellow-50 rounded-md p-4 border border-yellow-200">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">

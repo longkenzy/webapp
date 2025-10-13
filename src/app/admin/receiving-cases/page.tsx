@@ -8,6 +8,8 @@ import CreateReceivingCaseModal from './CreateReceivingCaseModal';
 import * as XLSX from 'xlsx';
 import { ReceivingCaseStatus } from '@prisma/client';
 import { getCurrentDateForFilename, formatVietnamDate, formatVietnamDateTime } from '@/lib/date-utils';
+import { DatePickerInput } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface ReceivingCase {
   id: string;
@@ -76,8 +78,9 @@ export default function ReceivingCasesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [receiverFilter, setReceiverFilter] = useState('');
   const [supplierFilter, setSupplierFilter] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [crmCodeFilter, setCrmCodeFilter] = useState('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
   const [receivers, setReceivers] = useState<Array<{id: string, fullName: string}>>([]);
   const [suppliers, setSuppliers] = useState<Array<{id: string, shortName: string}>>([]);
   const [allCases, setAllCases] = useState<ReceivingCase[]>([]);
@@ -629,7 +632,7 @@ export default function ReceivingCasesPage() {
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                       style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả trạng thái</option>
@@ -651,7 +654,7 @@ export default function ReceivingCasesPage() {
                     <select
                       value={receiverFilter}
                       onChange={(e) => setReceiverFilter(e.target.value)}
-                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                       style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả người nhận</option>
@@ -674,7 +677,7 @@ export default function ReceivingCasesPage() {
                     <select
                       value={supplierFilter}
                       onChange={(e) => setSupplierFilter(e.target.value)}
-                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                       style={{ WebkitAppearance: 'none' }}
                     >
                       <option value="">Tất cả nhà cung cấp</option>
@@ -686,6 +689,23 @@ export default function ReceivingCasesPage() {
                     </select>
                   </div>
 
+                  {/* CRM Code Filter */}
+                  <div>
+                    <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-pink-500 rounded-full"></div>
+                        <span>Mã CRM</span>
+                      </div>
+                    </label>
+                    <input
+                      type="text"
+                      value={crmCodeFilter}
+                      onChange={(e) => setCrmCodeFilter(e.target.value)}
+                      className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      placeholder="Nhập mã CRM..."
+                    />
+                  </div>
+
                   {/* Date From Filter */}
                   <div>
                     <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
@@ -694,12 +714,24 @@ export default function ReceivingCasesPage() {
                         <span>Từ ngày</span>
                       </div>
                     </label>
-                    <input
-                      type="date"
+                    <DatePickerInput
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
-                      style={{ WebkitAppearance: 'none' }}
+                      onChange={setStartDate}
+                      placeholder="Chọn từ ngày"
+                      locale="vi"
+                      valueFormat="DD/MM/YYYY"
+                      clearable
+                      styles={{
+                        input: {
+                          fontSize: '0.875rem',
+                          padding: '0.5rem 0.75rem',
+                          minHeight: '40px',
+                          height: '40px',
+                          borderColor: '#e5e7eb',
+                          backgroundColor: '#f9fafb',
+                          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        }
+                      }}
                     />
                   </div>
 
@@ -711,12 +743,25 @@ export default function ReceivingCasesPage() {
                         <span>Đến ngày</span>
                       </div>
                     </label>
-                    <input
-                      type="date"
+                    <DatePickerInput
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
-                      style={{ WebkitAppearance: 'none' }}
+                      onChange={setEndDate}
+                      placeholder="Chọn đến ngày"
+                      locale="vi"
+                      valueFormat="DD/MM/YYYY"
+                      clearable
+                      minDate={startDate || undefined}
+                      styles={{
+                        input: {
+                          fontSize: '0.875rem',
+                          padding: '0.5rem 0.75rem',
+                          minHeight: '40px',
+                          height: '40px',
+                          borderColor: '#e5e7eb',
+                          backgroundColor: '#f9fafb',
+                          fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        }
+                      }}
                     />
                   </div>
                 </div>
@@ -853,8 +898,9 @@ export default function ReceivingCasesPage() {
           statusFilter={statusFilter}
           receiverFilter={receiverFilter}
           supplierFilter={supplierFilter}
-          startDate={startDate}
-          endDate={endDate}
+          crmCodeFilter={crmCodeFilter}
+          startDate={startDate ? startDate.toISOString().split('T')[0] : ''}
+          endDate={endDate ? endDate.toISOString().split('T')[0] : ''}
           allCases={allCases}
           deletedCases={deletedCases}
         />

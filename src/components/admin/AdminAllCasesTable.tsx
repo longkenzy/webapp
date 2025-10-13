@@ -411,11 +411,16 @@ function AdminAllCasesTable() {
       if (receivingData.receivingCases) {
         receivingData.receivingCases.forEach((case_: any) => {
           // Format products for receiving cases
-          const productsInfo = case_.products && case_.products.length > 0 
+          let productsInfo = case_.products && case_.products.length > 0 
             ? case_.products.map((product: any) => 
                 `**${product.name}** | SL: ${product.quantity} | Mã: ${product.code || product.serialNumber || ''}`
               ).join('\n')
             : case_.description;
+          
+          // Add notes if available
+          if (case_.notes) {
+            productsInfo += `\n*Ghi chú: ${case_.notes}*`;
+          }
 
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
 

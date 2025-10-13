@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 import { formatVietnamDateTime } from '@/lib/date-utils';
 import CreateReceivingCaseModal from './CreateReceivingCaseModal';
 import EditReceivingCaseModal from './EditReceivingCaseModal';
+import { DatePickerInput } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -91,8 +93,9 @@ export default function ReceivingCasePage() {
     receiver: '',
     supplier: '',
     status: '',
-    startDate: '',
-    endDate: ''
+    crmCode: '',
+    startDate: null as Date | null,
+    endDate: null as Date | null
   });
   
   // Mobile filter visibility
@@ -339,16 +342,20 @@ export default function ReceivingCasePage() {
       const matchesStatus = filters.status === '' || 
         case_.status === filters.status;
       
+      // CRM code filter
+      const matchesCrmCode = filters.crmCode === '' || 
+        (case_.crmReferenceCode || '').toLowerCase().includes(filters.crmCode.toLowerCase());
+      
       // Date range filter
       const caseDate = new Date(case_.startDate);
-      const startDate = filters.startDate ? new Date(filters.startDate) : null;
-      const endDate = filters.endDate ? new Date(filters.endDate) : null;
+      const startDate = filters.startDate;
+      const endDate = filters.endDate;
       
       const matchesDateRange = (!startDate || caseDate >= startDate) && 
         (!endDate || caseDate <= endDate);
       
       return matchesSearch && matchesReceiver && matchesSupplier && 
-             matchesStatus && matchesDateRange;
+             matchesStatus && matchesCrmCode && matchesDateRange;
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); // Sort by newest first
 
@@ -543,14 +550,16 @@ export default function ReceivingCasePage() {
       receiver: '',
       supplier: '',
       status: '',
-      startDate: '',
-      endDate: ''
+      crmCode: '',
+      startDate: null,
+      endDate: null
     });
   };
 
   // Check if any filters are active
   const hasActiveFilters = () => {
-    return Object.values(filters).some(value => value !== '');
+    return filters.receiver !== '' || filters.supplier !== '' || filters.status !== '' || 
+           filters.crmCode !== '' || filters.startDate !== null || filters.endDate !== null;
   };
 
   // Pagination functions
@@ -578,7 +587,7 @@ export default function ReceivingCasePage() {
   // Validate date range
   const isDateRangeValid = () => {
     if (filters.startDate && filters.endDate) {
-      return new Date(filters.startDate) <= new Date(filters.endDate);
+      return filters.startDate <= filters.endDate;
     }
     return true;
   };
@@ -715,7 +724,7 @@ export default function ReceivingCasePage() {
 
                 {/* Filters Grid */}
                 <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
                     {/* Người nhận hàng */}
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -724,7 +733,7 @@ export default function ReceivingCasePage() {
                       <select
                         value={filters.receiver}
                         onChange={(e) => setFilters(prev => ({ ...prev, receiver: e.target.value }))}
-                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                        className="w-full px-2.5 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                       >
                         <option value="">Tất cả</option>
                         {getUniqueReceivers().map(receiver => (
@@ -741,7 +750,7 @@ export default function ReceivingCasePage() {
                       <select
                         value={filters.supplier}
                         onChange={(e) => setFilters(prev => ({ ...prev, supplier: e.target.value }))}
-                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                        className="w-full px-2.5 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                       >
                         <option value="">Tất cả</option>
                         {getUniqueSuppliers().map(supplier => (
@@ -758,7 +767,7 @@ export default function ReceivingCasePage() {
                       <select
                         value={filters.status}
                         onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                        className="w-full px-2.5 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
                       >
                         <option value="">Tất cả</option>
                         {getUniqueStatuses().map(status => (
@@ -767,16 +776,43 @@ export default function ReceivingCasePage() {
                       </select>
                     </div>
 
+                    {/* Mã CRM */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Mã CRM
+                      </label>
+                      <input
+                        type="text"
+                        value={filters.crmCode}
+                        onChange={(e) => setFilters(prev => ({ ...prev, crmCode: e.target.value }))}
+                        className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                        placeholder="Nhập mã CRM..."
+                      />
+                    </div>
+
                     {/* Từ ngày */}
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Từ ngày
                       </label>
-                      <input
-                        type="date"
+                      <DatePickerInput
                         value={filters.startDate}
-                        onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
-                        className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                        onChange={(value) => setFilters(prev => ({ ...prev, startDate: value }))}
+                        placeholder="Chọn từ ngày"
+                        locale="vi"
+                        valueFormat="DD/MM/YYYY"
+                        clearable
+                        styles={{
+                          input: {
+                            fontSize: '0.875rem',
+                            padding: '0.5rem 0.75rem',
+                            minHeight: '40px',
+                            height: '40px',
+                            borderColor: '#e5e7eb',
+                            backgroundColor: '#f9fafb',
+                            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                          }
+                        }}
                       />
                     </div>
 
@@ -785,13 +821,25 @@ export default function ReceivingCasePage() {
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Đến ngày
                       </label>
-                      <input
-                        type="date"
+                      <DatePickerInput
                         value={filters.endDate}
-                        onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                        className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${
-                          !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        onChange={(value) => setFilters(prev => ({ ...prev, endDate: value }))}
+                        placeholder="Chọn đến ngày"
+                        locale="vi"
+                        valueFormat="DD/MM/YYYY"
+                        clearable
+                        minDate={filters.startDate || undefined}
+                        styles={{
+                          input: {
+                            fontSize: '0.875rem',
+                            padding: '0.5rem 0.75rem',
+                            minHeight: '40px',
+                            height: '40px',
+                            borderColor: !isDateRangeValid() ? '#fca5a5' : '#e5e7eb',
+                            backgroundColor: '#f9fafb',
+                            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                          }
+                        }}
                       />
                       {!isDateRangeValid() && (
                         <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
@@ -940,6 +988,11 @@ export default function ReceivingCasePage() {
                                 </div>
                               </div>
                             ))}
+                            {case_.notes && (
+                              <div className="text-xs text-gray-600 italic pt-2 border-t border-blue-200 mt-2">
+                                <span className="font-medium">Ghi chú:</span> {case_.notes}
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1181,6 +1234,11 @@ export default function ReceivingCasePage() {
                                       )}
                                     </div>
                                   ))}
+                                  {case_.notes && (
+                                    <div className="text-xs text-slate-600 italic pt-1 border-t border-slate-200 mt-1">
+                                      <span className="font-medium">Ghi chú:</span> {case_.notes}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             } else {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAvatarRefresh } from '@/contexts/AvatarRefreshContext';
 import { 
   Home, 
@@ -63,8 +63,10 @@ export default function UserNavbar() {
     return pathname === href;
   };
 
+  const router = useRouter();
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ redirect: false });
+    router.push('/login');
   };
 
   // Helper functions for consistent hover behavior

@@ -155,14 +155,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Determine the correct avatar URL based on directory location
-    let avatarUrl: string;
-    if (avatarsDir.includes("public")) {
-      avatarUrl = `/avatars/${fileName}`;
-    } else {
-      // For production environments where avatars might be stored elsewhere
-      avatarUrl = `/api/avatars/${fileName}`;
-    }
+    // Always use API route for avatar URLs to ensure consistency
+    const avatarUrl = `/api/avatars/${fileName}`;
     
     console.log("Avatar saved successfully:", {
       fileName,

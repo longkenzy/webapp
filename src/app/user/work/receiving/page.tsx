@@ -797,7 +797,7 @@ export default function ReceivingCasePage() {
                       </label>
                       <DatePickerInput
                         value={filters.startDate}
-                        onChange={(value) => setFilters(prev => ({ ...prev, startDate: value }))}
+                        onChange={(value) => setFilters(prev => ({ ...prev, startDate: value ? new Date(value) : null }))}
                         placeholder="Chọn từ ngày"
                         locale="vi"
                         valueFormat="DD/MM/YYYY"
@@ -823,7 +823,7 @@ export default function ReceivingCasePage() {
                       </label>
                       <DatePickerInput
                         value={filters.endDate}
-                        onChange={(value) => setFilters(prev => ({ ...prev, endDate: value }))}
+                        onChange={(value) => setFilters(prev => ({ ...prev, endDate: value ? new Date(value) : null }))}
                         placeholder="Chọn đến ngày"
                         locale="vi"
                         valueFormat="DD/MM/YYYY"

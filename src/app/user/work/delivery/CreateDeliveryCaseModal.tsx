@@ -16,6 +16,7 @@ interface Employee {
   fullName: string;
   position: string;
   department: string;
+  companyEmail: string;
 }
 
 interface Partner {

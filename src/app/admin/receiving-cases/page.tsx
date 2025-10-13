@@ -716,7 +716,7 @@ export default function ReceivingCasesPage() {
                     </label>
                     <DatePickerInput
                       value={startDate}
-                      onChange={setStartDate}
+                      onChange={(date) => setStartDate(date ? new Date(date) : null)}
                       placeholder="Chọn từ ngày"
                       locale="vi"
                       valueFormat="DD/MM/YYYY"
@@ -745,7 +745,7 @@ export default function ReceivingCasesPage() {
                     </label>
                     <DatePickerInput
                       value={endDate}
-                      onChange={setEndDate}
+                      onChange={(date) => setEndDate(date ? new Date(date) : null)}
                       placeholder="Chọn đến ngày"
                       locale="vi"
                       valueFormat="DD/MM/YYYY"
@@ -823,8 +823,8 @@ export default function ReceivingCasesPage() {
                         setStatusFilter('');
                         setReceiverFilter('');
                         setSupplierFilter('');
-                        setStartDate('');
-                        setEndDate('');
+                        setStartDate(null);
+                        setEndDate(null);
                         setSearchTerm('');
                       }}
                       className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"

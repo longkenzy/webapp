@@ -153,10 +153,10 @@ export default function EditDeliveryCaseModal({ isOpen, onClose, onSuccess, case
     });
   };
 
-  const handleEndDateChange = (value: Date | null) => {
+  const handleEndDateChange = (value: string | null) => {
     setFormData(prev => ({
       ...prev,
-      endDate: value
+      endDate: value ? new Date(value) : null
     }));
   };
 

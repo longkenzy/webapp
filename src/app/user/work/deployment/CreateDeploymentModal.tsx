@@ -370,7 +370,7 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
       // Combine customer title and name
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
 
-      // Convert dates to ISO strings - ensure dates are valid Date objects
+      // Convert dates to ISO strings - handle both Date objects and strings
       console.log('🔍 Debug startDate:', {
         value: formData.startDate,
         type: typeof formData.startDate,
@@ -378,12 +378,27 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
         isValid: formData.startDate instanceof Date ? !isNaN(formData.startDate.getTime()) : false
       });
       
-      const startDateISO = formData.startDate instanceof Date && !isNaN(formData.startDate.getTime()) 
-        ? formData.startDate.toISOString() 
-        : null;
-      const endDateISO = formData.endDate instanceof Date && !isNaN(formData.endDate.getTime())
-        ? formData.endDate.toISOString() 
-        : null;
+      // Helper function to convert to ISO string
+      const toISOString = (dateValue: Date | string | null): string | null => {
+        if (!dateValue) return null;
+        
+        try {
+          if (dateValue instanceof Date) {
+            return !isNaN(dateValue.getTime()) ? dateValue.toISOString() : null;
+          }
+          // If it's a string, try to parse it
+          if (typeof dateValue === 'string') {
+            const parsed = new Date(dateValue);
+            return !isNaN(parsed.getTime()) ? parsed.toISOString() : null;
+          }
+        } catch (error) {
+          console.error('Error converting date:', error);
+        }
+        return null;
+      };
+      
+      const startDateISO = toISOString(formData.startDate);
+      const endDateISO = toISOString(formData.endDate);
       
       console.log('🔍 Converted dates:', { startDateISO, endDateISO });
 

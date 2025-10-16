@@ -147,13 +147,28 @@ export default function EditDeploymentModal({
     try {
       setLoading(true);
       
+      // Helper function to convert to ISO string
+      const toISOString = (dateValue: Date | string | null): string | null => {
+        if (!dateValue) return null;
+        
+        try {
+          if (dateValue instanceof Date) {
+            return !isNaN(dateValue.getTime()) ? dateValue.toISOString() : null;
+          }
+          // If it's a string, try to parse it
+          if (typeof dateValue === 'string') {
+            const parsed = new Date(dateValue);
+            return !isNaN(parsed.getTime()) ? parsed.toISOString() : null;
+          }
+        } catch (error) {
+          console.error('Error converting date:', error);
+        }
+        return null;
+      };
+
       // Prepare data for API
       const updateData = {
-        endDate: formData.endDate 
-          ? (formData.endDate instanceof Date && !isNaN(formData.endDate.getTime())
-              ? formData.endDate.toISOString() 
-              : new Date(formData.endDate).toISOString())
-          : null,
+        endDate: toISOString(formData.endDate),
         status: formData.status,
         notes: formData.notes || null, // Thêm Ghi chú
         crmReferenceCode: formData.crmReferenceCode || null // Thêm Mã CRM

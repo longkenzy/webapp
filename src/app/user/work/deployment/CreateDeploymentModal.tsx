@@ -370,9 +370,13 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
       // Combine customer title and name
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
 
-      // Convert dates to ISO strings
-      const startDateISO = formData.startDate ? formData.startDate.toISOString() : null;
-      const endDateISO = formData.endDate ? formData.endDate.toISOString() : null;
+      // Convert dates to ISO strings - ensure dates are valid Date objects
+      const startDateISO = formData.startDate instanceof Date && !isNaN(formData.startDate.getTime()) 
+        ? formData.startDate.toISOString() 
+        : null;
+      const endDateISO = formData.endDate instanceof Date && !isNaN(formData.endDate.getTime())
+        ? formData.endDate.toISOString() 
+        : null;
 
       // Prepare data for API
       const deploymentData = {

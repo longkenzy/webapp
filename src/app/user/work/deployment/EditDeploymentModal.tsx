@@ -150,7 +150,7 @@ export default function EditDeploymentModal({
       // Prepare data for API
       const updateData = {
         endDate: formData.endDate 
-          ? (formData.endDate instanceof Date 
+          ? (formData.endDate instanceof Date && !isNaN(formData.endDate.getTime())
               ? formData.endDate.toISOString() 
               : new Date(formData.endDate).toISOString())
           : null,

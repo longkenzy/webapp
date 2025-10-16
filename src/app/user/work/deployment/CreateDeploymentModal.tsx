@@ -371,12 +371,31 @@ export default function CreateDeploymentModal({ isOpen, onClose, onSuccess }: Cr
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
 
       // Convert dates to ISO strings - ensure dates are valid Date objects
+      console.log('🔍 Debug startDate:', {
+        value: formData.startDate,
+        type: typeof formData.startDate,
+        isDate: formData.startDate instanceof Date,
+        isValid: formData.startDate instanceof Date ? !isNaN(formData.startDate.getTime()) : false
+      });
+      
       const startDateISO = formData.startDate instanceof Date && !isNaN(formData.startDate.getTime()) 
         ? formData.startDate.toISOString() 
         : null;
       const endDateISO = formData.endDate instanceof Date && !isNaN(formData.endDate.getTime())
         ? formData.endDate.toISOString() 
         : null;
+      
+      console.log('🔍 Converted dates:', { startDateISO, endDateISO });
+
+      // Final validation: startDate must be valid
+      if (!startDateISO) {
+        toast.error('Ngày bắt đầu không hợp lệ. Vui lòng chọn lại!', {
+          duration: 4000,
+          position: 'top-right',
+        });
+        setLoading(false);
+        return;
+      }
 
       // Prepare data for API
       const deploymentData = {

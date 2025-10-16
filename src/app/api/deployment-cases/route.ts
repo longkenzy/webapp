@@ -50,6 +50,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate startDate is provided and valid
+    if (!startDate) {
+      console.log("Missing startDate");
+      return NextResponse.json(
+        { error: "Ngày bắt đầu là bắt buộc" },
+        { status: 400 }
+      );
+    }
+
     // Validate end date using dayjs helper
     const dateValidationError = validateCaseDates(startDate, endDate);
     if (dateValidationError) {
@@ -131,7 +140,7 @@ export async function POST(request: NextRequest) {
         deploymentTypeId,
         customerName,
         customerId: customerId || null,
-        startDate: startDate ? new Date(startDate) : new Date(),
+        startDate: new Date(startDate), // startDate is validated above, no fallback needed
         endDate: endDate ? new Date(endDate) : null,
         status: status || DeploymentCaseStatus.RECEIVED,
         notes: notes || null,

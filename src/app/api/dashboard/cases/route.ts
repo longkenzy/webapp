@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { InternalCaseStatus } from "@prisma/client";
 import { withAuth, withErrorHandling } from "@/lib/api-middleware";
-import { createOptimizedResponse, INCLUDE_PATTERNS } from "@/lib/api-optimization";
+import { createOptimizedResponse } from "@/lib/api-optimization";
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
@@ -35,7 +35,24 @@ export const GET = withErrorHandling(
           }
         ]
       },
-      include: INCLUDE_PATTERNS.caseWithBasicRelations,
+      include: {
+        requester: { 
+          select: {
+            id: true,
+            fullName: true,
+            position: true,
+            department: true
+          }
+        },
+        handler: { 
+          select: {
+            id: true,
+            fullName: true,
+            position: true,
+            department: true
+          }
+        }
+      },
       orderBy: {
         createdAt: 'desc'
       },

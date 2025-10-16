@@ -50,6 +50,14 @@ interface DeliveryCase {
   userUrgencyLevel: number | null;
   userFormScore: number | null;
   userAssessmentDate: string | null;
+  requester: {
+    id: string;
+    fullName: string;
+  };
+  handler: {
+    id: string;
+    fullName: string;
+  };
   customer: {
     id: string;
     shortName: string;
@@ -62,10 +70,6 @@ interface DeliveryCase {
     quantity: number;
     serialNumber: string | null;
   }[];
-  handler: {
-    id: string;
-    fullName: string;
-  };
 }
 
 interface CreateDeliveryCaseModalProps {
@@ -601,8 +605,9 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         return;
       }
 
-      // Use currentEmployee as reporter, or fallback to handler if not available
-      const reporterId = currentEmployee?.id || handlerId;
+      // IMPORTANT: In edit mode, preserve the original requesterId
+      // In create mode, use currentEmployee as requester
+      const reporterId = editData ? editData.requester.id : (currentEmployee?.id || handlerId);
 
       // Prepare data for API
       const caseData = {

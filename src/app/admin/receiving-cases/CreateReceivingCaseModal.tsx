@@ -51,6 +51,14 @@ interface ReceivingCase {
   userUrgencyLevel: number | null;
   userFormScore: number | null;
   userAssessmentDate: string | null;
+  requester: {
+    id: string;
+    fullName: string;
+  };
+  handler: {
+    id: string;
+    fullName: string;
+  };
   supplier: {
     id: string;
     shortName: string;
@@ -63,10 +71,6 @@ interface ReceivingCase {
     quantity: number;
     serialNumber: string | null;
   }[];
-  handler: {
-    id: string;
-    fullName: string;
-  };
 }
 
 interface CreateReceivingCaseModalProps {
@@ -447,8 +451,9 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
       // Use handler from formData (selected from dropdown)
       const handlerId = formData.handler;
       
-      // Use currentEmployee as reporter, or fallback to handler if not available
-      const reporterId = currentEmployee?.id || handlerId;
+      // IMPORTANT: In edit mode, preserve the original requesterId
+      // In create mode, use currentEmployee as requester
+      const reporterId = editData ? editData.requester.id : (currentEmployee?.id || handlerId);
 
       const caseData = {
         title: `Nhận hàng từ ${selectedPartner?.shortName || 'Nhà cung cấp'}`,

@@ -164,15 +164,29 @@ export const SELECT_FIELDS = {
 
 /**
  * Common include patterns to prevent N+1 queries
+ * NOTE: These patterns are for cases with "reporter" field (DeploymentCase, Incident, MaintenanceCase, Warranty)
+ * For InternalCase, ReceivingCase, DeliveryCase: use "requester" instead of "reporter"
  */
 export const INCLUDE_PATTERNS = {
-  caseWithRelations: {
+  // For DeploymentCase, Incident, MaintenanceCase, Warranty (have reporter + customer)
+  caseWithReporterAndCustomer: {
     reporter: { select: SELECT_FIELDS.employee },
     handler: { select: SELECT_FIELDS.employee },
     customer: { select: SELECT_FIELDS.partner }
   },
-  caseWithBasicRelations: {
+  caseWithReporterAndCustomerBasic: {
     reporter: { select: SELECT_FIELDS.employeeBasic },
+    handler: { select: SELECT_FIELDS.employeeBasic },
+    customer: { select: SELECT_FIELDS.partnerBasic }
+  },
+  // For InternalCase, ReceivingCase, DeliveryCase (have requester + customer/supplier)
+  caseWithRequesterAndPartner: {
+    requester: { select: SELECT_FIELDS.employee },
+    handler: { select: SELECT_FIELDS.employee },
+    customer: { select: SELECT_FIELDS.partner }
+  },
+  caseWithRequesterAndPartnerBasic: {
+    requester: { select: SELECT_FIELDS.employeeBasic },
     handler: { select: SELECT_FIELDS.employeeBasic },
     customer: { select: SELECT_FIELDS.partnerBasic }
   }

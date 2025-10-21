@@ -548,7 +548,7 @@ export default function IncidentPage() {
               <button 
                 onClick={refreshIncidents}
                 disabled={refreshing}
-                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 text-xs md:text-sm cursor-pointer"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs md:text-sm"
               >
                 <RefreshCw className={`h-3.5 w-3.5 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Làm mới</span>
@@ -936,11 +936,8 @@ export default function IncidentPage() {
                       <td className="px-2 py-1 w-32">
                         <div className="text-xs text-slate-600 max-w-32">
                           {incident.notes ? (
-                            <div className="bg-green-50 border border-green-200 rounded-md p-2">
-                              <div className="text-xs font-medium text-green-800 mb-1">Ghi chú:</div>
-                              <div className="text-xs text-green-700 line-clamp-3 break-words">
-                                {incident.notes}
-                              </div>
+                            <div className="text-xs text-slate-700 line-clamp-3 break-words">
+                              {incident.notes}
                             </div>
                           ) : (
                             <span className="text-slate-400 text-xs italic">Chưa có ghi chú</span>
@@ -952,7 +949,7 @@ export default function IncidentPage() {
                       <td className="px-2 py-1 w-24">
                         <div className="text-sm text-slate-900">
                           {incident.crmReferenceCode ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                            <span className="text-xs font-bold text-blue-600">
                               {incident.crmReferenceCode}
                             </span>
                           ) : (
@@ -1140,7 +1137,7 @@ export default function IncidentPage() {
                     <button
                       onClick={() => handleCloseCase(incident.id)}
                       disabled={closingCaseId === incident.id}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50 cursor-pointer"
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {closingCaseId === incident.id ? (
                         <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -1175,7 +1172,7 @@ export default function IncidentPage() {
                   <button
                     onClick={goToPrevPage}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <span className="sr-only">Trước</span>
                     <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -1200,7 +1197,7 @@ export default function IncidentPage() {
                       <button
                         key={pageNum}
                         onClick={() => goToPage(pageNum)}
-                        className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium ${
+                        className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium cursor-pointer ${
                           currentPage === pageNum
                             ? 'z-10 bg-red-50 border-red-500 text-red-600'
                             : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
@@ -1214,7 +1211,7 @@ export default function IncidentPage() {
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <span className="sr-only">Sau</span>
                     <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

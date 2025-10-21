@@ -260,7 +260,7 @@ export default function InternalCasePage() {
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-1 md:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2.5 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-1 md:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2.5 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Tạo Case Nội Bộ</span>
@@ -274,7 +274,7 @@ export default function InternalCasePage() {
           {/* Mobile: Collapsible Header */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="md:hidden w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors rounded-t-lg"
+            className="md:hidden w-full flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors rounded-t-lg cursor-pointer"
           >
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4 text-blue-600" />
@@ -303,7 +303,7 @@ export default function InternalCasePage() {
               <button 
                 onClick={refreshInternalCases}
                 disabled={refreshing}
-                className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs sm:text-sm"
+                className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs sm:text-sm"
               >
                 <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Làm mới</span>
@@ -484,7 +484,7 @@ export default function InternalCasePage() {
                     <div className="flex items-center space-x-1.5">
                       <button
                         onClick={clearFilters}
-                        className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors"
+                        className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors cursor-pointer"
                       >
                         <X className="h-3 w-3" />
                         <span>Xóa tất cả</span>
@@ -653,7 +653,7 @@ export default function InternalCasePage() {
                     <button
                       onClick={goToPrevPage}
                       disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       <span className="sr-only">Trước</span>
                       <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -678,7 +678,7 @@ export default function InternalCasePage() {
                         <button
                           key={pageNum}
                           onClick={() => goToPage(pageNum)}
-                          className={`relative inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 border text-xs md:text-sm font-medium ${
+                          className={`relative inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 border text-xs md:text-sm font-medium cursor-pointer ${
                             pageNum === currentPage
                               ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                               : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
@@ -692,7 +692,7 @@ export default function InternalCasePage() {
                     <button
                       onClick={goToNextPage}
                       disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       <span className="sr-only">Sau</span>
                       <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

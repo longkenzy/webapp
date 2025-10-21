@@ -164,7 +164,7 @@ const InternalCaseRow = memo(function InternalCaseRow({
           {case_.status !== 'COMPLETED' && (
             <button 
               onClick={() => onEdit(case_)}
-              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
+              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200 cursor-pointer"
               title="Chỉnh sửa"
             >
               <Edit className="h-4 w-4" />
@@ -175,7 +175,7 @@ const InternalCaseRow = memo(function InternalCaseRow({
             <button 
               onClick={handleCloseCase}
               disabled={isClosing}
-              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               title="Đóng case"
             >
               <Check className={`h-4 w-4 ${isClosing ? 'animate-pulse' : ''}`} />

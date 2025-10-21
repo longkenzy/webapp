@@ -173,7 +173,7 @@ const InternalCaseCard = memo(function InternalCaseCard({
         <div className="flex items-center gap-2">
           <button 
             onClick={() => onEdit(case_)}
-            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors cursor-pointer"
           >
             <Edit className="h-3.5 w-3.5" />
             Sửa
@@ -181,7 +181,7 @@ const InternalCaseCard = memo(function InternalCaseCard({
           <button
             onClick={handleCloseCase}
             disabled={isClosing}
-            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50"
+            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isClosing ? (
               <>

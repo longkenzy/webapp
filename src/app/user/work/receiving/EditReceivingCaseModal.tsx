@@ -421,7 +421,7 @@ export default function EditReceivingCaseModal({
             <button
               type="button"
               onClick={handleClose}
-              className="p-1.5 text-white/90 hover:text-white hover:bg-white/20 rounded transition-colors"
+              className="p-1.5 text-white/90 hover:text-white hover:bg-white/20 rounded transition-colors cursor-pointer"
             >
               <X className="h-5 w-5" />
             </button>
@@ -555,7 +555,7 @@ export default function EditReceivingCaseModal({
                   <button
                     type="button"
                     onClick={addProduct}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors font-medium"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors font-medium cursor-pointer"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     <span>Thêm sản phẩm</span>
@@ -572,7 +572,7 @@ export default function EditReceivingCaseModal({
                             <button
                               type="button"
                               onClick={() => removeProduct(product.id)}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -712,7 +712,7 @@ export default function EditReceivingCaseModal({
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer"
                 style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
               >
                 Hủy bỏ
@@ -720,7 +720,7 @@ export default function EditReceivingCaseModal({
               <button
                 type="submit"
                 disabled={loading}
-                className="px-5 py-2 text-sm bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2"
+                className="px-5 py-2 text-sm bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
                 style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
               >
                 {loading ? (

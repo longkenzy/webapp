@@ -522,7 +522,7 @@ export default function IncidentPage() {
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-red-600 to-orange-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-red-700 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-red-600 to-orange-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-red-700 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer"
             >
               <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4" />
               <span className="hidden md:inline">Tạo Case Xử Lý Sự Cố</span>
@@ -548,7 +548,7 @@ export default function IncidentPage() {
               <button 
                 onClick={refreshIncidents}
                 disabled={refreshing}
-                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 text-xs md:text-sm"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 text-xs md:text-sm cursor-pointer"
               >
                 <RefreshCw className={`h-3.5 w-3.5 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Làm mới</span>
@@ -990,7 +990,7 @@ export default function IncidentPage() {
                           {incident.status !== 'COMPLETED' && (
                             <button 
                               onClick={() => handleOpenEditModal(incident)}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 cursor-pointer"
                               title="Chỉnh sửa"
                             >
                               <Edit className="h-4 w-4" />
@@ -1001,7 +1001,7 @@ export default function IncidentPage() {
                             <button
                               onClick={() => handleCloseCase(incident.id)}
                               disabled={closingCaseId === incident.id}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                               title="Đóng case"
                             >
                               {closingCaseId === incident.id ? (
@@ -1132,7 +1132,7 @@ export default function IncidentPage() {
                   <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
                     <button 
                       onClick={() => handleOpenEditModal(incident)}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded transition-colors cursor-pointer"
                     >
                       <Edit className="h-3.5 w-3.5" />
                       Sửa
@@ -1140,7 +1140,7 @@ export default function IncidentPage() {
                     <button
                       onClick={() => handleCloseCase(incident.id)}
                       disabled={closingCaseId === incident.id}
-                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors disabled:opacity-50 cursor-pointer"
                     >
                       {closingCaseId === incident.id ? (
                         <RefreshCw className="h-3.5 w-3.5 animate-spin" />

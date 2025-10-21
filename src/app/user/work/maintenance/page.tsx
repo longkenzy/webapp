@@ -478,7 +478,7 @@ export default function MaintenancePage() {
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-orange-600 to-amber-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-orange-700 hover:to-amber-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-orange-600 to-amber-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md text-xs md:text-sm font-medium hover:from-orange-700 hover:to-amber-700 transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer"
             >
               <Wrench className="h-3.5 w-3.5 md:h-4 md:w-4" />
               <span className="hidden md:inline">Tạo Case Bảo Trì</span>
@@ -504,7 +504,7 @@ export default function MaintenancePage() {
               <button 
                 onClick={refreshMaintenanceCases}
                 disabled={refreshing}
-                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 text-xs md:text-sm"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 text-xs md:text-sm cursor-pointer"
               >
                 <RefreshCw className={`h-3.5 w-3.5 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Làm mới</span>
@@ -553,7 +553,7 @@ export default function MaintenancePage() {
                   {hasActiveFilters() && (
                     <button
                       onClick={clearFilters}
-                      className="text-xs text-gray-600 hover:text-gray-800 font-medium px-2 py-1 hover:bg-gray-100 rounded transition-colors"
+                      className="text-xs text-gray-600 hover:text-gray-800 font-medium px-2 py-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
                     >
                       Xóa tất cả
                     </button>
@@ -724,7 +724,7 @@ export default function MaintenancePage() {
                     <div className="flex items-center space-x-1.5">
                       <button
                         onClick={clearFilters}
-                        className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors"
+                        className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors cursor-pointer"
                       >
                         <X className="h-3 w-3" />
                         <span>Xóa tất cả</span>
@@ -855,11 +855,8 @@ export default function MaintenancePage() {
                       <td className="px-2 py-1 w-32">
                         <div className="text-xs text-slate-600 max-w-32">
                           {maintenance.notes ? (
-                            <div className="bg-green-50 border border-green-200 rounded-md p-2">
-                              <div className="text-xs font-medium text-green-800 mb-1">Ghi chú:</div>
-                              <div className="text-xs text-green-700 line-clamp-3 break-words">
-                                {maintenance.notes}
-                              </div>
+                            <div className="text-xs text-slate-700 line-clamp-3 break-words">
+                              {maintenance.notes}
                             </div>
                           ) : (
                             <span className="text-slate-400 text-xs italic">Chưa có ghi chú</span>
@@ -871,7 +868,7 @@ export default function MaintenancePage() {
                       <td className="px-2 py-1 w-24">
                         <div className="text-sm text-slate-900">
                           {maintenance.crmReferenceCode ? (
-                            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                            <span className="text-xs font-medium text-blue-600">
                               {maintenance.crmReferenceCode}
                             </span>
                           ) : (
@@ -909,7 +906,7 @@ export default function MaintenancePage() {
                           {maintenance.status !== 'COMPLETED' && (
                             <button 
                               onClick={() => handleOpenEditModal(maintenance)}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200"
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 cursor-pointer"
                               title="Chỉnh sửa"
                             >
                               <Edit className="h-4 w-4" />
@@ -920,7 +917,7 @@ export default function MaintenancePage() {
                             <button
                               onClick={() => handleCloseCase(maintenance.id)}
                               disabled={closingCaseId === maintenance.id}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                               title="Đóng case"
                             >
                               {closingCaseId === maintenance.id ? (
@@ -968,7 +965,7 @@ export default function MaintenancePage() {
                     {getStatusText(maintenanceCase.status)}
                   </span>
                   {maintenanceCase.crmReferenceCode && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                    <span className="text-xs font-medium text-blue-600">
                       {maintenanceCase.crmReferenceCode}
                     </span>
                   )}
@@ -1038,9 +1035,9 @@ export default function MaintenancePage() {
 
                   {/* Notes */}
                   {maintenanceCase.notes && (
-                    <div className="bg-green-50 border border-green-200 rounded px-2 py-1.5">
-                      <div className="text-xs font-medium text-green-800 mb-0.5">Ghi chú:</div>
-                      <div className="text-xs text-green-700 line-clamp-2">{maintenanceCase.notes}</div>
+                    <div className="text-xs text-slate-700">
+                      <span className="font-medium">Ghi chú: </span>
+                      <span className="line-clamp-2">{maintenanceCase.notes}</span>
                     </div>
                   )}
                 </div>

@@ -640,7 +640,7 @@ export default function ReceivingCasePage() {
             </div>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 md:px-4 py-2 rounded-md text-xs md:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg flex-shrink-0"
+              className="flex items-center gap-1.5 md:gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 md:px-4 py-2 rounded-md text-xs md:text-sm font-medium hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg flex-shrink-0 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Tạo Case Nhận Hàng</span>
@@ -666,7 +666,7 @@ export default function ReceivingCasePage() {
               <button 
                 onClick={refreshCases}
                 disabled={refreshing}
-                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs md:text-sm"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 text-xs md:text-sm cursor-pointer"
               >
                 <RefreshCw className={`h-3.5 w-3.5 md:h-4 md:w-4 ${refreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Làm mới</span>
@@ -1019,7 +1019,7 @@ export default function ReceivingCasePage() {
                       <>
                         <button 
                           onClick={() => handleOpenEditModal(case_)}
-                          className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-blue-600 border border-blue-200 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
+                          className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-blue-600 border border-blue-200 hover:bg-blue-50 rounded text-xs font-medium transition-colors cursor-pointer"
                         >
                           <Edit className="h-3 w-3" />
                           <span>Sửa</span>
@@ -1033,7 +1033,7 @@ export default function ReceivingCasePage() {
                               } catch (error) {}
                             }}
                             disabled={inProgressCaseId === case_.id}
-                            className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-yellow-700 border border-yellow-200 hover:bg-yellow-50 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                            className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-yellow-700 border border-yellow-200 hover:bg-yellow-50 rounded text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
                           >
                             <Clock className={`h-3 w-3 ${inProgressCaseId === case_.id ? 'animate-pulse' : ''}`} />
                             <span>Xử lý</span>
@@ -1047,7 +1047,7 @@ export default function ReceivingCasePage() {
                             } catch (error) {}
                           }}
                           disabled={closingCaseId === case_.id}
-                          className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-green-700 border border-green-200 hover:bg-green-50 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                          className="flex-1 flex items-center justify-center gap-0.5 px-1.5 py-1 text-green-700 border border-green-200 hover:bg-green-50 rounded text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
                         >
                           <Check className={`h-3 w-3 ${closingCaseId === case_.id ? 'animate-pulse' : ''}`} />
                           <span>Đóng</span>
@@ -1283,7 +1283,7 @@ export default function ReceivingCasePage() {
                           {case_.status !== 'COMPLETED' && (
                             <button 
                               onClick={() => handleOpenEditModal(case_)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200"
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200 cursor-pointer"
                               title="Chỉnh sửa"
                             >
                               <Edit className="h-4 w-4" />
@@ -1311,7 +1311,7 @@ export default function ReceivingCasePage() {
                                 }
                               }}
                               disabled={inProgressCaseId === case_.id}
-                              className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                               title="Chuyển sang đang xử lý"
                             >
                               <Clock className={`h-4 w-4 ${inProgressCaseId === case_.id ? 'animate-pulse' : ''}`} />
@@ -1339,7 +1339,7 @@ export default function ReceivingCasePage() {
                                 }
                               }}
                               disabled={closingCaseId === case_.id}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                               title="Đóng case"
                             >
                               <Check className={`h-4 w-4 ${closingCaseId === case_.id ? 'animate-pulse' : ''}`} />

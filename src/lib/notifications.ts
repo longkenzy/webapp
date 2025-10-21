@@ -38,19 +38,19 @@ export async function createCaseCreatedNotification(
   adminUserId: string
 ) {
   const caseTypeMap: Record<string, string> = {
-    'internal': 'Case nội bộ',
-    'delivery': 'Case giao hàng',
-    'receiving': 'Case nhận hàng',
-    'maintenance': 'Case bảo trì',
-    'warranty': 'Case bảo hành',
-    'incident': 'Case sự cố'
+    'internal': 'Nội bộ',
+    'delivery': 'Giao hàng',
+    'receiving': 'Nhận hàng',
+    'maintenance': 'Bảo trì',
+    'warranty': 'Bảo hành',
+    'incident': 'Sự cố'
   };
 
   const displayCaseType = caseTypeMap[caseType] || caseType;
 
   return createNotification({
     title: `Case ${displayCaseType} mới được tạo`,
-    message: `${requesterName} đã tạo case "${caseTitle}"`,
+    message: `${requesterName} đã tạo "${caseTitle}"`,
     type: NotificationType.CASE_CREATED,
     userId: adminUserId,
     caseId,

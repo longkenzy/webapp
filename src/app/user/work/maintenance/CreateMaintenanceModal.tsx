@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
+import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw, Building2, Star } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
-import { getCurrentVietnamDateTime, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -87,8 +88,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
     customer: '',
     title: '',
     description: '',
-    startDate: getCurrentVietnamDateTime(),
-    endDate: '',
+    startDate: null as Date | null,
+    endDate: null as Date | null,
     status: 'RECEIVED',
     notes: '',
     crmReferenceCode: '', // Thêm trường Mã CRM
@@ -186,8 +187,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       customer: '',
       title: '',
       description: '',
-      startDate: getCurrentVietnamDateTime(),
-      endDate: '',
+      startDate: null,
+      endDate: null,
       status: 'RECEIVED',
       notes: '',
       crmReferenceCode: '', // Reset Mã CRM
@@ -206,6 +207,11 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
   useEffect(() => {
     if (isOpen) {
       resetForm();
+      // Set startDate to current date/time (client-side only to avoid hydration mismatch)
+      setFormData(prev => ({
+        ...prev,
+        startDate: new Date()
+      }));
     }
   }, [isOpen, resetForm]);
 
@@ -290,7 +296,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
     }
   }, [isOpen]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | Date | null) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -357,13 +363,10 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       return;
     }
     
-    // Validate end date using dayjs
-    if (formData.endDate) {
-      const { validateCaseDates } = await import('@/lib/case-helpers');
-      const validationError = validateCaseDates(formData.startDate, formData.endDate);
-      
-      if (validationError) {
-        toast.error(validationError, {
+    // Validate end date
+    if (formData.endDate && formData.startDate) {
+      if (formData.endDate <= formData.startDate) {
+        toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
           duration: 3000,
           position: 'top-right',
         });
@@ -383,8 +386,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         handlerId: formData.handler,
         maintenanceTypeId: formData.maintenanceType, // Send the ID instead of the name
         customerId: formData.customer || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: formData.startDate?.toISOString() || new Date().toISOString(),
+        endDate: formData.endDate?.toISOString() || null,
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
@@ -394,7 +397,7 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
         userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
         userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
-        userAssessmentDate: convertLocalInputToISO(getCurrentVietnamDateTime())
+        userAssessmentDate: new Date()
       };
 
       console.log('=== Submitting Maintenance Case ===');
@@ -474,495 +477,502 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4 overflow-y-auto">
-      {/* iOS Safari text color fix */}
+    <>
       <style dangerouslySetInnerHTML={{ __html: `
-        input, select, textarea {
+        .ios-input-fix input,
+        .ios-input-fix select,
+        .ios-input-fix textarea {
           -webkit-text-fill-color: #111827 !important;
           opacity: 1 !important;
           color: #111827 !important;
         }
-        input::placeholder, textarea::placeholder {
+        .ios-input-fix input::placeholder,
+        .ios-input-fix textarea::placeholder {
           -webkit-text-fill-color: #9ca3af !important;
           opacity: 0.6 !important;
           color: #9ca3af !important;
         }
       `}} />
-
-      <div className="bg-white rounded-t-2xl md:rounded-lg shadow-xl w-full max-w-7xl h-[95vh] md:max-h-[90vh] overflow-y-auto md:my-8">
-        {/* Compact Header */}
-        <div className="sticky top-0 z-20 bg-gradient-to-r from-orange-600 to-amber-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-t-2xl md:rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="p-1.5 md:p-2 bg-white/20 rounded-md">
-                <Wrench className="h-4 w-4 md:h-5 md:w-5" />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="ios-input-fix bg-white rounded shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+         {/* Header - Màu xanh lá cây để phân biệt với Admin */}
+         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded">
+                <Wrench className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-base md:text-lg font-semibold">Tạo Case Bảo Trì</h2>
-                <p className="text-orange-100 text-xs md:text-sm hidden md:block">Hệ thống quản lý bảo trì</p>
+                <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Tạo Case Bảo Trì</h2>
+                <p className="text-emerald-50 text-xs mt-0.5">Quản lý bảo trì sản phẩm/dịch vụ</p>
               </div>
             </div>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 md:p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
+              className="p-1.5 text-white/90 hover:text-white hover:bg-white/20 rounded transition-colors cursor-pointer"
             >
-              <X className="h-4 w-4 md:h-5 md:w-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
 
-        {/* Compact Form */}
-        <form onSubmit={handleSubmit} className="p-3 md:p-6 pb-20 md:pb-6">
-          <div className="space-y-6">
-            {/* Section 1: Thông tin cơ bản */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-orange-100 rounded-md">
-                  <User className="h-4 w-4 text-orange-600" />
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="p-5 space-y-4">
+            {/* Row 1: Người xử lý + Loại bảo trì */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Section 1: Người xử lý */}
+              <div className="bg-white rounded border border-gray-200">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-emerald-600" />
+                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Người xử lý</h3>
+                  </div>
+                  <span className="text-red-500 text-sm">*</span>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thông tin cơ bản</h3>
+                
+                <div className="p-3">
+                  <select
+                    value={formData.handler}
+                    onChange={(e) => handleInputChange('handler', e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">
+                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
+                    </option>
+                    {employees.length > 0 ? (
+                      employees.map((employee) => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.fullName}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
+                      </option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {/* Section 2: Loại bảo trì */}
+              <div className="bg-white rounded border border-gray-200">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="h-4 w-4 text-emerald-600" />
+                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Loại bảo trì</h3>
+                  </div>
+                  <span className="text-red-500 text-sm">*</span>
+                </div>
+                
+                <div className="p-3">
+                  <select
+                    value={formData.maintenanceType}
+                    onChange={(e) => handleInputChange('maintenanceType', e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">
+                      {loading ? 'Đang tải...' : 'Chọn loại bảo trì'}
+                    </option>
+                    {maintenanceTypes.length > 0 ? (
+                      maintenanceTypes.map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        {loading ? 'Đang tải...' : 'Không có loại bảo trì nào'}
+                      </option>
+                    )}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Thông tin khách hàng */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thông tin khách hàng</h3>
               </div>
               
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600 flex items-center">
-                      <span className="w-24">Người xử lý</span>
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
+              <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                    Tên khách hàng <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
                     <select
-                      value={formData.handler}
-                      onChange={(e) => handleInputChange('handler', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      required
-                      disabled={loading}
+                      value={formData.customerTitle}
+                      onChange={(e) => handleInputChange('customerTitle', e.target.value)}
+                      className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     >
-                      <option value="">
-                        {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                      </option>
-                      {employees.length > 0 ? (
-                        employees.map((employee) => (
-                          <option key={employee.id} value={employee.id}>
-                            {employee.fullName}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="" disabled>
-                          {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
-                        </option>
-                      )}
+                      <option value="Anh">Anh</option>
+                      <option value="Chị">Chị</option>
                     </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600 flex items-center">
-                      <span className="w-24">Loại bảo trì</span>
-                      <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      value={formData.maintenanceType}
-                      onChange={(e) => handleInputChange('maintenanceType', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    <input
+                      type="text"
+                      value={formData.customerName}
+                      onChange={(e) => handleInputChange('customerName', e.target.value)}
+                      className="flex-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                      placeholder="Nhập tên khách hàng..."
                       required
-                      disabled={loading}
-                    >
-                      <option value="">
-                        {loading ? 'Đang tải...' : 'Chọn loại bảo trì'}
-                      </option>
-                      {maintenanceTypes.length > 0 ? (
-                        maintenanceTypes.map((type) => (
-                          <option key={type.id} value={type.id}>
-                            {type.name}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="" disabled>
-                          {loading ? 'Đang tải...' : 'Không có loại bảo trì nào'}
-                        </option>
-                      )}
-                    </select>
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                      <span className="w-24">Khách hàng</span>
-                      <span className="ml-1 w-2"></span>
-                    </label>
-                    <div className="flex gap-2">
-                      <select
-                        value={formData.customerTitle}
-                        onChange={(e) => handleInputChange('customerTitle', e.target.value)}
-                        className="w-20 px-2 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      >
-                        <option value="Anh">Anh</option>
-                        <option value="Chị">Chị</option>
-                      </select>
-                      <input
-                        type="text"
-                        value={formData.customerName}
-                        onChange={(e) => handleInputChange('customerName', e.target.value)}
-                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        placeholder="Nhập tên khách hàng..."
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600 flex items-center h-5">
-                      <span className="w-24">Tên công ty</span>
-                      <span className="ml-1 w-2"></span>
-                    </label>
-                    <div className="relative customer-dropdown-container">
-                      <input
-                        type="text"
-                        value={customerSearch}
-                        onChange={(e) => handleCustomerSearchChange(e.target.value)}
-                        onFocus={() => setShowCustomerDropdown(true)}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                        placeholder="Tìm kiếm khách hàng..."
-                      />
-                      {showCustomerDropdown && (
-                        <div className="absolute z-30 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                          {filteredPartners.length > 0 ? (
-                            filteredPartners.map((partner) => (
-                              <div
-                                key={partner.id}
-                                onClick={() => handleCustomerSelect(partner.id)}
-                                className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                                style={{ WebkitTextFillColor: '#111827', opacity: 1 }}
-                              >
-                                <div className="font-medium" style={{ WebkitTextFillColor: '#111827', opacity: 1, color: '#111827' }}>{partner.shortName}</div>
-                                <div className="text-gray-500 text-xs" style={{ WebkitTextFillColor: '#6b7280', opacity: 1, color: '#6b7280' }}>{partner.fullCompanyName}</div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500" style={{ WebkitTextFillColor: '#6b7280', opacity: 1 }}>
-                              Không tìm thấy khách hàng
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Tên công ty</label>
+                  <div className="relative customer-dropdown-container">
+                    <input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => handleCustomerSearchChange(e.target.value)}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                      placeholder="Tìm kiếm khách hàng..."
+                    />
+                    {showCustomerDropdown && (
+                      <div className="absolute z-[9999] w-full mt-1.5 bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-y-auto">
+                        {filteredPartners.length > 0 ? (
+                          filteredPartners.map((partner) => (
+                            <div
+                              key={partner.id}
+                              onClick={() => handleCustomerSelect(partner.id)}
+                              className="px-3 py-2.5 hover:bg-emerald-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                            >
+                              <div className="font-medium text-sm text-gray-900">{partner.shortName}</div>
+                              <div className="text-xs text-gray-600 mt-0.5">{partner.fullCompanyName}</div>
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                          ))
+                        ) : (
+                          <div className="px-3 py-6 text-center text-sm text-gray-500">
+                            Không tìm thấy khách hàng
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Section 2: Chi tiết bảo trì */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-purple-100 rounded-md">
-                  <FileText className="h-4 w-4 text-purple-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Chi tiết bảo trì</h3>
+            {/* Section 4: Chi tiết bảo trì */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết bảo trì</h3>
               </div>
               
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600 flex items-center">
-                      <span className="w-24">Tiêu đề bảo trì</span>
-                      <span className="text-red-500 ml-1">*</span>
+              <div className="p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Tiêu đề bảo trì <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={formData.title}
                       onChange={(e) => handleInputChange('title', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                       placeholder="Nhập tiêu đề bảo trì"
                       required
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-gray-600 flex items-center">
-                      <span className="w-24">Mã CRM</span>
-                    </label>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Mã CRM</label>
                     <input
                       type="text"
                       value={formData.crmReferenceCode || ''}
                       onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                      placeholder="Nhập mã CRM (tùy chọn)"
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                      placeholder="Nhập mã CRM"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Mã tham chiếu từ hệ thống CRM
-                    </p>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Mô tả chi tiết</span>
-                    <span className="text-red-500 ml-1">*</span>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                    Mô tả chi tiết <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors resize-none"
-                    placeholder="Mô tả chi tiết công việc bảo trì cần thực hiện..."
+                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none"
+                    placeholder="Mô tả chi tiết bảo trì..."
                     required
                   />
                 </div>
               </div>
             </div>
 
-            {/* Section 3: Thời gian */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-orange-100 rounded-md">
-                  <Calendar className="h-4 w-4 text-orange-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thời gian</h3>
+            {/* Section 5: Thời gian */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                <div className="space-y-1 min-w-0 overflow-hidden">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span>Thời gian bắt đầu</span>
-                    <span className="text-red-500 ml-1">*</span>
+              <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                    Ngày bắt đầu <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.startDate}
-                    onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    style={{ minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none' }}
-                    required
+                    onChange={(value) => handleInputChange('startDate', value)}
+                    placeholder="Chọn ngày bắt đầu"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.375rem 0.625rem',
+                        borderColor: '#d1d5db',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                      }
+                    }}
                   />
                 </div>
 
-                <div className="space-y-1 min-w-0 overflow-hidden">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span>Thời gian kết thúc</span>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                    Ngày kết thúc
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.endDate}
-                    onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    style={{ minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none' }}
+                    onChange={(value) => handleInputChange('endDate', value)}
+                    placeholder="Chọn ngày kết thúc"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    minDate={formData.startDate || undefined}
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.375rem 0.625rem',
+                        borderColor: '#d1d5db',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                      }
+                    }}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Section 4: Đánh giá của User */}
-            <div className="bg-yellow-50 rounded-md p-4 border border-yellow-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-yellow-100 rounded-md">
-                    <Settings className="h-4 w-4 text-yellow-600" />
+            {/* Section 6: Trạng thái & Ghi chú */}
+            <div className="bg-white rounded border border-gray-200">
+              <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Ghi chú</h3>
+              </div>
+              
+              <div className="p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Trạng thái case</label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => handleInputChange('status', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    >
+                      <option value="RECEIVED">Tiếp nhận</option>
+                      <option value="PROCESSING">Đang xử lý</option>
+                      <option value="COMPLETED">Hoàn thành</option>
+                      <option value="CANCELLED">Hủy</option>
+                    </select>
                   </div>
-                  <h3 className="text-sm font-semibold text-yellow-700">Đánh giá của User</h3>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5">Ghi chú</label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                    placeholder="Nhập ghi chú cho case bảo trì..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 7: Đánh giá công việc */}
+            <div className="bg-white rounded border border-amber-200">
+              <div className="bg-amber-50 px-3 py-2 border-b border-amber-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-amber-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Đánh giá công việc</h3>
                 </div>
                 <button
                   type="button"
                   onClick={fetchConfigs}
-                  className="flex items-center space-x-1 px-2 py-1 text-xs text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100 rounded transition-colors"
-                  title="Làm mới options đánh giá"
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors font-medium cursor-pointer"
+                  title="Làm mới cấu hình"
                 >
-                  <RefreshCw className="h-3 w-3" />
-                  <span>Làm mới</span>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Làm mới</span>
                 </button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Mức độ khó */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ khó</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.difficultyLevel}
-                    onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn mức độ khó</option>
-                    {getFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="p-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Mức độ khó */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Mức độ khó <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.difficultyLevel}
+                      onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                      required
+                    >
+                      <option value="">Chọn mức độ khó</option>
+                      {getFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
+                        <option key={option.id} value={option.points}>
+                          {option.points} điểm - {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Thời gian ước tính */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Thời gian ước tính</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.estimatedTime}
-                    onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn thời gian ước tính</option>
-                    {getFieldOptions(EvaluationCategory.TIME).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Thời gian ước tính */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Thời gian ước tính <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.estimatedTime}
+                      onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                      required
+                    >
+                      <option value="">Chọn thời gian ước tính</option>
+                      {getFieldOptions(EvaluationCategory.TIME).map((option) => (
+                        <option key={option.id} value={option.points}>
+                          {option.points} điểm - {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Mức độ ảnh hưởng */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ ảnh hưởng</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.impactLevel}
-                    onChange={(e) => handleInputChange('impactLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn mức độ ảnh hưởng</option>
-                    {getFieldOptions(EvaluationCategory.IMPACT).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Mức độ ảnh hưởng */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Mức độ ảnh hưởng <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.impactLevel}
+                      onChange={(e) => handleInputChange('impactLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                      required
+                    >
+                      <option value="">Chọn mức độ ảnh hưởng</option>
+                      {getFieldOptions(EvaluationCategory.IMPACT).map((option) => (
+                        <option key={option.id} value={option.points}>
+                          {option.points} điểm - {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Mức độ khẩn cấp */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ khẩn cấp</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.urgencyLevel}
-                    onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn mức độ khẩn cấp</option>
-                    {getFieldOptions(EvaluationCategory.URGENCY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Mức độ khẩn cấp */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Mức độ khẩn cấp <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.urgencyLevel}
+                      onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                      required
+                    >
+                      <option value="">Chọn mức độ khẩn cấp</option>
+                      {getFieldOptions(EvaluationCategory.URGENCY).map((option) => (
+                        <option key={option.id} value={option.points}>
+                          {option.points} điểm - {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Hình thức làm việc */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Hình thức làm việc</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.form}
-                    onChange={(e) => {
-                      handleInputChange('form', e.target.value);
-                      // Auto-set form score based on selection
-                      const selectedOption = getFieldOptions(EvaluationCategory.FORM).find(
-                        option => option.label === e.target.value
-                      );
-                      if (selectedOption) {
-                        handleInputChange('formScore', selectedOption.points.toString());
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                    required
-                  >
-                    <option value="">Chọn hình thức làm việc</option>
-                    {getFieldOptions(EvaluationCategory.FORM).map((option) => (
-                      <option key={option.id} value={option.label}>
-                        {option.label} ({option.points} điểm)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 5: Trạng thái */}
-            <div className="bg-gray-50 rounded-md p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="p-1.5 bg-orange-100 rounded-md">
-                  <CheckCircle className="h-4 w-4 text-orange-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Trạng thái</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Trạng thái</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors"
-                    required
-                  >
-                    <option value="RECEIVED">Tiếp nhận</option>
-                    <option value="PROCESSING">Đang xử lý</option>
-                    <option value="COMPLETED">Hoàn thành</option>
-                    <option value="CANCELLED">Hủy</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-24">Ghi chú</span>
-                    <span className="ml-1 w-2"></span>
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors resize-none"
-                    placeholder="Ghi chú thêm (nếu có)..."
-                  />
+                  {/* Hình thức làm việc */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Hình thức làm việc <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.form}
+                      onChange={(e) => {
+                        handleInputChange('form', e.target.value);
+                        // Auto-set form score based on selection
+                        const selectedOption = getFieldOptions(EvaluationCategory.FORM).find(
+                          option => option.label === e.target.value
+                        );
+                        if (selectedOption) {
+                          handleInputChange('formScore', selectedOption.points.toString());
+                        }
+                      }}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                      required
+                    >
+                      <option value="">Chọn hình thức làm việc</option>
+                      {getFieldOptions(EvaluationCategory.FORM).map((option) => (
+                        <option key={option.id} value={option.label}>
+                          {option.label} ({option.points} điểm)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Submit Button */}
-          <div className="fixed md:static bottom-0 left-0 right-0 flex items-center gap-2 md:gap-3 md:justify-end px-3 py-3 md:pt-4 md:mt-6 bg-white md:bg-transparent border-t border-gray-200 z-10">
+          {/* Actions */}
+          <div className="sticky bottom-0 bg-white border-t border-gray-300 px-5 py-3 flex items-center justify-end gap-3 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 md:flex-none px-4 md:px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
+              className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer"
+              style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
             >
-              Hủy
+              Hủy bỏ
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 md:flex-none px-4 md:px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-orange-600 to-amber-600 rounded-md hover:from-orange-700 hover:to-amber-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+              className="px-5 py-2 text-sm bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
+              style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
             >
               {loading ? (
                 <>
-                  <RefreshCw className="animate-spin h-4 w-4" />
-                  <span className="hidden md:inline">Đang tạo...</span>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Đang tạo...</span>
                 </>
               ) : (
                 <>
                   <Wrench className="h-4 w-4" />
-                  <span className="hidden md:inline">Tạo Case</span>
-                  <span className="md:hidden">Tạo</span>
+                  <span>Tạo Case Bảo Trì</span>
                 </>
               )}
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

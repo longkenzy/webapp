@@ -51,22 +51,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if partner with same shortName already exists
+    const existingPartner = await db.partner.findUnique({
+      where: { shortName: shortName.trim() }
+    });
+
+    if (existingPartner) {
+      return NextResponse.json(
+        { error: `Tên viết tắt "${shortName}" đã tồn tại. Vui lòng chọn tên khác.` },
+        { status: 400 }
+      );
+    }
+
     // Create the new partner
     const newPartner = await db.partner.create({
       data: {
-        fullCompanyName,
-        shortName,
-        address,
-        contactPerson: contactPerson || null,
-        contactPhone: contactPhone || null,
+        fullCompanyName: fullCompanyName.trim(),
+        shortName: shortName.trim(),
+        address: address.trim(),
+        contactPerson: contactPerson?.trim() || null,
+        contactPhone: contactPhone?.trim() || null,
       },
     });
 
     return NextResponse.json(newPartner);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating partner:", error);
+    
+    // Handle Prisma unique constraint violation
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { error: "Tên viết tắt này đã tồn tại. Vui lòng chọn tên khác." },
+        { status: 400 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Lỗi server. Vui lòng thử lại sau." },
       { status: 500 }
     );
   }

@@ -598,7 +598,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center"
+                        className="absolute inset-y-0 right-0 pr-2.5 flex items-center cursor-pointer"
                         disabled={loadingPartners}
                       >
                         <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -652,7 +652,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                 <button
                   type="button"
                   onClick={addProduct}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors font-medium"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors font-medium cursor-pointer"
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Thêm sản phẩm</span>
@@ -744,7 +744,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                                 <button
                                   type="button"
                                   onClick={() => removeProduct(product.id)}
-                                  className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                  className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
                                   title="Xóa sản phẩm"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -765,7 +765,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                             <button
                               type="button"
                               onClick={() => removeProduct(product.id)}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                              className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -987,7 +987,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess }:
                 <button
                   type="button"
                   onClick={fetchConfigs}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors font-medium"
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors font-medium cursor-pointer"
                   title="Làm mới cấu hình"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />

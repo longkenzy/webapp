@@ -82,7 +82,7 @@ export const POST = withErrorHandling(
     });
 
     // Send notifications asynchronously
-    sendCaseNotifications('internal', internalCase.id, internalCase.title, requester.fullName);
+    sendCaseNotifications('internal', internalCase.id, internalCase.title, handler.fullName);
 
     return successResponse(internalCase, "Internal case created successfully");
   })

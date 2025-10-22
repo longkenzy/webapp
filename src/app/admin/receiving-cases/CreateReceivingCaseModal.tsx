@@ -9,6 +9,8 @@ import { useSession } from 'next-auth/react';
 import { ReceivingCaseStatus } from '@prisma/client';
 import toast from 'react-hot-toast';
 import { convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -86,8 +88,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     supplierId: '',
     handler: '', // Handler ID
     productDetails: '',
-    deliveryDateTime: '',
-    completionDateTime: '',
+    deliveryDateTime: null as Date | null,
+    completionDateTime: null as Date | null,
     status: 'RECEIVED',
     crmReferenceCode: '',
     notes: '',
@@ -128,16 +130,16 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   // Populate form data when in edit mode
   useEffect(() => {
     if (editData && isOpen) {
-      // Convert datetime to local timezone for datetime-local input using timezone-aware function
-      const deliveryDateTimeLocal = editData.startDate ? convertISOToLocalInput(editData.startDate) : '';
-      const completionDateTimeLocal = editData.endDate ? convertISOToLocalInput(editData.endDate) : '';
+      // Convert ISO string to Date object for DateTimePicker
+      const deliveryDateTime = editData.startDate ? new Date(editData.startDate) : null;
+      const completionDateTime = editData.endDate ? new Date(editData.endDate) : null;
 
       setFormData({
         supplierId: editData.supplier?.id || '',
         handler: editData.handler?.id || '', // Set handler from editData
         productDetails: editData.description || '',
-        deliveryDateTime: deliveryDateTimeLocal,
-        completionDateTime: completionDateTimeLocal,
+        deliveryDateTime,
+        completionDateTime,
         status: editData.status || 'RECEIVED',
         crmReferenceCode: editData.crmReferenceCode || '',
         notes: editData.notes || '',
@@ -183,8 +185,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         supplierId: '',
         handler: '', // Will be auto-filled with currentEmployee
         productDetails: '',
-        deliveryDateTime: '',
-        completionDateTime: '',
+        deliveryDateTime: null,
+        completionDateTime: null,
         status: 'RECEIVED',
         crmReferenceCode: '',
         notes: '',
@@ -462,8 +464,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         handlerId: handlerId, // Use handler selected from dropdown
         supplierId: formData.supplierId,
         form: formData.form,
-        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
-        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
+        startDate: formData.deliveryDateTime ? formData.deliveryDateTime.toISOString() : null,
+        endDate: formData.completionDateTime ? formData.completionDateTime.toISOString() : null,
         status: formData.status || ReceivingCaseStatus.RECEIVED, // Use status from form
         notes: formData.notes || null,
         crmReferenceCode: formData.crmReferenceCode || null,
@@ -591,8 +593,8 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
       supplierId: '',
       handler: '',
       productDetails: '',
-      deliveryDateTime: '',
-      completionDateTime: '',
+      deliveryDateTime: null,
+      completionDateTime: null,
       status: 'RECEIVED',
       crmReferenceCode: '',
       notes: '',
@@ -612,7 +614,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     onClose();
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | Date | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -1010,13 +1012,24 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
                     <span className="w-32">Ngày giờ giao</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.deliveryDateTime}
-                    onChange={(e) => handleInputChange('deliveryDateTime', e.target.value)}
-                    className={`w-full px-3 py-2 text-sm border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      errors.deliveryDateTime ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                    onChange={(value) => handleInputChange('deliveryDateTime', value)}
+                    placeholder="Chọn ngày giờ giao"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.5rem 0.75rem',
+                        borderColor: errors.deliveryDateTime ? '#fca5a5' : '#d1d5db',
+                        backgroundColor: errors.deliveryDateTime ? '#fef2f2' : 'white',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                      }
+                    }}
                   />
                   {errors.deliveryDateTime && (
                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
@@ -1030,11 +1043,25 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
                   <label className="text-xs font-medium text-gray-600 flex items-center">
                     <span className="w-32">Ngày giờ hoàn thành</span>
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.completionDateTime}
-                    onChange={(e) => handleInputChange('completionDateTime', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    onChange={(value) => handleInputChange('completionDateTime', value)}
+                    placeholder="Chọn ngày giờ hoàn thành"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    minDate={formData.deliveryDateTime || undefined}
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.5rem 0.75rem',
+                        borderColor: errors.completionDateTime ? '#fca5a5' : '#d1d5db',
+                        backgroundColor: errors.completionDateTime ? '#fef2f2' : 'white',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                      }
+                    }}
                   />
                 </div>
               </div>

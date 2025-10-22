@@ -9,6 +9,8 @@ import { useSession } from 'next-auth/react';
 import { ReceivingCaseStatus } from '@prisma/client';
 import toast from 'react-hot-toast';
 import { convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -85,8 +87,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
     customerId: '',
     handler: '', // Handler ID
     productDetails: '',
-    deliveryDateTime: '',
-    completionDateTime: '',
+    deliveryDateTime: null as Date | null,
+    completionDateTime: null as Date | null,
     status: 'RECEIVED',
     form: '',
     crmReferenceCode: '', // Thêm trường Mã CRM
@@ -137,12 +139,10 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
     if (editData && isOpen) {
       console.log('=== Populating form data for edit ===');
       console.log('Edit data:', editData);
-      console.log('Customer:', editData.customer);
-      console.log('Products:', editData.products);
       
-      // Convert datetime to local timezone for datetime-local input using helper functions
-      const deliveryDateTimeLocal = editData.startDate ? convertISOToLocalInput(editData.startDate) : '';
-      const completionDateTimeLocal = editData.endDate ? convertISOToLocalInput(editData.endDate) : '';
+      // Convert ISO string to Date object for DateTimePicker
+      const deliveryDateTime = editData.startDate ? new Date(editData.startDate) : null;
+      const completionDateTime = editData.endDate ? new Date(editData.endDate) : null;
       
       // Get form options to map the correct label
       const formOptions = getFieldOptions(EvaluationCategory.FORM);
@@ -154,10 +154,10 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       
       setFormData({
         customerId: editData.customer?.id || '',
-        handler: editData.handler?.id || '', // Set handler from editData
+        handler: editData.handler?.id || '',
         productDetails: editData.description || '',
-        deliveryDateTime: deliveryDateTimeLocal,
-        completionDateTime: completionDateTimeLocal,
+        deliveryDateTime,
+        completionDateTime,
         status: editData.status || 'RECEIVED',
         form: selectedFormOption?.label || defaultFormOption?.label || 'Onsite',
         crmReferenceCode: editData.crmReferenceCode || '',
@@ -167,30 +167,6 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         urgencyLevel: editData.userUrgencyLevel?.toString() || '',
         formScore: editData.userFormScore?.toString() || '2',
         assessmentNotes: ''
-      });
-
-      console.log('✅ Edit Mode - Handler ID from editData:', editData.handler?.id);
-      console.log('✅ Converted deliveryDateTime:', deliveryDateTimeLocal);
-      console.log('✅ Converted completionDateTime:', completionDateTimeLocal);
-      
-      console.log('Form options:', formOptions);
-      console.log('Selected form option:', selectedFormOption);
-      console.log('Edit data form:', editData.form);
-      console.log('Edit data userFormScore:', editData.userFormScore);
-      
-      console.log('Form data set:', {
-        customerId: editData.customer?.id || '',
-        productDetails: editData.description || '',
-        deliveryDateTime: editData.startDate ? convertISOToLocalInput(editData.startDate) : '',
-        completionDateTime: editData.endDate ? convertISOToLocalInput(editData.endDate) : '',
-        status: editData.status || 'RECEIVED',
-        form: selectedFormOption?.label || defaultFormOption?.label || 'Onsite',
-        crmReferenceCode: editData.crmReferenceCode || '',
-        difficultyLevel: editData.userDifficultyLevel?.toString() || '',
-        estimatedTime: editData.userEstimatedTime?.toString() || '',
-        impactLevel: editData.userImpactLevel?.toString() || '',
-        urgencyLevel: editData.userUrgencyLevel?.toString() || '',
-        formScore: editData.userFormScore?.toString() || '2'
       });
 
       // Set selected partner
@@ -289,8 +265,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       customerId: '',
       handler: '',
       productDetails: '',
-      deliveryDateTime: '',
-      completionDateTime: '',
+      deliveryDateTime: null,
+      completionDateTime: null,
       status: 'RECEIVED',
       form: '',
       crmReferenceCode: '', // Reset Mã CRM
@@ -425,6 +401,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
     }
   };
 
+  // Generic handler for all form inputs
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -437,6 +414,20 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  // Handler for DateTimePicker (receives field name and Date/string value)
+  const handleDateTimeChange = (field: string, value: Date | string | null) => {
+    // Convert string to Date if needed
+    const dateValue = value && typeof value === 'string' ? new Date(value) : value;
+    setFormData(prev => ({ ...prev, [field]: dateValue }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
         return newErrors;
       });
     }
@@ -598,8 +589,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         handlerId: handlerId, // Use handler selected from dropdown
         customerId: formData.customerId,
         form: formData.form || 'Giao hàng',
-        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
-        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
+        startDate: formData.deliveryDateTime ? formData.deliveryDateTime.toISOString() : null,
+        endDate: formData.completionDateTime ? formData.completionDateTime.toISOString() : null,
         status: formData.status || 'RECEIVED', // Use status from form
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null,
@@ -1135,15 +1126,24 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                     <span>Ngày giờ giao</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <input
-                    type="datetime-local"
-                    name="deliveryDateTime"
+                  <DateTimePicker
                     value={formData.deliveryDateTime}
-                    onChange={handleInputChange}
-                    className={`w-full min-w-0 px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                      errors.deliveryDateTime ? 'border-red-300' : 'border-gray-300'
-                    }`}
-                    style={{ WebkitAppearance: 'none' }}
+                    onChange={(value) => handleDateTimeChange('deliveryDateTime', value)}
+                    placeholder="Chọn ngày giờ giao"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.375rem 0.625rem',
+                        borderColor: errors.deliveryDateTime ? '#fca5a5' : '#d1d5db',
+                        backgroundColor: errors.deliveryDateTime ? '#fef2f2' : 'white',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                      }
+                    }}
                   />
                   {errors.deliveryDateTime && (
                     <p className="text-xs text-red-600 flex items-center space-x-1 mt-1">
@@ -1156,13 +1156,25 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                   <label className="text-xs font-medium text-gray-600 flex items-center">
                     <span>Ngày giờ hoàn thành</span>
                   </label>
-                  <input
-                    type="datetime-local"
-                    name="completionDateTime"
+                  <DateTimePicker
                     value={formData.completionDateTime}
-                    onChange={handleInputChange}
-                    className="w-full min-w-0 px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    style={{ WebkitAppearance: 'none' }}
+                    onChange={(value) => handleDateTimeChange('completionDateTime', value)}
+                    placeholder="Chọn ngày giờ hoàn thành"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    minDate={formData.deliveryDateTime || undefined}
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.375rem 0.625rem',
+                        borderColor: errors.completionDateTime ? '#fca5a5' : '#d1d5db',
+                        backgroundColor: errors.completionDateTime ? '#fef2f2' : 'white',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                      }
+                    }}
                   />
                 </div>
                 <div className="space-y-1">

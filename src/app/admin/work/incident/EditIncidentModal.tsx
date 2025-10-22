@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle, Save, RefreshCw } from 'lucide-react';
 import { convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -78,8 +80,8 @@ export default function EditIncidentModal({
     customerId: '',
     handlerId: '',
     status: '',
-    startDate: '',
-    endDate: '',
+    startDate: null as Date | null,
+    endDate: null as Date | null,
     notes: '',
     crmReferenceCode: ''
   });
@@ -135,9 +137,9 @@ export default function EditIncidentModal({
       console.log('Incident Handler ID:', incidentData.handler?.id);
       console.log('Incident Handler Name:', incidentData.handler?.fullName);
       
-      // Convert datetime to local timezone for datetime-local input using helper functions
-      const startDateLocal = incidentData.startDate ? convertISOToLocalInput(incidentData.startDate) : '';
-      const endDateLocal = incidentData.endDate ? convertISOToLocalInput(incidentData.endDate) : '';
+      // Convert ISO string to Date object for DateTimePicker
+      const startDate = incidentData.startDate ? new Date(incidentData.startDate) : null;
+      const endDate = incidentData.endDate ? new Date(incidentData.endDate) : null;
 
       setFormData({
         title: incidentData.title || '',
@@ -147,15 +149,15 @@ export default function EditIncidentModal({
         customerId: incidentData.customer?.id || '',
         handlerId: incidentData.handler?.id || '',
         status: incidentData.status || '',
-        startDate: startDateLocal,
-        endDate: endDateLocal,
+        startDate,
+        endDate,
         notes: incidentData.notes || '',
         crmReferenceCode: incidentData.crmReferenceCode || ''
       });
       
       console.log('✅ Form Data Set - Handler:', incidentData.handler?.id);
-      console.log('Converted startDate:', startDateLocal);
-      console.log('Converted endDate:', endDateLocal);
+      console.log('Converted startDate:', startDate);
+      console.log('Converted endDate:', endDate);
     }
   }, [isOpen, incidentData, employees]);
 
@@ -240,8 +242,8 @@ export default function EditIncidentModal({
           customerId: formData.customerId || null,
           handlerId: formData.handlerId,
           status: formData.status,
-          startDate: formData.startDate ? convertLocalInputToISO(formData.startDate) : null,
-          endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+          startDate: formData.startDate ? formData.startDate.toISOString() : null,
+          endDate: formData.endDate ? formData.endDate.toISOString() : null,
           notes: formData.notes,
           crmReferenceCode: formData.crmReferenceCode
         }),
@@ -270,6 +272,12 @@ export default function EditIncidentModal({
       ...prev,
       [name]: value
     }));
+  };
+
+  // Handler for DateTimePicker
+  const handleDateTimeChange = (field: string, value: Date | string | null) => {
+    const dateValue = value && typeof value === 'string' ? new Date(value) : value;
+    setFormData(prev => ({ ...prev, [field]: dateValue }));
   };
 
   const getStatusOptions = () => [
@@ -447,13 +455,23 @@ export default function EditIncidentModal({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Thời gian bắt đầu *
                   </label>
-                  <input
-                    type="datetime-local"
-                    name="startDate"
+                  <DateTimePicker
                     value={formData.startDate}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    onChange={(value) => handleDateTimeChange('startDate', value)}
+                    placeholder="Chọn thời gian bắt đầu"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.5rem 0.75rem',
+                        borderColor: '#d1d5db',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.375rem',
+                      }
+                    }}
                   />
                 </div>
 
@@ -461,12 +479,24 @@ export default function EditIncidentModal({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Thời gian kết thúc
                   </label>
-                  <input
-                    type="datetime-local"
-                    name="endDate"
+                  <DateTimePicker
                     value={formData.endDate}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    onChange={(value) => handleDateTimeChange('endDate', value)}
+                    placeholder="Chọn thời gian kết thúc"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    minDate={formData.startDate || undefined}
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.5rem 0.75rem',
+                        borderColor: '#d1d5db',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.375rem',
+                      }
+                    }}
                   />
                 </div>
               </div>

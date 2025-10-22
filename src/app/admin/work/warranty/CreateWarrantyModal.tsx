@@ -8,6 +8,8 @@ import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -70,8 +72,8 @@ export default function CreateWarrantyModal({
     customer: '',
     title: '',
     description: '',
-    startDate: '', // Empty by default - user must select time
-    endDate: '',
+    startDate: null as Date | null,
+    endDate: null as Date | null,
     status: 'RECEIVED',
     notes: '',
     crmReferenceCode: '', // Thêm trường Mã CRM
@@ -213,8 +215,8 @@ export default function CreateWarrantyModal({
       customer: '',
       title: '',
       description: '',
-      startDate: getCurrentVietnamDateTime(),
-      endDate: '',
+      startDate: new Date(),
+      endDate: null,
       status: 'RECEIVED',
       notes: '',
       crmReferenceCode: '', // Reset Mã CRM
@@ -248,9 +250,9 @@ export default function CreateWarrantyModal({
           }
         }
 
-        // Convert datetime to local timezone for datetime-local input using helper functions
-        const startDateLocal = editingWarranty.startDate ? convertISOToLocalInput(editingWarranty.startDate) : '';
-        const endDateLocal = editingWarranty.endDate ? convertISOToLocalInput(editingWarranty.endDate) : '';
+        // Convert ISO string to Date object for DateTimePicker
+        const startDate = editingWarranty.startDate ? new Date(editingWarranty.startDate) : null;
+        const endDate = editingWarranty.endDate ? new Date(editingWarranty.endDate) : null;
 
         // Set form data immediately for instant display
         setFormData({
@@ -261,8 +263,8 @@ export default function CreateWarrantyModal({
           customer: editingWarranty.customer?.id || '',
           title: editingWarranty.title || '',
           description: editingWarranty.description || '',
-          startDate: startDateLocal,
-          endDate: endDateLocal,
+          startDate,
+          endDate,
           status: editingWarranty.status || 'RECEIVED',
           notes: editingWarranty.notes || '',
           crmReferenceCode: editingWarranty.crmReferenceCode || '',
@@ -274,8 +276,8 @@ export default function CreateWarrantyModal({
           formScore: editingWarranty.userFormScore?.toString() || '2'
         });
         
-        console.log('Converted startDate:', startDateLocal);
-        console.log('Converted endDate:', endDateLocal);
+        console.log('Converted startDate:', startDate);
+        console.log('Converted endDate:', endDate);
         
         // Set customer search if customer exists
         if (editingWarranty.customer) {
@@ -400,7 +402,7 @@ export default function CreateWarrantyModal({
     }
   }, [isOpen]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | Date | null) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -502,8 +504,8 @@ export default function CreateWarrantyModal({
         handlerId: formData.handler,
         warrantyTypeId: formData.warrantyType,
         customerId: formData.customer || null,
-        startDate: formData.startDate ? convertLocalInputToISO(formData.startDate) : null,
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        startDate: formData.startDate ? formData.startDate.toISOString() : null,
+        endDate: formData.endDate ? formData.endDate.toISOString() : null,
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null,
@@ -834,12 +836,24 @@ export default function CreateWarrantyModal({
                     <span className="w-32">Thời gian bắt đầu</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.startDate}
-                    onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors min-h-[38px]"
-                    required
+                    onChange={(value) => handleInputChange('startDate', value)}
+                    placeholder="Chọn thời gian bắt đầu"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.5rem 0.75rem',
+                        borderColor: '#d1d5db',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                        minHeight: '38px',
+                      }
+                    }}
                   />
                 </div>
 
@@ -848,11 +862,25 @@ export default function CreateWarrantyModal({
                     <span className="w-32">Thời gian kết thúc</span>
                     <span className="ml-1 w-2"></span>
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.endDate}
-                    onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-orange-500 focus:border-orange-500 transition-colors min-h-[38px]"
+                    onChange={(value) => handleInputChange('endDate', value)}
+                    placeholder="Chọn thời gian kết thúc"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    minDate={formData.startDate || undefined}
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.5rem 0.75rem',
+                        borderColor: '#d1d5db',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                        minHeight: '38px',
+                      }
+                    }}
                   />
                 </div>
               </div>

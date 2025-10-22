@@ -8,6 +8,8 @@ import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
+import { DateTimePicker } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface Employee {
   id: string;
@@ -109,9 +111,9 @@ export default function CreateDeploymentModal({
       console.log('Default form option:', defaultFormOption);
       console.log('Selected form option:', selectedFormOption);
       
-      // Convert datetime to local timezone for datetime-local input using helper functions
-      const startDateLocal = editData.startDate ? convertISOToLocalInput(editData.startDate) : '';
-      const endDateLocal = editData.endDate ? convertISOToLocalInput(editData.endDate) : '';
+      // Convert ISO string to Date object for DateTimePicker
+      const startDate = editData.startDate ? new Date(editData.startDate) : null;
+      const endDate = editData.endDate ? new Date(editData.endDate) : null;
 
       const newFormData = {
         customerTitle: editData.customerName?.includes('Anh') ? 'Anh' : 'Chị',
@@ -121,8 +123,8 @@ export default function CreateDeploymentModal({
         customer: editData.customer?.id || '',
         title: editData.title || '',
         description: editData.description || '',
-        startDate: startDateLocal,
-        endDate: endDateLocal,
+        startDate,
+        endDate,
         status: editData.status || 'RECEIVED',
         notes: editData.notes || '',
         crmReferenceCode: editData.crmReferenceCode || '',
@@ -135,8 +137,8 @@ export default function CreateDeploymentModal({
       };
       
       console.log('Setting form data:', newFormData);
-      console.log('Converted startDate:', startDateLocal);
-      console.log('Converted endDate:', endDateLocal);
+      console.log('Converted startDate:', startDate);
+      console.log('Converted endDate:', endDate);
       setFormData(newFormData);
       
       // Set customer search term
@@ -155,8 +157,8 @@ export default function CreateDeploymentModal({
         customer: '',
         title: '',
         description: '',
-        startDate: '', // Empty - user must select time
-        endDate: '',
+        startDate: null,
+        endDate: null,
         status: 'RECEIVED',
         notes: '',
         crmReferenceCode: '',
@@ -179,8 +181,8 @@ export default function CreateDeploymentModal({
     customer: '',
     title: '',
     description: '',
-    startDate: '', // Empty by default - user must select time
-    endDate: '',
+    startDate: null as Date | null,
+    endDate: null as Date | null,
     status: 'RECEIVED',
     notes: '',
     crmReferenceCode: '', // Thêm trường Mã CRM
@@ -304,8 +306,8 @@ export default function CreateDeploymentModal({
       customer: '',
       title: '',
       description: '',
-      startDate: getCurrentVietnamDateTime(),
-      endDate: '',
+      startDate: new Date(),
+      endDate: null,
       status: 'RECEIVED',
       notes: '',
       crmReferenceCode: '', // Reset Mã CRM
@@ -429,7 +431,7 @@ export default function CreateDeploymentModal({
     }
   }, [isOpen]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | Date | null) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -553,8 +555,8 @@ export default function CreateDeploymentModal({
         handlerId: formData.handler, // Use selected handler
         deploymentTypeId: selectedDeploymentType.id,
         customerId: formData.customer || null,
-        startDate: formData.startDate ? convertLocalInputToISO(formData.startDate) : null,
-        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
+        startDate: formData.startDate ? formData.startDate.toISOString() : null,
+        endDate: formData.endDate ? formData.endDate.toISOString() : null,
         status: formData.status,
         notes: formData.notes || null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM
@@ -860,12 +862,24 @@ export default function CreateDeploymentModal({
                     <span className="w-32">Thời gian bắt đầu</span>
                     <span className="text-red-500 ml-1">*</span>
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.startDate}
-                    onChange={(e) => handleInputChange('startDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
-                    required
+                    onChange={(value) => handleInputChange('startDate', value)}
+                    placeholder="Chọn thời gian bắt đầu"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.5rem 0.75rem',
+                        borderColor: '#d1d5db',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                        minHeight: '38px',
+                      }
+                    }}
                   />
                 </div>
 
@@ -874,11 +888,25 @@ export default function CreateDeploymentModal({
                     <span className="w-32">Thời gian hoàn thành</span>
                     <span className="ml-1 w-2"></span>
                   </label>
-                  <input
-                    type="datetime-local"
+                  <DateTimePicker
                     value={formData.endDate}
-                    onChange={(e) => handleInputChange('endDate', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors min-h-[38px]"
+                    onChange={(value) => handleInputChange('endDate', value)}
+                    placeholder="Chọn thời gian hoàn thành"
+                    locale="vi"
+                    valueFormat="DD/MM/YYYY HH:mm"
+                    clearable
+                    minDate={formData.startDate || undefined}
+                    withSeconds={false}
+                    styles={{
+                      input: {
+                        fontSize: '0.875rem',
+                        padding: '0.5rem 0.75rem',
+                        borderColor: '#d1d5db',
+                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                        borderRadius: '0.25rem',
+                        minHeight: '38px',
+                      }
+                    }}
                   />
                 </div>
               </div>

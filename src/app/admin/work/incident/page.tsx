@@ -8,9 +8,9 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
+import { getCurrentDateForFilename, formatVietnamDateTime } from '@/lib/date-utils';
 import EditIncidentModal from './EditIncidentModal';
 import CreateIncidentModal from '../../../user/work/incident/CreateIncidentModal';
-import { getCurrentDateForFilename } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -466,9 +466,9 @@ export default function AdminIncidentWorkPage() {
       'Loại sự cố': incident.incidentType,
       'Khách hàng': incident.customer?.fullCompanyName || 'N/A',
       'Trạng thái': incident.status,
-      'Ngày bắt đầu': new Date(incident.startDate).toLocaleDateString('vi-VN'),
-      'Ngày kết thúc': incident.endDate ? new Date(incident.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
-      'Ngày tạo': new Date(incident.createdAt).toLocaleDateString('vi-VN'),
+      'Ngày bắt đầu': formatVietnamDateTime(incident.startDate),
+      'Ngày kết thúc': incident.endDate ? formatVietnamDateTime(incident.endDate) : 'Chưa hoàn thành',
+      'Ngày tạo': formatVietnamDateTime(incident.createdAt),
       'Độ khó (User)': incident.userDifficultyLevel || 'N/A',
       'Thời gian ước tính (User)': incident.userEstimatedTime || 'N/A',
       'Tác động (User)': incident.userImpactLevel || 'N/A',
@@ -1199,7 +1199,7 @@ export default function AdminIncidentWorkPage() {
                                 {incident.title}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Tạo: {new Date(incident.createdAt).toLocaleString('vi-VN')}
+                                Tạo: {formatVietnamDateTime(incident.createdAt)}
                               </div>
                             </div>
                           </td>
@@ -1226,21 +1226,9 @@ export default function AdminIncidentWorkPage() {
                           
                           {/* Thời gian */}
                           <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 w-36">
-                            <div>Bắt đầu: {new Date(incident.startDate).toLocaleString('vi-VN', { 
-                              year: 'numeric', 
-                              month: '2-digit', 
-                              day: '2-digit', 
-                              hour: '2-digit', 
-                              minute: '2-digit'
-                            })}</div>
+                            <div>Bắt đầu: {formatVietnamDateTime(incident.startDate)}</div>
                             {incident.endDate && (
-                              <div>Kết thúc: {new Date(incident.endDate).toLocaleString('vi-VN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
-                                day: '2-digit', 
-                                hour: '2-digit', 
-                                minute: '2-digit'
-                              })}</div>
+                              <div>Kết thúc: {formatVietnamDateTime(incident.endDate)}</div>
                             )}
                           </td>
                           

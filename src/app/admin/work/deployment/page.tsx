@@ -8,6 +8,7 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
+import { getCurrentDateForFilename, formatVietnamDateTime } from '@/lib/date-utils';
 
 // Lazy load modal for better initial page load
 const CreateDeploymentModal = lazy(() => import('./CreateDeploymentModal'));
@@ -441,9 +442,9 @@ export default function AdminDeploymentWorkPage() {
       'Loại bảo hành': typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType?.name || 'Unknown',
       'Khách hàng': deployment.customer?.fullCompanyName || 'N/A',
       'Trạng thái': deployment.status,
-      'Ngày bắt đầu': new Date(deployment.startDate).toLocaleDateString('vi-VN'),
-      'Ngày kết thúc': deployment.endDate ? new Date(deployment.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
-      'Ngày tạo': new Date(deployment.createdAt).toLocaleDateString('vi-VN'),
+      'Ngày bắt đầu': formatVietnamDateTime(deployment.startDate),
+      'Ngày kết thúc': deployment.endDate ? formatVietnamDateTime(deployment.endDate) : 'Chưa hoàn thành',
+      'Ngày tạo': formatVietnamDateTime(deployment.createdAt),
       'Độ khó (User)': deployment.userDifficultyLevel || 'N/A',
       'Thời gian ước tính (User)': deployment.userEstimatedTime || 'N/A',
       'Tác động (User)': deployment.userImpactLevel || 'N/A',
@@ -1318,21 +1319,14 @@ export default function AdminDeploymentWorkPage() {
                             <div>
                               <span>Bắt đầu: </span>
                               <span className="font-medium">
-                                {new Date(deployment.startDate).toLocaleString('vi-VN', { 
-                                  day: '2-digit', 
-                                  month: '2-digit', 
-                                  year: 'numeric', 
-                                  hour: '2-digit', 
-                                  minute: '2-digit',
-                                  timeZone: 'Asia/Ho_Chi_Minh' 
-                                })}
+                                {formatVietnamDateTime(deployment.startDate)}
                               </span>
                             </div>
                             {deployment.endDate && (
                               <div>
                                 <span>Kết thúc: </span>
                                 <span className="font-medium">
-                                  {new Date(deployment.endDate).toLocaleDateString('vi-VN')}
+                                  {formatVietnamDateTime(deployment.endDate)}
                                 </span>
                               </div>
                             )}

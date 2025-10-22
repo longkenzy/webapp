@@ -518,9 +518,9 @@ export default function AdminMaintenanceWorkPage() {
       'Người xử lý': case_.handler.fullName,
       'Loại bảo trì': case_.maintenanceCaseType?.name || case_.maintenanceType,
       'Trạng thái': case_.status,
-      'Ngày bắt đầu': new Date(case_.startDate).toLocaleDateString('vi-VN'),
-      'Ngày kết thúc': case_.endDate ? new Date(case_.endDate).toLocaleDateString('vi-VN') : '',
-      'Ngày tạo': new Date(case_.createdAt).toLocaleDateString('vi-VN'),
+      'Ngày bắt đầu': formatVietnamDateTime(case_.startDate),
+      'Ngày kết thúc': case_.endDate ? formatVietnamDateTime(case_.endDate) : '',
+      'Ngày tạo': formatVietnamDateTime(case_.createdAt),
       'Ghi chú': case_.notes || '',
       'Đánh giá khó (User)': case_.userDifficultyLevel || '',
       'Thời gian ước tính (User)': case_.userEstimatedTime || '',
@@ -1166,21 +1166,9 @@ export default function AdminMaintenanceWorkPage() {
                           
                           {/* Thời gian */}
                           <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 w-36">
-                            <div>Bắt đầu: {new Date(case_.startDate).toLocaleString('vi-VN', { 
-                              year: 'numeric', 
-                              month: '2-digit', 
-                              day: '2-digit', 
-                              hour: '2-digit', 
-                              minute: '2-digit'
-                            })}</div>
+                            <div>Bắt đầu: {formatVietnamDateTime(case_.startDate)}</div>
                             {case_.endDate && (
-                              <div>Kết thúc: {new Date(case_.endDate).toLocaleString('vi-VN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
-                                day: '2-digit', 
-                                hour: '2-digit', 
-                                minute: '2-digit'
-                              })}</div>
+                              <div>Kết thúc: {formatVietnamDateTime(case_.endDate)}</div>
                             )}
                           </td>
                           

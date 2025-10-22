@@ -8,8 +8,8 @@ import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
+import { getCurrentDateForFilename, formatVietnamDateTime } from '@/lib/date-utils';
 import CreateWarrantyModal from './CreateWarrantyModal';
-import { getCurrentDateForFilename } from '@/lib/date-utils';
 
 interface Employee {
   id: string;
@@ -458,9 +458,9 @@ export default function AdminWarrantyWorkPage() {
       'Loại bảo hành': typeof warranty.warrantyType === 'string' ? warranty.warrantyType : warranty.warrantyType?.name || 'Unknown',
       'Khách hàng': warranty.customer?.fullCompanyName || 'N/A',
       'Trạng thái': warranty.status,
-      'Ngày bắt đầu': new Date(warranty.startDate).toLocaleDateString('vi-VN'),
-      'Ngày kết thúc': warranty.endDate ? new Date(warranty.endDate).toLocaleDateString('vi-VN') : 'Chưa hoàn thành',
-      'Ngày tạo': new Date(warranty.createdAt).toLocaleDateString('vi-VN'),
+      'Ngày bắt đầu': formatVietnamDateTime(warranty.startDate),
+      'Ngày kết thúc': warranty.endDate ? formatVietnamDateTime(warranty.endDate) : 'Chưa hoàn thành',
+      'Ngày tạo': formatVietnamDateTime(warranty.createdAt),
       'Độ khó (User)': warranty.userDifficultyLevel || 'N/A',
       'Thời gian ước tính (User)': warranty.userEstimatedTime || 'N/A',
       'Tác động (User)': warranty.userImpactLevel || 'N/A',
@@ -1219,7 +1219,7 @@ export default function AdminWarrantyWorkPage() {
                                 {warranty.title}
                               </div>
                               <div className="text-xs text-gray-500">
-                                Tạo: {new Date(warranty.createdAt).toLocaleString('vi-VN')}
+                                Tạo: {formatVietnamDateTime(warranty.createdAt)}
                               </div>
                             </div>
                           </td>
@@ -1246,21 +1246,9 @@ export default function AdminWarrantyWorkPage() {
                           
                           {/* Thời gian */}
                           <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 w-36">
-                            <div>Bắt đầu: {new Date(warranty.startDate).toLocaleString('vi-VN', { 
-                              year: 'numeric', 
-                              month: '2-digit', 
-                              day: '2-digit', 
-                              hour: '2-digit', 
-                              minute: '2-digit'
-                            })}</div>
+                            <div>Bắt đầu: {formatVietnamDateTime(warranty.startDate)}</div>
                             {warranty.endDate && (
-                              <div>Kết thúc: {new Date(warranty.endDate).toLocaleString('vi-VN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
-                                day: '2-digit', 
-                                hour: '2-digit', 
-                                minute: '2-digit'
-                              })}</div>
+                              <div>Kết thúc: {formatVietnamDateTime(warranty.endDate)}</div>
                             )}
                           </td>
                           

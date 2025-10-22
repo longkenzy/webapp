@@ -140,28 +140,9 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       console.log('Customer:', editData.customer);
       console.log('Products:', editData.products);
       
-      // Convert datetime to local timezone for datetime-local input
-      let deliveryDateTimeLocal = '';
-      if (editData.startDate) {
-        const startDateObj = new Date(editData.startDate);
-        const year = startDateObj.getFullYear();
-        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(startDateObj.getDate()).padStart(2, '0');
-        const hours = String(startDateObj.getHours()).padStart(2, '0');
-        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
-        deliveryDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
-
-      let completionDateTimeLocal = '';
-      if (editData.endDate) {
-        const endDateObj = new Date(editData.endDate);
-        const year = endDateObj.getFullYear();
-        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(endDateObj.getDate()).padStart(2, '0');
-        const hours = String(endDateObj.getHours()).padStart(2, '0');
-        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
-        completionDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
+      // Convert datetime to local timezone for datetime-local input using helper functions
+      const deliveryDateTimeLocal = editData.startDate ? convertISOToLocalInput(editData.startDate) : '';
+      const completionDateTimeLocal = editData.endDate ? convertISOToLocalInput(editData.endDate) : '';
       
       // Get form options to map the correct label
       const formOptions = getFieldOptions(EvaluationCategory.FORM);
@@ -617,8 +598,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         handlerId: handlerId, // Use handler selected from dropdown
         customerId: formData.customerId,
         form: formData.form || 'Giao hàng',
-        startDate: formData.deliveryDateTime || null,
-        endDate: formData.completionDateTime || null,
+        startDate: formData.deliveryDateTime ? convertLocalInputToISO(formData.deliveryDateTime) : null,
+        endDate: formData.completionDateTime ? convertLocalInputToISO(formData.completionDateTime) : null,
         status: formData.status || 'RECEIVED', // Use status from form
         notes: null,
         crmReferenceCode: formData.crmReferenceCode || null,

@@ -6,7 +6,7 @@ import { X, User, Rocket, FileText, Calendar, Settings, CheckCircle, RefreshCw }
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -109,28 +109,9 @@ export default function CreateDeploymentModal({
       console.log('Default form option:', defaultFormOption);
       console.log('Selected form option:', selectedFormOption);
       
-      // Convert datetime to local timezone for datetime-local input
-      let startDateLocal = '';
-      if (editData.startDate) {
-        const startDateObj = new Date(editData.startDate);
-        const year = startDateObj.getFullYear();
-        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(startDateObj.getDate()).padStart(2, '0');
-        const hours = String(startDateObj.getHours()).padStart(2, '0');
-        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
-        startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
-
-      let endDateLocal = '';
-      if (editData.endDate) {
-        const endDateObj = new Date(editData.endDate);
-        const year = endDateObj.getFullYear();
-        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(endDateObj.getDate()).padStart(2, '0');
-        const hours = String(endDateObj.getHours()).padStart(2, '0');
-        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
-        endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
+      // Convert datetime to local timezone for datetime-local input using helper functions
+      const startDateLocal = editData.startDate ? convertISOToLocalInput(editData.startDate) : '';
+      const endDateLocal = editData.endDate ? convertISOToLocalInput(editData.endDate) : '';
 
       const newFormData = {
         customerTitle: editData.customerName?.includes('Anh') ? 'Anh' : 'Chị',
@@ -572,8 +553,8 @@ export default function CreateDeploymentModal({
         handlerId: formData.handler, // Use selected handler
         deploymentTypeId: selectedDeploymentType.id,
         customerId: formData.customer || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: formData.startDate ? convertLocalInputToISO(formData.startDate) : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

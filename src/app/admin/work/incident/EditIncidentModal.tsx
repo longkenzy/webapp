@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, AlertTriangle, Save, RefreshCw } from 'lucide-react';
+import { convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -134,28 +135,9 @@ export default function EditIncidentModal({
       console.log('Incident Handler ID:', incidentData.handler?.id);
       console.log('Incident Handler Name:', incidentData.handler?.fullName);
       
-      // Convert datetime to local timezone for datetime-local input
-      let startDateLocal = '';
-      if (incidentData.startDate) {
-        const startDateObj = new Date(incidentData.startDate);
-        const year = startDateObj.getFullYear();
-        const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(startDateObj.getDate()).padStart(2, '0');
-        const hours = String(startDateObj.getHours()).padStart(2, '0');
-        const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
-        startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
-
-      let endDateLocal = '';
-      if (incidentData.endDate) {
-        const endDateObj = new Date(incidentData.endDate);
-        const year = endDateObj.getFullYear();
-        const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(endDateObj.getDate()).padStart(2, '0');
-        const hours = String(endDateObj.getHours()).padStart(2, '0');
-        const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
-        endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-      }
+      // Convert datetime to local timezone for datetime-local input using helper functions
+      const startDateLocal = incidentData.startDate ? convertISOToLocalInput(incidentData.startDate) : '';
+      const endDateLocal = incidentData.endDate ? convertISOToLocalInput(incidentData.endDate) : '';
 
       setFormData({
         title: incidentData.title || '',
@@ -245,10 +227,6 @@ export default function EditIncidentModal({
 
     setSaving(true);
     try {
-      // Convert datetime-local to ISO string
-      const startDateObj = formData.startDate ? new Date(formData.startDate) : null;
-      const endDateObj = formData.endDate ? new Date(formData.endDate) : null;
-
       const response = await fetch(`/api/incidents/${incidentData.id}`, {
         method: 'PUT',
         headers: {
@@ -262,8 +240,8 @@ export default function EditIncidentModal({
           customerId: formData.customerId || null,
           handlerId: formData.handlerId,
           status: formData.status,
-          startDate: startDateObj ? startDateObj.toISOString() : null,
-          endDate: endDateObj ? endDateObj.toISOString() : null,
+          startDate: formData.startDate ? convertLocalInputToISO(formData.startDate) : null,
+          endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
           notes: formData.notes,
           crmReferenceCode: formData.crmReferenceCode
         }),

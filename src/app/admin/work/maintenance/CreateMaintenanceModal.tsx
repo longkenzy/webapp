@@ -6,7 +6,7 @@ import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw }
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
-import { getCurrentVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentVietnamDateTime, convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -266,28 +266,9 @@ export default function CreateMaintenanceModal({
         console.log('Editing maintenance case:', editingMaintenance);
         console.log('Resolved maintenanceTypeId:', maintenanceTypeId);
 
-        // Convert datetime to local timezone for datetime-local input
-        let startDateLocal = '';
-        if (editingMaintenance.startDate) {
-          const startDateObj = new Date(editingMaintenance.startDate);
-          const year = startDateObj.getFullYear();
-          const month = String(startDateObj.getMonth() + 1).padStart(2, '0');
-          const day = String(startDateObj.getDate()).padStart(2, '0');
-          const hours = String(startDateObj.getHours()).padStart(2, '0');
-          const minutes = String(startDateObj.getMinutes()).padStart(2, '0');
-          startDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-        }
-
-        let endDateLocal = '';
-        if (editingMaintenance.endDate) {
-          const endDateObj = new Date(editingMaintenance.endDate);
-          const year = endDateObj.getFullYear();
-          const month = String(endDateObj.getMonth() + 1).padStart(2, '0');
-          const day = String(endDateObj.getDate()).padStart(2, '0');
-          const hours = String(endDateObj.getHours()).padStart(2, '0');
-          const minutes = String(endDateObj.getMinutes()).padStart(2, '0');
-          endDateLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
-        }
+        // Convert datetime to local timezone for datetime-local input using helper functions
+        const startDateLocal = editingMaintenance.startDate ? convertISOToLocalInput(editingMaintenance.startDate) : '';
+        const endDateLocal = editingMaintenance.endDate ? convertISOToLocalInput(editingMaintenance.endDate) : '';
 
         // Set form data immediately for instant display
         setFormData({
@@ -566,8 +547,8 @@ export default function CreateMaintenanceModal({
         handlerId: formData.handler,
         maintenanceTypeId: formData.maintenanceType,
         customerId: formData.customer || null,
-        startDate: formData.startDate,
-        endDate: formData.endDate || null,
+        startDate: formData.startDate ? convertLocalInputToISO(formData.startDate) : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null,

@@ -6,6 +6,7 @@ import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw }
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
+import { convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 
 interface Employee {
@@ -204,25 +205,9 @@ export default function EditInternalCaseModal({
         console.warn('Handler Name:', caseData.handler.fullName);
       }
       
-      // Convert datetime to local timezone for datetime-local input
-      const startDateObj = new Date(caseData.startDate);
-      const startYear = startDateObj.getFullYear();
-      const startMonth = String(startDateObj.getMonth() + 1).padStart(2, '0');
-      const startDay = String(startDateObj.getDate()).padStart(2, '0');
-      const startHours = String(startDateObj.getHours()).padStart(2, '0');
-      const startMinutes = String(startDateObj.getMinutes()).padStart(2, '0');
-      const startDateLocal = `${startYear}-${startMonth}-${startDay}T${startHours}:${startMinutes}`;
-
-      let endDateLocal = '';
-      if (caseData.endDate) {
-        const endDateObj = new Date(caseData.endDate);
-        const endYear = endDateObj.getFullYear();
-        const endMonth = String(endDateObj.getMonth() + 1).padStart(2, '0');
-        const endDay = String(endDateObj.getDate()).padStart(2, '0');
-        const endHours = String(endDateObj.getHours()).padStart(2, '0');
-        const endMinutes = String(endDateObj.getMinutes()).padStart(2, '0');
-        endDateLocal = `${endYear}-${endMonth}-${endDay}T${endHours}:${endMinutes}`;
-      }
+      // Convert datetime to local timezone for datetime-local input using helper functions
+      const startDateLocal = convertISOToLocalInput(caseData.startDate);
+      const endDateLocal = caseData.endDate ? convertISOToLocalInput(caseData.endDate) : '';
 
       // CRITICAL: Set handler ID from caseData, NOT from current user
       const handlerIdToSet = caseData.handler.id;
@@ -346,10 +331,6 @@ export default function EditInternalCaseModal({
     try {
       setLoading(true);
       
-      // Convert datetime-local to ISO string to preserve local timezone
-      const startDateObj = new Date(formData.startDate);
-      const endDateObj = formData.endDate ? new Date(formData.endDate) : null;
-      
       // Prepare data for API
       const updateData = {
         requesterId: formData.requester,
@@ -358,8 +339,8 @@ export default function EditInternalCaseModal({
         form: formData.form,
         title: formData.title,
         description: formData.description,
-        startDate: startDateObj.toISOString(), // Send as ISO string
-        endDate: endDateObj ? endDateObj.toISOString() : null,
+        startDate: formData.startDate ? convertLocalInputToISO(formData.startDate) : null,
+        endDate: formData.endDate ? convertLocalInputToISO(formData.endDate) : null,
         status: formData.status,
         notes: formData.notes || null,
         // User self-assessment data

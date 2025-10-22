@@ -25,6 +25,8 @@ import {
 export const POST = withErrorHandling(
   withAuth(async (request: NextRequest) => {
     const body = await request.json();
+    console.log('=== Internal Case Creation Request ===');
+    console.log('Request body:', JSON.stringify(body, null, 2));
     
     const {
       title,
@@ -55,31 +57,63 @@ export const POST = withErrorHandling(
     }
 
     // Validate employees
+    console.log('Validating employees:', { requesterId, handlerId });
     const { requester, handler } = await validateEmployees(requesterId, handlerId);
-    if (!requester || !handler) {
-      return errorResponse("Requester or handler not found");
+    console.log('Employee validation result:', { 
+      requester: requester ? { id: requester.id, name: requester.fullName } : null,
+      handler: handler ? { id: handler.id, name: handler.fullName } : null
+    });
+    
+    if (!requester) {
+      return errorResponse(`Requester with ID ${requesterId} not found`);
+    }
+    if (!handler) {
+      return errorResponse(`Handler with ID ${handlerId} not found`);
     }
 
     // Process user assessment data
     const userAssessment = processUserAssessment(body);
 
     // Create internal case
-    const internalCase = await db.internalCase.create({
-      data: {
-        title,
-        description,
-        requesterId: requester.id,
-        handlerId: handler.id,
-        caseType,
-        form: form || "Onsite",
-        startDate: startDate ? new Date(startDate) : new Date(),
-        endDate: endDate ? new Date(endDate) : null,
-        status: status || InternalCaseStatus.RECEIVED,
-        notes: notes || null,
-        ...userAssessment
-      },
-      include: commonCaseIncludes
+    console.log('Creating internal case with data:', {
+      title,
+      description,
+      requesterId: requester.id,
+      handlerId: handler.id,
+      caseType,
+      form: form || "Onsite",
+      startDate: startDate ? new Date(startDate) : new Date(),
+      endDate: endDate ? new Date(endDate) : null,
+      status: status || InternalCaseStatus.RECEIVED,
+      notes: notes || null,
+      userAssessment
     });
+
+    let internalCase;
+    try {
+      internalCase = await db.internalCase.create({
+        data: {
+          title,
+          description,
+          requesterId: requester.id,
+          handlerId: handler.id,
+          caseType,
+          form: form || "Onsite",
+          startDate: startDate ? new Date(startDate) : new Date(),
+          endDate: endDate ? new Date(endDate) : null,
+          status: (status as InternalCaseStatus) || InternalCaseStatus.RECEIVED,
+          notes: notes || null,
+          ...userAssessment
+        },
+        include: commonCaseIncludes
+      });
+
+      console.log('Internal case created successfully:', internalCase.id);
+    } catch (dbError) {
+      console.error('Database error creating internal case:', dbError);
+      const errorMessage = dbError instanceof Error ? dbError.message : 'Unknown database error';
+      return errorResponse(`Database error: ${errorMessage}`);
+    }
 
     // Send notifications asynchronously
     sendCaseNotifications('internal', internalCase.id, internalCase.title, handler.fullName);

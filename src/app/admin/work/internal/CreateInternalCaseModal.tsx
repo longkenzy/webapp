@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw, Star } from 'lucide-react';
+import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw, Star, Save } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
-import { getCurrentVietnamDateTime, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 import { DateTimePicker } from '@mantine/dates';
 import 'dayjs/locale/vi';
@@ -27,57 +26,28 @@ interface CaseType {
   updatedAt: string;
 }
 
-interface InternalCaseData {
-  id: string;
-  title: string;
-  description: string;
-  requester: {
-    id: string;
-    fullName: string;
-    position: string;
-    department: string;
-  };
-  handler: {
-    id: string;
-    fullName: string;
-    position: string;
-    department: string;
-    avatar?: string | null;
-  };
-  caseType: string;
-  form: string;
-  status: string;
-  startDate: string;
-  endDate?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  notes?: string | null;
-  userDifficultyLevel?: number | null;
-  userEstimatedTime?: number | null;
-  userImpactLevel?: number | null;
-  userUrgencyLevel?: number | null;
-  userFormScore?: number | null;
-  userAssessmentDate?: string | null;
-  adminDifficultyLevel?: number | null;
-  adminEstimatedTime?: number | null;
-  adminImpactLevel?: number | null;
-  adminUrgencyLevel?: number | null;
-  adminAssessmentDate?: string | null;
-  adminAssessmentNotes?: string | null;
-}
-
 interface CreateInternalCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (newCase: InternalCaseData) => void;
-  editingCase?: any; // Case data for editing
+  onSuccess?: (newCase: any) => void;
+  editingCase?: any;
+  employees?: Employee[];
+  caseTypes?: CaseType[];
 }
 
-export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, editingCase }: CreateInternalCaseModalProps) {
+export default function CreateInternalCaseModal({ 
+  isOpen, 
+  onClose, 
+  onSuccess, 
+  editingCase,
+  employees: preloadedEmployees = [],
+  caseTypes: preloadedCaseTypes = []
+}: CreateInternalCaseModalProps) {
   const { data: session } = useSession();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [caseTypes, setCaseTypes] = useState<CaseType[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>(preloadedEmployees);
+  const [caseTypes, setCaseTypes] = useState<CaseType[]>(preloadedCaseTypes);
   const [loading, setLoading] = useState(false);
+  const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
 
   // User evaluation categories
   const userCategories = [
@@ -90,6 +60,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
 
   const { getFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
   const { fetchConfigs } = useEvaluation();
+
   const [formData, setFormData] = useState({
     requester: '',
     position: '',
@@ -100,27 +71,55 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
     description: '',
     startDate: new Date() as Date | null,
     endDate: null as Date | null,
-    status: 'RECEIVED', // Default status
+    status: 'RECEIVED',
     notes: '',
-    // User self-assessment fields
     difficultyLevel: '',
     estimatedTime: '',
     impactLevel: '',
     urgencyLevel: '',
-    formScore: '2' // Default for Onsite
+    formScore: '2'
   });
+
+  const fetchCurrentEmployee = useCallback(async () => {
+    if (!session?.user?.email) return;
+    
+    try {
+      const response = await fetch('/api/user/basic-info');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.employee) {
+          setCurrentEmployee({
+            id: data.employee.id,
+            fullName: data.employee.fullName,
+            position: data.employee.position,
+            department: data.employee.department,
+            companyEmail: data.employee.companyEmail
+          });
+        } else {
+          setCurrentEmployee({
+            id: data.id,
+            fullName: data.name || '',
+            position: '',
+            department: '',
+            companyEmail: data.email || ''
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching current employee:', error);
+    }
+  }, [session?.user?.email]);
 
   const fetchEmployees = useCallback(async () => {
     try {
       const response = await fetch('/api/employees/list', {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=600', // Increased cache time
+          'Cache-Control': 'max-age=600',
         },
       });
       if (response.ok) {
         const result = await response.json();
-        // API returns { success: true, data: [...] }
         setEmployees(result.data || result);
       } else {
         console.error('Failed to fetch employees:', response.status, response.statusText);
@@ -137,15 +136,13 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
       const response = await fetch('/api/case-types', {
         method: 'GET',
         headers: {
-          'Cache-Control': 'max-age=600', // Increased cache time
+          'Cache-Control': 'max-age=600',
         },
       });
       if (response.ok) {
         const result = await response.json();
         
-        // Check if response has data array
         if (result.success && Array.isArray(result.data)) {
-          // Filter only active case types
           const activeCaseTypes = result.data.filter((caseType: CaseType) => caseType.isActive);
           setCaseTypes(activeCaseTypes);
         } else {
@@ -166,40 +163,22 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
     setFormData({
       requester: '',
       position: '',
-      handler: '',
+      handler: currentEmployee?.id || '',
       caseType: '',
       form: 'Onsite',
       title: '',
       description: '',
       startDate: new Date(),
       endDate: null,
-      status: 'RECEIVED', // Default status
+      status: 'RECEIVED',
       notes: '',
-      // User self-assessment fields
       difficultyLevel: '',
       estimatedTime: '',
       impactLevel: '',
       urgencyLevel: '',
-      formScore: '2' // Default for Onsite
+      formScore: '2'
     });
-  }, []);
-
-  // Reset form when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      resetForm();
-    }
-  }, [isOpen, resetForm]);
-
-  // Fetch data when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchEmployees();
-      fetchCaseTypes();
-      // Refresh evaluation configs to get latest options
-      fetchConfigs();
-    }
-  }, [isOpen, fetchEmployees, fetchCaseTypes, fetchConfigs]);
+  }, [currentEmployee?.id]);
 
   // Populate form when editing
   useEffect(() => {
@@ -209,6 +188,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         position: editingCase.requester?.position || '',
         handler: editingCase.handler?.id || '',
         caseType: editingCase.caseType || '',
+        form: editingCase.form || 'Onsite',
         title: editingCase.title || '',
         description: editingCase.description || '',
         startDate: editingCase.startDate ? new Date(editingCase.startDate) : new Date(),
@@ -219,77 +199,58 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         estimatedTime: editingCase.userEstimatedTime?.toString() || '',
         impactLevel: editingCase.userImpactLevel?.toString() || '',
         urgencyLevel: editingCase.userUrgencyLevel?.toString() || '',
-        form: editingCase.form || 'Onsite',
         formScore: editingCase.userFormScore?.toString() || '2'
       });
     } else if (isOpen && !editingCase) {
-      // Reset form for new case
       resetForm();
     }
   }, [isOpen, editingCase, resetForm]);
 
   // Auto-fill handler with current user when employees are loaded (ONLY for CREATE mode, NOT for EDIT mode)
   useEffect(() => {
-    // CRITICAL: Only auto-select handler when creating NEW case, NOT when editing
-    if (employees.length > 0 && session?.user && !editingCase) {
-      console.log('Session user:', session.user);
-      console.log('Available employees:', employees.map(emp => ({ id: emp.id, fullName: emp.fullName, companyEmail: emp.companyEmail })));
-      
-      // Try to find current user by email first
-      let currentUser = null;
-      if (session.user.email) {
-        currentUser = employees.find(emp => emp.companyEmail === session.user.email);
-      }
-      
-      // If not found by email, try to find by username or name
-      if (!currentUser && session.user.name) {
-        currentUser = employees.find(emp => 
-          emp.fullName.toLowerCase().includes(session.user.name?.toLowerCase() || '') ||
-          emp.companyEmail.toLowerCase().includes(session.user.name?.toLowerCase() || '')
-        );
-      }
-      
-      // If still not found, try to find by email from session
-      if (!currentUser && session.user.email) {
-        currentUser = employees.find(emp => 
-          emp.companyEmail.toLowerCase().includes(session.user.email?.toLowerCase() || '')
-        );
-      }
-      
-      if (currentUser) {
-        console.log('Auto-selected handler (CREATE mode only):', currentUser.fullName);
-        setFormData(prev => ({
-          ...prev,
-          handler: currentUser.id
-        }));
-      } else {
-        console.log('Could not find current user in employees list');
-        console.log('Session user email:', session.user.email);
-        console.log('Session user name:', session.user.name);
-      }
+    if (employees.length > 0 && currentEmployee && !editingCase && formData.handler === '') {
+      setFormData(prev => ({
+        ...prev,
+        handler: currentEmployee.id
+      }));
     }
-  }, [employees, session?.user, editingCase]);
+  }, [employees, currentEmployee, editingCase, formData.handler]);
+
+  // Sync preloaded data
+  useEffect(() => {
+    if (preloadedEmployees.length > 0) setEmployees(preloadedEmployees);
+  }, [preloadedEmployees]);
+
+  useEffect(() => {
+    if (preloadedCaseTypes.length > 0) setCaseTypes(preloadedCaseTypes);
+  }, [preloadedCaseTypes]);
+
+  // Fetch data when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchCurrentEmployee();
+      fetchConfigs();
+      
+      if (employees.length === 0) fetchEmployees();
+      if (caseTypes.length === 0) fetchCaseTypes();
+    }
+  }, [isOpen, fetchCurrentEmployee, fetchConfigs]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
-      // Save current scroll position
       const scrollY = window.scrollY;
       
-      // Prevent body scroll
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
       
       return () => {
-        // Restore body scroll
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
         document.body.style.overflow = '';
-        
-        // Restore scroll position
         window.scrollTo(0, scrollY);
       };
     }
@@ -344,6 +305,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
     }
     
     try {
+      setLoading(true);
+      
       // Helper function to convert to ISO string
       const toISOString = (dateValue: Date | string | null): string | null => {
         if (!dateValue) return null;
@@ -352,7 +315,6 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
           if (dateValue instanceof Date) {
             return !isNaN(dateValue.getTime()) ? dateValue.toISOString() : null;
           }
-          // If it's a string, try to parse it
           if (typeof dateValue === 'string') {
             const parsed = new Date(dateValue);
             return !isNaN(parsed.getTime()) ? parsed.toISOString() : null;
@@ -366,7 +328,6 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
       const startDateISO = toISOString(formData.startDate);
       const endDateISO = toISOString(formData.endDate);
 
-      // Final validation: startDate must be valid
       if (!startDateISO) {
         toast.error('Ngày bắt đầu không hợp lệ. Vui lòng chọn lại!', {
           duration: 4000,
@@ -387,16 +348,12 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         endDate: endDateISO,
         status: formData.status,
         notes: formData.notes || null,
-        // User self-assessment data
         userDifficultyLevel: formData.difficultyLevel,
         userEstimatedTime: formData.estimatedTime,
         userImpactLevel: formData.impactLevel,
         userUrgencyLevel: formData.urgencyLevel,
         userFormScore: formData.formScore
       };
-
-      console.log('=== Form Data Being Sent ===');
-      console.log('Form data:', JSON.stringify(caseData, null, 2));
 
       // Send to API
       const isEditing = !!editingCase;
@@ -411,30 +368,22 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         body: JSON.stringify(caseData),
       });
 
-
       if (response.ok) {
         const result = await response.json();
         
-        // Show success message (you can add a toast notification here)
         toast.success(isEditing ? 'Cập nhật case nội bộ thành công!' : 'Tạo case nội bộ thành công!', {
           duration: 3000,
           position: 'top-right',
         });
         
-        // Trigger case creation event for real-time notifications
         window.dispatchEvent(new CustomEvent('case-created'));
         
-        // Reset form data
         resetForm();
         
-        // Call onSuccess callback with new case data
         if (onSuccess && result.data) {
-          console.log('=== Case Created Successfully ===');
-          console.log('New case data:', result.data);
           await onSuccess(result.data);
         }
         
-        // Close modal
         onClose();
       } else {
         const responseText = await response.text();
@@ -459,6 +408,8 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
         duration: 4000,
         position: 'top-right',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -483,17 +434,17 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
       `}} />
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="ios-input-fix bg-white rounded shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
-         {/* Header - Màu xanh lá cây để phân biệt với Admin */}
-         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 flex items-center justify-between flex-shrink-0">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-4 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/20 rounded">
                 <Wrench className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
-                  {editingCase ? 'Chỉnh sửa Case Nội Bộ' : 'Tạo Case Nội Bộ'}
+                  {editingCase ? 'Chỉnh sửa Case Nội Bộ (Admin)' : 'Tạo Case Nội Bộ (Admin)'}
                 </h2>
-                <p className="text-emerald-50 text-xs mt-0.5">Quản lý công việc nội bộ</p>
+                <p className="text-blue-50 text-xs mt-0.5">Quản lý công việc nội bộ</p>
               </div>
             </div>
             <button
@@ -514,7 +465,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
               <div className="bg-white rounded border border-gray-200">
                 <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-emerald-600" />
+                    <User className="h-4 w-4 text-blue-600" />
                     <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Người yêu cầu</h3>
                   </div>
                   <span className="text-red-500 text-sm">*</span>
@@ -524,7 +475,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                   <select
                     value={formData.requester}
                     onChange={(e) => handleInputChange('requester', e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
                     disabled={loading}
                   >
@@ -555,17 +506,17 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
               <div className="bg-white rounded border border-gray-200">
                 <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-emerald-600" />
+                    <User className="h-4 w-4 text-blue-600" />
                     <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Người xử lý</h3>
                   </div>
-                  <span className="text-red-500 text-sm">*</span>
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">Admin</span>
                 </div>
                 
                 <div className="p-3">
                   <select
                     value={formData.handler}
                     onChange={(e) => handleInputChange('handler', e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     required
                     disabled={loading}
                   >
@@ -592,7 +543,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
             <div className="bg-white rounded border border-gray-200">
               <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Settings className="h-4 w-4 text-emerald-600" />
+                  <Settings className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Loại case</h3>
                 </div>
                 <span className="text-red-500 text-sm">*</span>
@@ -602,7 +553,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                 <select
                   value={formData.caseType}
                   onChange={(e) => handleInputChange('caseType', e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   required
                 >
                   <option value="">Chọn loại case</option>
@@ -623,7 +574,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
             {/* Section 3: Chi tiết case */}
             <div className="bg-white rounded border border-gray-200">
               <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-emerald-600" />
+                <FileText className="h-4 w-4 text-blue-600" />
                 <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết case</h3>
               </div>
               
@@ -637,7 +588,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                       type="text"
                       value={formData.title}
                       onChange={(e) => handleInputChange('title', e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       placeholder="Nhập tiêu đề case"
                       required
                     />
@@ -651,7 +602,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                       value={formData.description}
                       onChange={(e) => handleInputChange('description', e.target.value)}
                       rows={3}
-                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors resize-none"
+                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                       placeholder="Mô tả chi tiết case..."
                       required
                     />
@@ -663,7 +614,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
             {/* Section 4: Thời gian */}
             <div className="bg-white rounded border border-gray-200">
               <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-emerald-600" />
+                <Calendar className="h-4 w-4 text-blue-600" />
                 <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
               </div>
               
@@ -722,7 +673,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
             {/* Section 5: Trạng thái & Ghi chú */}
             <div className="bg-white rounded border border-gray-200">
               <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-emerald-600" />
+                <FileText className="h-4 w-4 text-blue-600" />
                 <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Ghi chú</h3>
               </div>
               
@@ -733,7 +684,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                     <select
                       value={formData.status}
                       onChange={(e) => handleInputChange('status', e.target.value)}
-                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     >
                       <option value="RECEIVED">Tiếp nhận</option>
                       <option value="IN_PROGRESS">Đang xử lý</option>
@@ -748,7 +699,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                   <textarea
                     value={formData.notes}
                     onChange={(e) => handleInputChange('notes', e.target.value)}
-                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                    className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                     placeholder="Nhập ghi chú cho case nội bộ..."
                     rows={3}
                   />
@@ -766,7 +717,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                 <button
                   type="button"
                   onClick={fetchConfigs}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors font-medium"
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors font-medium cursor-pointer"
                   title="Làm mới cấu hình"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
@@ -865,7 +816,6 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                       value={formData.form}
                       onChange={(e) => {
                         handleInputChange('form', e.target.value);
-                        // Auto-set form score based on selection
                         const selectedOption = getFieldOptions(EvaluationCategory.FORM).find(
                           option => option.label === e.target.value
                         );
@@ -887,6 +837,7 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
                 </div>
               </div>
             </div>
+
           </div>
 
           {/* Actions */}
@@ -902,25 +853,25 @@ export default function CreateInternalCaseModal({ isOpen, onClose, onSuccess, ed
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-sm bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
               style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
             >
               {loading ? (
                 <>
                   <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Đang {editingCase ? 'cập nhật' : 'tạo'}...</span>
+                  <span>{editingCase ? 'Đang cập nhật...' : 'Đang tạo...'}</span>
                 </>
               ) : (
                 <>
-                  <Wrench className="h-4 w-4" />
-                  <span>{editingCase ? 'Cập nhật' : 'Tạo'} Case Nội Bộ</span>
+                  <Save className="h-4 w-4" />
+                  <span>{editingCase ? 'Cập nhật Case' : 'Tạo Case Nội Bộ'}</span>
                 </>
               )}
             </button>
           </div>
         </form>
-        </div>
       </div>
+    </div>
     </>
   );
 }

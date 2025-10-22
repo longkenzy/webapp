@@ -23,7 +23,7 @@ export function validateCaseDates(startDate: string, endDate?: string) {
 
 // Common user assessment data processing
 export function processUserAssessment(body: any) {
-  return {
+  const assessment = {
     userDifficultyLevel: body.userDifficultyLevel !== undefined && body.userDifficultyLevel !== null 
       ? parseInt(body.userDifficultyLevel) : null,
     userEstimatedTime: body.userEstimatedTime !== undefined && body.userEstimatedTime !== null 
@@ -36,6 +36,9 @@ export function processUserAssessment(body: any) {
       ? parseInt(body.userFormScore) : null,
     userAssessmentDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
   };
+  
+  console.log('Processed user assessment:', assessment);
+  return assessment;
 }
 
 // Common employee validation
@@ -45,8 +48,8 @@ export async function validateEmployees(requesterId: string, handlerId: string) 
     db.employee.findUnique({ where: { id: handlerId } })
   ]);
 
+  // If requester is not found as employee, try to find as user
   if (!requester) {
-    // Try to find user and get default employee
     const user = await db.user.findUnique({
       where: { id: requesterId },
       include: { employee: true }
@@ -57,7 +60,27 @@ export async function validateEmployees(requesterId: string, handlerId: string) 
     } else if (user) {
       // Use first available employee as fallback
       const defaultEmployee = await db.employee.findFirst();
-      return { requester: defaultEmployee, handler };
+      if (defaultEmployee) {
+        return { requester: defaultEmployee, handler };
+      }
+    }
+  }
+
+  // If handler is not found as employee, try to find as user
+  if (!handler) {
+    const user = await db.user.findUnique({
+      where: { id: handlerId },
+      include: { employee: true }
+    });
+    
+    if (user?.employee) {
+      return { requester, handler: user.employee };
+    } else if (user) {
+      // Use first available employee as fallback
+      const defaultEmployee = await db.employee.findFirst();
+      if (defaultEmployee) {
+        return { requester, handler: defaultEmployee };
+      }
     }
   }
 

@@ -440,7 +440,21 @@ export default function CreateMaintenanceModal({
     
     // Validate end date
     if (formData.endDate && formData.startDate) {
-      if (formData.endDate <= formData.startDate) {
+      // Helper function to safely convert to Date object
+      const toDate = (value: Date | string | null | undefined): Date | null => {
+        if (!value) return null;
+        try {
+          return value instanceof Date ? value : new Date(value);
+        } catch (error) {
+          console.error('Error converting to Date:', error);
+          return null;
+        }
+      };
+
+      const startDate = toDate(formData.startDate);
+      const endDate = toDate(formData.endDate);
+      
+      if (startDate && endDate && endDate <= startDate) {
         toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
           duration: 3000,
           position: 'top-right',
@@ -455,6 +469,18 @@ export default function CreateMaintenanceModal({
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
       const isEditing = !!editingMaintenance;
       
+      // Helper function to safely convert to ISO string
+      const toISOString = (value: Date | string | null | undefined): string | null => {
+        if (!value) return null;
+        try {
+          const date = value instanceof Date ? value : new Date(value);
+          return isNaN(date.getTime()) ? null : date.toISOString();
+        } catch (error) {
+          console.error('Error converting date to ISO string:', error);
+          return null;
+        }
+      };
+
       const maintenanceData: any = {
         title: formData.title,
         description: formData.description,
@@ -462,8 +488,8 @@ export default function CreateMaintenanceModal({
         handlerId: formData.handler,
         maintenanceTypeId: formData.maintenanceType,
         customerId: formData.customer || null,
-        startDate: formData.startDate?.toISOString() || new Date().toISOString(),
-        endDate: formData.endDate?.toISOString() || null,
+        startDate: toISOString(formData.startDate) || new Date().toISOString(),
+        endDate: toISOString(formData.endDate),
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null,

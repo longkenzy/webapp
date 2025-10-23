@@ -151,6 +151,27 @@ export default function MaintenancePage() {
     setRefreshing(false);
   };
 
+  // Silent refresh without loading state
+  const silentRefresh = async () => {
+    try {
+      const response = await fetch('/api/maintenance-cases', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setMaintenanceCases(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error silently refreshing maintenance cases:', error);
+    }
+  };
+
 
   // Handle edit modal
   const handleOpenEditModal = (maintenanceData: MaintenanceCase) => {
@@ -163,13 +184,16 @@ export default function MaintenancePage() {
     setSelectedMaintenance(null);
   };
 
-  const handleEditSuccess = (updatedMaintenance: MaintenanceCase) => {
+  const handleEditSuccess = async (updatedMaintenance: MaintenanceCase) => {
     // Cập nhật case trong danh sách với dữ liệu đầy đủ từ API
     setMaintenanceCases(prevMaintenance => 
       prevMaintenance.map(maintenance => 
         maintenance.id === updatedMaintenance.id ? updatedMaintenance : maintenance
       )
     );
+    
+    // Also refresh from server to ensure data consistency (silent refresh)
+    await silentRefresh();
   };
 
   const handleCloseCase = async (caseId: string) => {
@@ -197,6 +221,9 @@ export default function MaintenancePage() {
               : maintenanceCase
           )
         );
+        
+        // Also refresh from server to ensure data consistency (silent refresh)
+        await silentRefresh();
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || 'Có lỗi xảy ra khi đóng case');
@@ -1146,8 +1173,12 @@ export default function MaintenancePage() {
       <CreateMaintenanceModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={(newMaintenance: any) => {
-          setMaintenanceCases(prevMaintenance => [...prevMaintenance, newMaintenance as MaintenanceCase]);
+        onSuccess={async (newMaintenance: any) => {
+          // Add the new case to the list immediately for better UX
+          setMaintenanceCases(prevMaintenance => [newMaintenance as MaintenanceCase, ...prevMaintenance]);
+          
+          // Also refresh from server to ensure data consistency (silent refresh)
+          await silentRefresh();
         }}
       />
 

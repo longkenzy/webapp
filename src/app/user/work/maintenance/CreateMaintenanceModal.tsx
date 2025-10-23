@@ -378,6 +378,18 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
       // Prepare data for API
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
       
+      // Helper function to safely convert to ISO string
+      const toISOString = (value: Date | string | null | undefined): string | null => {
+        if (!value) return null;
+        try {
+          const date = value instanceof Date ? value : new Date(value);
+          return isNaN(date.getTime()) ? null : date.toISOString();
+        } catch (error) {
+          console.error('Error converting date to ISO string:', error);
+          return null;
+        }
+      };
+
       const maintenanceData = {
         title: formData.title,
         description: formData.description,
@@ -386,8 +398,8 @@ export default function CreateMaintenanceModal({ isOpen, onClose, onSuccess }: C
         handlerId: formData.handler,
         maintenanceTypeId: formData.maintenanceType, // Send the ID instead of the name
         customerId: formData.customer || null,
-        startDate: formData.startDate?.toISOString() || new Date().toISOString(),
-        endDate: formData.endDate?.toISOString() || null,
+        startDate: toISOString(formData.startDate) || new Date().toISOString(),
+        endDate: toISOString(formData.endDate),
         status: formData.status,
         notes: formData.notes,
         crmReferenceCode: formData.crmReferenceCode || null, // Thêm Mã CRM

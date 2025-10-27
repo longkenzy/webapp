@@ -68,7 +68,7 @@ interface UnifiedCase {
   caseType: string;
   createdAt: string;
   updatedAt: string;
-  type: 'internal' | 'delivery' | 'receiving' | 'maintenance' | 'incident' | 'warranty';
+  type: 'internal' | 'delivery' | 'receiving' | 'maintenance' | 'incident' | 'warranty' | 'deployment';
 }
 
 export default function UserDashboardPage() {
@@ -158,6 +158,8 @@ export default function UserDashboardPage() {
         return <AlertTriangle className="h-4 w-4" />;
       case 'warranty':
         return <Shield className="h-4 w-4" />;
+      case 'deployment':
+        return <Settings className="h-4 w-4" />;
       default:
         return <FileText className="h-4 w-4" />;
     }
@@ -177,6 +179,8 @@ export default function UserDashboardPage() {
         return 'Case sự cố';
       case 'warranty':
         return 'Case bảo hành';
+      case 'deployment':
+        return 'Case triển khai';
       default:
         return 'Case';
     }
@@ -196,6 +200,8 @@ export default function UserDashboardPage() {
         return `/user/work/incident`;
       case 'warranty':
         return `/user/work/warranty`;
+      case 'deployment':
+        return `/user/work/deployment`;
       default:
         return '#';
     }
@@ -204,22 +210,24 @@ export default function UserDashboardPage() {
   const fetchAllCases = async () => {
     try {
       setLoading(true);
-      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes] = await Promise.all([
+      const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes, deploymentRes] = await Promise.all([
         fetch('/api/internal-cases?limit=50'),
         fetch('/api/delivery-cases?limit=50'),
         fetch('/api/receiving-cases?limit=50'),
         fetch('/api/maintenance-cases?limit=50'),
         fetch('/api/incidents?limit=50'),
-        fetch('/api/warranties?limit=50')
+        fetch('/api/warranties?limit=50'),
+        fetch('/api/deployment-cases?limit=50')
       ]);
 
-      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData] = await Promise.all([
+      const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData, deploymentData] = await Promise.all([
         internalRes.json(),
         deliveryRes.json(),
         receivingRes.json(),
         maintenanceRes.json(),
         incidentRes.json(),
-        warrantyRes.json()
+        warrantyRes.json(),
+        deploymentRes.json()
       ]);
 
       const unifiedCases: UnifiedCase[] = [];
@@ -414,6 +422,31 @@ export default function UserDashboardPage() {
             createdAt: case_.createdAt,
             updatedAt: case_.updatedAt,
             type: 'warranty'
+          });
+        });
+      }
+
+      // Process deployment cases
+      if (deploymentData.data) {
+        deploymentData.data.forEach((case_: any) => {
+          const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
+          
+          unifiedCases.push({
+            id: case_.id,
+            title: titleWithForm,
+            description: case_.description,
+            handlerName: case_.handler?.fullName || 'Chưa phân công',
+            handler: case_.handler ? {
+              avatar: case_.handler.avatar
+            } : undefined,
+            customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || case_.customerName || 'Khách hàng',
+            status: case_.status,
+            startDate: case_.startDate,
+            endDate: case_.endDate,
+            caseType: case_.deploymentType?.name || 'Triển khai',
+            createdAt: case_.createdAt,
+            updatedAt: case_.updatedAt,
+            type: 'deployment'
           });
         });
       }
@@ -698,14 +731,15 @@ export default function UserDashboardPage() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-1.5 md:gap-4 mb-3 md:mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-1.5 md:gap-4 mb-3 md:mb-8">
         {[
           { type: 'internal', label: 'Case nội bộ', shortLabel: 'Nội bộ', icon: FileText, color: 'bg-blue-500' },
           { type: 'delivery', label: 'Case giao hàng', shortLabel: 'Giao', icon: Truck, color: 'bg-green-500' },
           { type: 'receiving', label: 'Case nhận hàng', shortLabel: 'Nhận', icon: Package, color: 'bg-yellow-500' },
           { type: 'maintenance', label: 'Case bảo trì', shortLabel: 'Bảo trì', icon: Wrench, color: 'bg-purple-500' },
           { type: 'incident', label: 'Case sự cố', shortLabel: 'Sự cố', icon: AlertTriangle, color: 'bg-red-500' },
-          { type: 'warranty', label: 'Case bảo hành', shortLabel: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' }
+          { type: 'warranty', label: 'Case bảo hành', shortLabel: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' },
+          { type: 'deployment', label: 'Case triển khai', shortLabel: 'Triển khai', icon: Settings, color: 'bg-emerald-500' }
         ].map(({ type, label, shortLabel, icon: Icon, color }) => {
           const count = filteredCases.filter(c => c.type === type).length;
           return (
@@ -780,6 +814,7 @@ export default function UserDashboardPage() {
                 <option value="maintenance">Bảo trì</option>
                 <option value="incident">Sự cố</option>
                 <option value="warranty">Bảo hành</option>
+                <option value="deployment">Triển khai</option>
               </select>
             </div>
 

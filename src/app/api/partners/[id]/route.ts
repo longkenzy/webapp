@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { atLeast } from "@/lib/auth/rbac";
 import { Role } from "@prisma/client";
@@ -43,6 +44,9 @@ export async function PUT(
       },
     });
 
+    // Revalidate cache để user khác thấy được thay đổi
+    revalidatePath('/api/partners/list');
+
     return NextResponse.json(updatedPartner);
   } catch (error) {
     console.error("Error updating partner:", error);
@@ -73,6 +77,9 @@ export async function DELETE(
     await db.partner.delete({
       where: { id },
     });
+
+    // Revalidate cache để user khác thấy được thay đổi
+    revalidatePath('/api/partners/list');
 
     return NextResponse.json({ success: true });
   } catch (error) {

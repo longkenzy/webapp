@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { atLeast } from "@/lib/auth/rbac";
 import { Role } from "@prisma/client";
@@ -73,6 +74,9 @@ export async function POST(request: NextRequest) {
         contactPhone: contactPhone?.trim() || null,
       },
     });
+
+    // Revalidate cache để user khác thấy được partner mới
+    revalidatePath('/api/partners/list');
 
     return NextResponse.json(newPartner);
   } catch (error: any) {

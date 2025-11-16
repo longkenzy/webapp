@@ -15,7 +15,7 @@ export const GET = withErrorHandling(
     });
 
     return createOptimizedResponse(partners, {
-      cache: 'STATIC', // Partners change rarely
+      cache: 'DYNAMIC', // Thay đổi từ STATIC sang DYNAMIC để tránh cache lâu khi có thay đổi
       status: 200
     });
   })

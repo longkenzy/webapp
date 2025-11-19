@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Building2, Phone, MapPin, User, Edit, Trash2, Save, X, Search, Plus, ChevronDown } from "lucide-react";
+import { Building2, Phone, MapPin, User, Edit, Trash2, Save, X, Search, Plus, ChevronDown, FileSpreadsheet } from "lucide-react";
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 
 interface Partner {
   id: string;
@@ -252,6 +253,61 @@ export default function PartnersPage() {
     }
   };
 
+  // Export to Excel
+  const exportToExcel = () => {
+    try {
+      // Chuẩn bị dữ liệu cho Excel
+      const excelData = filteredPartners.map((partner, index) => ({
+        'STT': index + 1,
+        'Tên công ty đầy đủ': partner.fullCompanyName,
+        'Tên viết tắt': partner.shortName,
+        'Địa chỉ': partner.address,
+        'Người liên hệ': partner.contactPerson || '',
+        'Số điện thoại': partner.contactPhone || '',
+        'Ngày tạo': new Date(partner.createdAt).toLocaleDateString('vi-VN'),
+        'Ngày cập nhật': new Date(partner.updatedAt).toLocaleDateString('vi-VN')
+      }));
+
+      // Tạo worksheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Tự động điều chỉnh độ rộng cột
+      const columnWidths = [
+        { wch: 5 },  // STT
+        { wch: 40 }, // Tên công ty đầy đủ
+        { wch: 15 }, // Tên viết tắt
+        { wch: 50 }, // Địa chỉ
+        { wch: 20 }, // Người liên hệ
+        { wch: 15 }, // Số điện thoại
+        { wch: 12 }, // Ngày tạo
+        { wch: 12 }  // Ngày cập nhật
+      ];
+      worksheet['!cols'] = columnWidths;
+
+      // Tạo workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Danh sách nhà cung cấp');
+
+      // Tạo tên file với timestamp
+      const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileName = `Danh_sach_nha_cung_cap_${timestamp}.xlsx`;
+
+      // Xuất file
+      XLSX.writeFile(workbook, fileName);
+
+      toast.success('Xuất file Excel thành công!', {
+        duration: 3000,
+        position: 'top-right',
+      });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Có lỗi xảy ra khi xuất file Excel', {
+        duration: 4000,
+        position: 'top-right',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
@@ -356,14 +412,25 @@ export default function PartnersPage() {
           {/* Header */}
           <div className="px-3 md:px-4 py-2.5 md:py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-sm md:text-base font-semibold text-gray-900">Danh sách nhà cung cấp</h3>
-            <button
-              onClick={startAddingNew}
-              disabled={isAddingNew}
-              className="inline-flex items-center px-2.5 md:px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Plus className="h-3 w-3 md:mr-1" />
-              <span className="hidden md:inline">Thêm nhà cung cấp</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportToExcel}
+                disabled={filteredPartners.length === 0}
+                className="inline-flex items-center px-2.5 md:px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Xuất file Excel"
+              >
+                <FileSpreadsheet className="h-3 w-3 md:mr-1" />
+                <span className="hidden md:inline">Xuất Excel</span>
+              </button>
+              <button
+                onClick={startAddingNew}
+                disabled={isAddingNew}
+                className="inline-flex items-center px-2.5 md:px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Plus className="h-3 w-3 md:mr-1" />
+                <span className="hidden md:inline">Thêm nhà cung cấp</span>
+              </button>
+            </div>
           </div>
           
           {/* Mobile: Card View */}

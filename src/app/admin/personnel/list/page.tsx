@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Users, ChevronDown, Phone, Mail, Briefcase } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, Eye, Users, ChevronDown, Phone, Mail, Briefcase, FileSpreadsheet } from "lucide-react";
 import Link from "next/link";
 import DeleteConfirmationModal from '@/components/shared/common/DeleteConfirmationModal';
 import { formatVietnamDate } from '@/lib/date-utils';
+import * as XLSX from 'xlsx';
+import toast from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -261,6 +263,89 @@ export default function PersonnelListPage() {
     return undefined;
   };
 
+  // Export to Excel
+  const exportToExcel = () => {
+    try {
+      // Chuẩn bị dữ liệu cho Excel
+      const excelData = filteredEmployees.map((employee, index) => ({
+        'STT': index + 1,
+        'Họ và tên': employee.fullName,
+        'Ngày sinh': formatDate(employee.dateOfBirth),
+        'Năm sinh': getYearOfBirth(employee.dateOfBirth),
+        'Giới tính': employee.gender,
+        'Quê quán': employee.hometown,
+        'Tôn giáo': employee.religion,
+        'Dân tộc': employee.ethnicity,
+        'Nơi sinh': employee.placeOfBirth,
+        'Địa chỉ thường trú': employee.permanentAddress,
+        'Địa chỉ tạm trú': employee.temporaryAddress || '',
+        'Chức vụ': employee.position || '',
+        'Phòng ban': employee.department || '',
+        'Ngày vào làm': formatDate(employee.startDate),
+        'Loại hợp đồng': employee.contractType || '',
+        'Trạng thái': employee.status === 'active' ? 'Đang làm việc' : 
+                      employee.status === 'inactive' ? 'Nghỉ việc' : 
+                      employee.status === 'pending' ? 'Chờ duyệt' : employee.status,
+        'SĐT chính': employee.primaryPhone,
+        'SĐT phụ': employee.secondaryPhone || '',
+        'Email cá nhân': employee.personalEmail,
+        'Email công ty': employee.companyEmail,
+        'Ngày tạo': formatDate(employee.createdAt)
+      }));
+
+      // Tạo worksheet
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+      // Tự động điều chỉnh độ rộng cột
+      const columnWidths = [
+        { wch: 5 },  // STT
+        { wch: 25 }, // Họ và tên
+        { wch: 12 }, // Ngày sinh
+        { wch: 10 }, // Năm sinh
+        { wch: 10 }, // Giới tính
+        { wch: 20 }, // Quê quán
+        { wch: 15 }, // Tôn giáo
+        { wch: 15 }, // Dân tộc
+        { wch: 20 }, // Nơi sinh
+        { wch: 40 }, // Địa chỉ thường trú
+        { wch: 40 }, // Địa chỉ tạm trú
+        { wch: 20 }, // Chức vụ
+        { wch: 20 }, // Phòng ban
+        { wch: 12 }, // Ngày vào làm
+        { wch: 15 }, // Loại hợp đồng
+        { wch: 15 }, // Trạng thái
+        { wch: 15 }, // SĐT chính
+        { wch: 15 }, // SĐT phụ
+        { wch: 30 }, // Email cá nhân
+        { wch: 30 }, // Email công ty
+        { wch: 12 }  // Ngày tạo
+      ];
+      worksheet['!cols'] = columnWidths;
+
+      // Tạo workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Danh sách nhân sự');
+
+      // Tạo tên file với timestamp
+      const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileName = `Danh_sach_nhan_su_${timestamp}.xlsx`;
+
+      // Xuất file
+      XLSX.writeFile(workbook, fileName);
+
+      toast.success('Xuất file Excel thành công!', {
+        duration: 3000,
+        position: 'top-right',
+      });
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Có lỗi xảy ra khi xuất file Excel', {
+        duration: 4000,
+        position: 'top-right',
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -332,13 +417,24 @@ export default function PersonnelListPage() {
             <p className="text-[10px] md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">Quản lý thông tin nhân sự trong hệ thống</p>
           </div>
           
-          <Link
-            href="/admin/personnel/add"
-            className="inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white text-xs md:text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5 md:h-4 md:w-4 md:mr-2" />
-            <span className="hidden md:inline">Thêm nhân sự</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportToExcel}
+              disabled={filteredEmployees.length === 0}
+              className="inline-flex items-center px-2.5 md:px-3 py-1.5 md:py-2 bg-green-600 text-white text-xs md:text-sm font-medium rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Xuất file Excel"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 md:h-4 md:w-4 md:mr-2" />
+              <span className="hidden md:inline">Xuất Excel</span>
+            </button>
+            <Link
+              href="/admin/personnel/add"
+              className="inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 bg-blue-600 text-white text-xs md:text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5 md:h-4 md:w-4 md:mr-2" />
+              <span className="hidden md:inline">Thêm nhân sự</span>
+            </Link>
+          </div>
         </div>
 
         {/* Search and Filter Bar */}

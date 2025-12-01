@@ -1,14 +1,16 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from 'react';
-import { Plus, Settings, Rocket, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X, ChevronDown } from 'lucide-react';
+import { Plus, Settings, Rocket, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X, ChevronDown, Filter } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
-import { getCurrentDateForFilename, formatVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentDateForFilename, formatVietnamDateTime, formatVietnamDate } from '@/lib/date-utils';
+import { DatePickerInput } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 // Lazy load modal for better initial page load
 const CreateDeploymentModal = lazy(() => import('./CreateDeploymentModal'));
@@ -74,17 +76,17 @@ export default function AdminDeploymentWorkPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
+
   // Create modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
-  
+
   // Edit modal states
   const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(null);
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deletedDeployments, setDeletedDeployments] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  
+
   // States for incidents list
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,20 +94,21 @@ export default function AdminDeploymentWorkPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'config' | 'cases'>('cases');
-  
+
   // Filter states
   const [selectedHandler, setSelectedHandler] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [selectedDeploymentType, setSelectedDeploymentType] = useState<string>('');
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
+  const [crmCodeFilter, setCrmCodeFilter] = useState<string>('');
+  const [dateFrom, setDateFrom] = useState<Date | null>(null);
+  const [dateTo, setDateTo] = useState<Date | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
-  
+
   // States for evaluation form
   const [evaluationForm, setEvaluationForm] = useState({
     adminDifficultyLevel: '',
@@ -116,15 +119,15 @@ export default function AdminDeploymentWorkPage() {
   const [evaluating, setEvaluating] = useState(false);
 
   // Incident Type Management States
-  const [deploymentTypes, setDeploymentTypes] = useState<Array<{id: string, name: string, description?: string}>>([]);
+  const [deploymentTypes, setDeploymentTypes] = useState<Array<{ id: string, name: string, description?: string }>>([]);
   const [deploymentTypesLoading, setDeploymentTypesLoading] = useState(true);
   const [showDeploymentTypeModal, setShowDeploymentTypeModal] = useState(false);
-  const [editingDeploymentType, setEditingDeploymentType] = useState<{id: string, name: string} | null>(null);
+  const [editingDeploymentType, setEditingDeploymentType] = useState<{ id: string, name: string } | null>(null);
   const [deploymentTypeForm, setDeploymentTypeForm] = useState({
     name: '',
     isActive: true
   });
-  
+
   // Inline editing states
   const [isAddingNewRow, setIsAddingNewRow] = useState(false);
   const [newDeploymentTypeName, setNewDeploymentTypeName] = useState('');
@@ -138,14 +141,14 @@ export default function AdminDeploymentWorkPage() {
 
   // Helper function to check if deployment is evaluated by admin
   const isDeploymentEvaluatedByAdmin = (deployment: Deployment) => {
-    return deployment.adminDifficultyLevel !== null && 
-           deployment.adminDifficultyLevel !== undefined &&
-           deployment.adminEstimatedTime !== null && 
-           deployment.adminEstimatedTime !== undefined &&
-           deployment.adminImpactLevel !== null && 
-           deployment.adminImpactLevel !== undefined &&
-           deployment.adminUrgencyLevel !== null && 
-           deployment.adminUrgencyLevel !== undefined;
+    return deployment.adminDifficultyLevel !== null &&
+      deployment.adminDifficultyLevel !== undefined &&
+      deployment.adminEstimatedTime !== null &&
+      deployment.adminEstimatedTime !== undefined &&
+      deployment.adminImpactLevel !== null &&
+      deployment.adminImpactLevel !== undefined &&
+      deployment.adminUrgencyLevel !== null &&
+      deployment.adminUrgencyLevel !== undefined;
   };
 
   // Helper functions to get evaluation text
@@ -182,14 +185,14 @@ export default function AdminDeploymentWorkPage() {
   const fetchDeployments = useCallback(async (retryCount = 0) => {
     try {
       setLoading(true);
-      
+
       const response = await fetch('/api/deployment-cases?limit=1000', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setDeployments(data.data || []);
@@ -223,7 +226,7 @@ export default function AdminDeploymentWorkPage() {
           'Cache-Control': 'no-cache',
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setDeployments(data.data || []);
@@ -254,7 +257,7 @@ export default function AdminDeploymentWorkPage() {
       const response = await fetch(`/api/deployment-cases/${deploymentId}`, {
         method: 'DELETE',
       });
-      
+
       if (response.ok) {
         setDeployments(prev => prev.filter(deployment => deployment.id !== deploymentId));
         setDeletedDeployments(prev => new Set([...prev, deploymentId]));
@@ -291,16 +294,26 @@ export default function AdminDeploymentWorkPage() {
     });
   }, []);
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   // Check if any filters are active
   const hasActiveFilters = useCallback(() => {
-    return searchTerm !== '' || 
-           selectedHandler !== '' || 
-           selectedStatus !== '' || 
-           selectedDeploymentType !== '' || 
-           selectedCustomer !== '' || 
-           dateFrom !== '' || 
-           dateTo !== '';
-  }, [searchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo]);
+    return searchTerm !== '' ||
+      selectedHandler !== '' ||
+      selectedStatus !== '' ||
+      selectedDeploymentType !== '' ||
+      selectedCustomer !== '' ||
+      crmCodeFilter !== '' ||
+      dateFrom !== null ||
+      dateTo !== null;
+  }, [searchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, crmCodeFilter, dateFrom, dateTo]);
 
   // Clear filters
   const clearFilters = useCallback(() => {
@@ -309,14 +322,15 @@ export default function AdminDeploymentWorkPage() {
     setSelectedStatus('');
     setSelectedDeploymentType('');
     setSelectedCustomer('');
-    setDateFrom('');
-    setDateTo('');
+    setCrmCodeFilter('');
+    setDateFrom(null);
+    setDateTo(null);
   }, []);
 
   // Filter deployments (memoized for performance)
   // Use debounced search term for filtering (performance optimization)
-  const filteredWarranties = useMemo(() => deployments.filter(deployment => {
-    const matchesSearch = !debouncedSearchTerm || 
+  const filteredDeployments = useMemo(() => deployments.filter(deployment => {
+    const matchesSearch = !debouncedSearchTerm ||
       deployment.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
       deployment.description.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
       deployment.customerName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
@@ -327,23 +341,24 @@ export default function AdminDeploymentWorkPage() {
 
     const matchesHandler = !selectedHandler || deployment.handler.id === selectedHandler;
     const matchesStatus = !selectedStatus || deployment.status === selectedStatus;
-    const matchesDeploymentType = !selectedDeploymentType || 
+    const matchesDeploymentType = !selectedDeploymentType ||
       (typeof deployment.deploymentType === 'string' ? deployment.deploymentType : deployment.deploymentType?.name || '') === selectedDeploymentType;
     const matchesCustomer = !selectedCustomer || deployment.customer?.id === selectedCustomer;
-    
-    const matchesDateFrom = !dateFrom || new Date(deployment.startDate) >= new Date(dateFrom);
-    const matchesDateTo = !dateTo || new Date(deployment.startDate) <= new Date(dateTo);
+    const matchesCrmCode = !crmCodeFilter || (deployment.crmReferenceCode && deployment.crmReferenceCode.toLowerCase().includes(crmCodeFilter.toLowerCase()));
 
-    return matchesSearch && matchesHandler && matchesStatus && matchesDeploymentType && 
-           matchesCustomer && matchesDateFrom && matchesDateTo;
-  }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()), [deployments, debouncedSearchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo]);
+    const matchesDateFrom = !dateFrom || new Date(deployment.startDate) >= dateFrom;
+    const matchesDateTo = !dateTo || new Date(deployment.startDate) <= dateTo;
+
+    return matchesSearch && matchesHandler && matchesStatus && matchesDeploymentType &&
+      matchesCustomer && matchesCrmCode && matchesDateFrom && matchesDateTo;
+  }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()), [deployments, debouncedSearchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, crmCodeFilter, dateFrom, dateTo]);
 
   // Pagination logic
-  const totalItems = filteredWarranties.length;
+  const totalItems = filteredDeployments.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedDeployments = filteredWarranties.slice(startIndex, endIndex);
+  const paginatedDeployments = filteredDeployments.slice(startIndex, endIndex);
 
   // Pagination functions
   const goToPage = (page: number) => {
@@ -365,24 +380,24 @@ export default function AdminDeploymentWorkPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, dateFrom, dateTo]);
+  }, [debouncedSearchTerm, selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, crmCodeFilter, dateFrom, dateTo]);
 
   // Get unique values for filters (memoized for performance)
-  const uniqueHandlers = useMemo(() => 
+  const uniqueHandlers = useMemo(() =>
     Array.from(new Set(deployments.map(deployment => deployment.handler.id)))
       .map(id => deployments.find(deployment => deployment.handler.id === id)?.handler)
       .filter(Boolean) as Employee[], [deployments]);
 
-  const uniqueStatuses = useMemo(() => 
+  const uniqueStatuses = useMemo(() =>
     Array.from(new Set(deployments.map(deployment => deployment.status))), [deployments]);
-    
-  const uniqueDeploymentTypes = useMemo(() => 
-    Array.from(new Set(deployments.map(deployment => 
-      typeof deployment.deploymentType === 'string' ? deployment.deploymentType : 
-      deployment.deploymentType?.name || 'Unknown'
+
+  const uniqueDeploymentTypes = useMemo(() =>
+    Array.from(new Set(deployments.map(deployment =>
+      typeof deployment.deploymentType === 'string' ? deployment.deploymentType :
+        deployment.deploymentType?.name || 'Unknown'
     ).filter(Boolean))), [deployments]);
-    
-  const uniqueCustomers = useMemo(() => 
+
+  const uniqueCustomers = useMemo(() =>
     Array.from(new Set(deployments.map(deployment => deployment.customer?.id).filter(Boolean)))
       .map(id => deployments.find(deployment => deployment.customer?.id === id)?.customer)
       .filter(Boolean), [deployments]);
@@ -408,7 +423,7 @@ export default function AdminDeploymentWorkPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setDeployments(prev => prev.map(deployment => 
+        setDeployments(prev => prev.map(deployment =>
           deployment.id === selectedDeployment.id ? data.data : deployment
         ));
         toast.success('Đánh giá bảo hành thành công');
@@ -434,7 +449,7 @@ export default function AdminDeploymentWorkPage() {
 
   // Export to Excel
   const exportToExcel = useCallback(() => {
-    const exportData = filteredWarranties.map(deployment => ({
+    const exportData = filteredDeployments.map(deployment => ({
       'Tiêu đề': deployment.title,
       'Mô tả': deployment.description,
       'Tên khách hàng': deployment.customerName,
@@ -458,11 +473,11 @@ export default function AdminDeploymentWorkPage() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Danh sách sự cố');
-    
+
     const fileName = `danh-sach-bao-hanh-${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(wb, fileName);
     toast.success('Xuất file Excel thành công');
-  }, [filteredWarranties]);
+  }, [filteredDeployments]);
 
   // Fetch deployment types from API
   const fetchDeploymentTypes = useCallback(async () => {
@@ -497,7 +512,7 @@ export default function AdminDeploymentWorkPage() {
     setNewDeploymentTypeName('');
   };
 
-  const handleEditDeploymentType = (type: {id: string, name: string}) => {
+  const handleEditDeploymentType = (type: { id: string, name: string }) => {
     setEditingDeploymentType(type);
     setDeploymentTypeForm({
       name: type.name,
@@ -506,7 +521,7 @@ export default function AdminDeploymentWorkPage() {
     setShowDeploymentTypeModal(true);
   };
 
-  const handleDeleteDeploymentType = async (type: {id: string, name: string}) => {
+  const handleDeleteDeploymentType = async (type: { id: string, name: string }) => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa loại bảo hành "${type.name}"?`)) {
       try {
         const response = await fetch(`/api/deployment-types/${type.id}`, {
@@ -520,7 +535,7 @@ export default function AdminDeploymentWorkPage() {
           // Remove from local state
           setDeploymentTypes(prev => prev.filter(t => t.id !== type.id));
           toast.success('Xóa loại bảo hành thành công');
-          
+
           // Dispatch event to notify other components
           window.dispatchEvent(new CustomEvent('deployment-types-updated'));
         } else {
@@ -612,7 +627,7 @@ export default function AdminDeploymentWorkPage() {
           toast.success('Cập nhật loại bảo hành thành công');
           // Refresh the list to sync with API
           await fetchDeploymentTypes();
-          
+
           // Dispatch event to notify other components
           window.dispatchEvent(new CustomEvent('deployment-types-updated'));
         } else {
@@ -642,7 +657,7 @@ export default function AdminDeploymentWorkPage() {
           toast.success('Thêm loại bảo hành thành công');
           // Refresh the list to sync with API
           await fetchDeploymentTypes();
-          
+
           // Dispatch event to notify other components
           window.dispatchEvent(new CustomEvent('deployment-types-updated'));
         } else {
@@ -651,7 +666,7 @@ export default function AdminDeploymentWorkPage() {
           return;
         }
       }
-      
+
       setShowDeploymentTypeModal(false);
       setEditingDeploymentType(null);
       setDeploymentTypeForm({ name: '', isActive: true });
@@ -672,7 +687,7 @@ export default function AdminDeploymentWorkPage() {
   // Fetch employees (with caching)
   const fetchEmployees = useCallback(async () => {
     if (employeesLoaded) return; // Don't re-fetch if already loaded
-    
+
     try {
       const response = await fetch('/api/employees/list', {
         method: 'GET',
@@ -694,7 +709,7 @@ export default function AdminDeploymentWorkPage() {
   // Fetch partners (with caching)
   const fetchPartners = useCallback(async () => {
     if (partnersLoaded) return; // Don't re-fetch if already loaded
-    
+
     try {
       const response = await fetch('/api/partners', {
         method: 'GET',
@@ -813,9 +828,10 @@ export default function AdminDeploymentWorkPage() {
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50">
-      {/* iOS Safari input fix */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <div className="min-h-screen bg-gray-50">
+        {/* iOS Safari input fix */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
         input, select, textarea {
           -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
           opacity: 1 !important;
@@ -832,932 +848,913 @@ export default function AdminDeploymentWorkPage() {
           opacity: 1 !important;
         }
       `}} />
-      
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 md:space-x-4">
-              <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg">
-                <Rocket className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
-              </div>
-              <div>
-                <h1 className="text-lg md:text-2xl font-bold text-gray-900">Quản lý triển khai</h1>
-                <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">
-                  Quản lý và theo dõi các case triển khai
-                </p>
-                {activeTab === 'cases' && (
-                  <div className="mt-2 flex items-center flex-wrap gap-2 md:gap-4 text-[10px] md:text-xs">
-                    <div className="flex items-center space-x-1">
-                      <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                      <span className="text-green-600">
-                        Đã đánh giá: {filteredWarranties.filter(isDeploymentEvaluatedByAdmin).length}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <AlertTriangle className="h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
-                      <span className="text-yellow-600">
-                        Chưa đánh giá: {filteredWarranties.filter(deployment => !isDeploymentEvaluatedByAdmin(deployment)).length}
-                      </span>
-                    </div>
-                    {hasActiveFilters() && (
+
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 md:space-x-4">
+                <div className="p-1.5 md:p-2 bg-blue-100 rounded-lg">
+                  <Rocket className="h-5 w-5 md:h-6 md:w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-lg md:text-2xl font-bold text-gray-900">Quản lý triển khai</h1>
+                  <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">
+                    Quản lý và theo dõi các case triển khai
+                  </p>
+                  {activeTab === 'cases' && (
+                    <div className="mt-2 flex items-center flex-wrap gap-2 md:gap-4 text-[10px] md:text-xs">
                       <div className="flex items-center space-x-1">
-                        <Search className="h-3 w-3 md:h-4 md:w-4 text-blue-500" />
-                        <span className="text-blue-600">
-                          Đang lọc: {filteredWarranties.length}/{deployments.length}
+                        <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                        <span className="text-green-600">
+                          Đã đánh giá: {filteredDeployments.filter(isDeploymentEvaluatedByAdmin).length}
                         </span>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <div className="flex items-center space-x-1">
+                        <AlertTriangle className="h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
+                        <span className="text-yellow-600">
+                          Chưa đánh giá: {filteredDeployments.filter(deployment => !isDeploymentEvaluatedByAdmin(deployment)).length}
+                        </span>
+                      </div>
+                      {hasActiveFilters() && (
+                        <div className="flex items-center space-x-1">
+                          <Search className="h-3 w-3 md:h-4 md:w-4 text-blue-500" />
+                          <span className="text-blue-600">
+                            Đang lọc: {filteredDeployments.length}/{deployments.length}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Create Case Button */}
+              {activeTab === 'cases' && (
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="flex items-center space-x-1 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md md:rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm text-xs md:text-sm cursor-pointer"
+                >
+                  <Rocket className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span className="font-medium hidden sm:inline">Tạo Case</span>
+                  <span className="font-medium sm:hidden">Tạo</span>
+                </button>
+              )}
             </div>
-            
-            {/* Create Case Button */}
-            {activeTab === 'cases' && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-1 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-md md:rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-sm text-xs md:text-sm cursor-pointer"
-              >
-                <Rocket className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                <span className="font-medium hidden sm:inline">Tạo Case</span>
-                <span className="font-medium sm:hidden">Tạo</span>
-              </button>
-            )}
-          </div>
-          
-          {/* Tabs */}
-          <div className="mt-4 md:mt-6">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-4 md:space-x-8 overflow-x-auto scrollbar-hide">
-                <button
-                  onClick={() => setActiveTab('cases')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
-                    activeTab === 'cases'
+
+            {/* Tabs */}
+            <div className="mt-4 md:mt-6">
+              <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-4 md:space-x-8 overflow-x-auto scrollbar-hide">
+                  <button
+                    onClick={() => setActiveTab('cases')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${activeTab === 'cases'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4" />
-                    <span>Danh sách triển khai</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      hasActiveFilters() 
-                        ? 'bg-blue-100 text-blue-600' 
+                      }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-4 w-4" />
+                      <span>Danh sách triển khai</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${hasActiveFilters()
+                        ? 'bg-blue-100 text-blue-600'
                         : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {hasActiveFilters() ? `${filteredWarranties.length}/${deployments.length}` : deployments.length}
-                    </span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setActiveTab('config')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
-                    activeTab === 'config'
+                        }`}>
+                        {hasActiveFilters() ? `${filteredDeployments.length}/${deployments.length}` : deployments.length}
+                      </span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('config')}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${activeTab === 'config'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Settings className="h-4 w-4" />
-                    <span>Cấu hình</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
-                      {deploymentTypes.length}
-                    </span>
-                  </div>
-                </button>
-              </nav>
+                      }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Settings className="h-4 w-4" />
+                      <span>Cấu hình</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-600">
+                        {deploymentTypes.length}
+                      </span>
+                    </div>
+                  </button>
+                </nav>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-8">
+        {/* Main Content */}
+        <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-8">
 
-        {/* Cases Tab Content */}
-        {activeTab === 'cases' ? (
-          <div className="space-y-4 md:space-y-6">
-            {/* Search and Filter Bar */}
-            <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center space-x-2 flex-1 cursor-pointer"
-                  >
-                    <div className="p-1 md:p-1.5 bg-blue-100 rounded-md">
-                      <Search className="h-3.5 w-3.5 md:h-4 md:w-4 text-blue-600" />
+          {/* Cases Tab Content */}
+          {activeTab === 'cases' ? (
+            <div className="space-y-4 md:space-y-6">
+              {/* Search and Filter Bar */}
+              {/* Search and Filter Bar */}
+              <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center space-x-1.5 md:space-x-2 flex-1 min-w-0">
+                      <div className="p-1 md:p-1.5 bg-blue-100 rounded-md flex-shrink-0">
+                        <Search className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-xs md:text-base font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
+                        <p className="text-[10px] md:text-xs text-gray-600 hidden sm:block">Tìm kiếm và lọc triển khai theo nhiều tiêu chí</p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-sm md:text-base font-semibold text-gray-900 flex items-center gap-2">
-                        Tìm kiếm & Lọc
-                        {activeFiltersCount > 0 && (
-                          <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-blue-600 rounded-full">
-                            {activeFiltersCount}
+                    <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
+                      <button
+                        onClick={exportToExcel}
+                        disabled={filteredDeployments.length === 0}
+                        className="flex items-center space-x-1 md:space-x-1.5 px-2 md:px-3 py-1 md:py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+                      >
+                        <Download className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                        <span className="text-[10px] md:text-sm font-medium hidden sm:inline">Xuất Excel</span>
+                      </button>
+                      <button
+                        onClick={refreshDeployments}
+                        disabled={refreshing}
+                        className="flex items-center space-x-1 md:space-x-1.5 px-2 md:px-3 py-1 md:py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+                      >
+                        <RefreshCw className={`h-3 w-3 md:h-3.5 md:w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+                        <span className="text-[10px] md:text-sm font-medium hidden sm:inline">Làm mới</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-2 md:p-4">
+                  <div className="space-y-2 md:space-y-4">
+                    {/* Search Section */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 relative flex items-center">
+                        <Search className="absolute left-2 md:left-3 h-3 w-3 md:h-4 md:w-4 text-gray-400" />
+                        <input
+                          type="text"
+                          placeholder="Tìm kiếm theo tên bảo hành, người báo cáo, người xử lý..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-7 md:pl-10 pr-2 md:pr-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                          style={{ WebkitAppearance: 'none', lineHeight: 'normal' }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`flex items-center gap-1 px-2 md:px-3 py-1.5 md:py-2 border rounded-md transition-all relative ${showFilters
+                          ? 'bg-blue-50 border-blue-300 text-blue-700'
+                          : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                          }`}
+                      >
+                        <Filter className="h-3 w-3 md:h-4 md:w-4" />
+                        <span className="text-xs md:text-sm font-medium hidden sm:inline">Lọc</span>
+                        {(selectedHandler || selectedStatus || selectedDeploymentType || selectedCustomer || crmCodeFilter || dateFrom || dateTo) && (
+                          <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                            {[selectedHandler, selectedStatus, selectedDeploymentType, selectedCustomer, crmCodeFilter, dateFrom, dateTo].filter(Boolean).length}
                           </span>
                         )}
-                      </h3>
-                      <p className="text-[10px] md:text-xs text-gray-600 hidden md:block">Tìm kiếm và lọc triển khai theo nhiều tiêu chí</p>
+                        <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                      </button>
                     </div>
-                    <ChevronDown className={`h-4 w-4 md:h-5 md:w-5 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-                  </button>
-                  <div className="hidden md:flex items-center space-x-2 ml-2">
-                    <button 
-                      onClick={exportToExcel}
-                      disabled={filteredWarranties.length === 0}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      <span className="text-sm font-medium">Xuất Excel</span>
-                    </button>
-                    <button 
-                      onClick={refreshDeployments}
-                      disabled={refreshing}
-                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
-                    >
-                      <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-                      <span className="text-sm font-medium">Làm mới</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
 
-              {/* Content */}
-              <div className={`transition-all duration-300 overflow-hidden ${showFilters ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="p-3 md:p-4">
-                <div className="space-y-3 md:space-y-4">
-                  {/* Search Section */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tìm kiếm
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Tìm kiếm theo tên bảo hành, người báo cáo, người xử lý..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Filters Section */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bộ lọc
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      {/* Handler Filter */}
+                    {/* Filters Section - Collapsible */}
+                    <div className={`overflow-hidden transition-all duration-300 ${showFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                            <span>Người xử lý</span>
-                          </div>
+                        <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
+                          Bộ lọc
                         </label>
-                        <select
-                          value={selectedHandler}
-                          onChange={(e) => setSelectedHandler(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        >
-                          <option value="">Tất cả người xử lý</option>
-                          {uniqueHandlers.map((handler) => (
-                            <option key={handler.id} value={handler.id}>
-                              {handler.fullName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Status Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                            <span>Trạng thái</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+                          {/* Handler Filter */}
+                          <div>
+                            <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-green-500 rounded-full"></div>
+                                <span>Người xử lý</span>
+                              </div>
+                            </label>
+                            <select
+                              value={selectedHandler}
+                              onChange={(e) => setSelectedHandler(e.target.value)}
+                              className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                              style={{ WebkitAppearance: 'none' }}
+                            >
+                              <option value="">Tất cả người xử lý</option>
+                              {uniqueHandlers.map((handler) => (
+                                <option key={handler.id} value={handler.id}>
+                                  {handler.fullName}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                        </label>
-                        <select
-                          value={selectedStatus}
-                          onChange={(e) => setSelectedStatus(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        >
-                          <option value="">Tất cả trạng thái</option>
-                          {uniqueStatuses.map((status) => (
-                            <option key={status} value={status}>
-                              {getStatusLabel(status)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
 
-                      {/* Incident Type Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                            <span>Loại bảo hành</span>
+                          {/* Status Filter */}
+                          <div>
+                            <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-purple-500 rounded-full"></div>
+                                <span>Trạng thái</span>
+                              </div>
+                            </label>
+                            <select
+                              value={selectedStatus}
+                              onChange={(e) => setSelectedStatus(e.target.value)}
+                              className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                              style={{ WebkitAppearance: 'none' }}
+                            >
+                              <option value="">Tất cả trạng thái</option>
+                              {uniqueStatuses.map((status) => (
+                                <option key={status} value={status}>
+                                  {getStatusLabel(status)}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                        </label>
-                        <select
-                          value={selectedDeploymentType}
-                          onChange={(e) => setSelectedDeploymentType(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        >
-                          <option value="">Tất cả loại bảo hành</option>
-                          {uniqueDeploymentTypes.map((type) => (
-                            <option key={type} value={type}>
-                              {formatDeploymentType(type)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
 
-                      {/* Customer Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                            <span>Khách hàng</span>
+                          {/* Incident Type Filter */}
+                          <div>
+                            <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-orange-500 rounded-full"></div>
+                                <span>Loại bảo hành</span>
+                              </div>
+                            </label>
+                            <select
+                              value={selectedDeploymentType}
+                              onChange={(e) => setSelectedDeploymentType(e.target.value)}
+                              className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                              style={{ WebkitAppearance: 'none' }}
+                            >
+                              <option value="">Tất cả loại bảo hành</option>
+                              {uniqueDeploymentTypes.map((type) => (
+                                <option key={type} value={type}>
+                                  {formatDeploymentType(type)}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                        </label>
-                        <select
-                          value={selectedCustomer}
-                          onChange={(e) => setSelectedCustomer(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        >
-                          <option value="">Tất cả khách hàng</option>
-                          {uniqueCustomers.map((customer) => (
-                            <option key={customer?.id} value={customer?.id}>
-                              {customer?.shortName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
 
-                      {/* Date From Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span>Từ ngày</span>
+                          {/* Customer Filter */}
+                          <div>
+                            <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-indigo-500 rounded-full"></div>
+                                <span>Khách hàng</span>
+                              </div>
+                            </label>
+                            <select
+                              value={selectedCustomer}
+                              onChange={(e) => setSelectedCustomer(e.target.value)}
+                              className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                              style={{ WebkitAppearance: 'none' }}
+                            >
+                              <option value="">Tất cả khách hàng</option>
+                              {uniqueCustomers.map((customer) => (
+                                <option key={customer?.id} value={customer?.id}>
+                                  {customer?.shortName}
+                                </option>
+                              ))}
+                            </select>
                           </div>
-                        </label>
-                        <input
-                          type="date"
-                          value={dateFrom}
-                          onChange={(e) => setDateFrom(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        />
-                      </div>
 
-                      {/* Date To Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>
-                            <span>Đến ngày</span>
+                          {/* CRM Code Filter */}
+                          <div>
+                            <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-pink-500 rounded-full"></div>
+                                <span>Mã CRM</span>
+                              </div>
+                            </label>
+                            <input
+                              type="text"
+                              value={crmCodeFilter}
+                              onChange={(e) => setCrmCodeFilter(e.target.value)}
+                              className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                              placeholder="Nhập mã CRM..."
+                            />
                           </div>
-                        </label>
-                        <input
-                          type="date"
-                          value={dateTo}
-                          onChange={(e) => setDateTo(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        />
-                      </div>
 
-                    </div>
-                  </div>
-                </div>
+                          {/* Date From Filter */}
+                          <div>
+                            <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-blue-500 rounded-full"></div>
+                                <span>Từ ngày</span>
+                              </div>
+                            </label>
+                            <DatePickerInput
+                              value={dateFrom}
+                              onChange={(date) => setDateFrom(date ? new Date(date) : null)}
+                              placeholder="Chọn từ ngày"
+                              locale="vi"
+                              valueFormat="DD/MM/YYYY"
+                              clearable
+                              styles={{
+                                input: {
+                                  fontSize: '0.875rem',
+                                  padding: '0.5rem 0.75rem',
+                                  minHeight: '40px',
+                                  height: '40px',
+                                  borderColor: '#e5e7eb',
+                                  backgroundColor: '#f9fafb',
+                                  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                                }
+                              }}
+                            />
+                          </div>
 
-                {/* Active Filters & Actions */}
-                {hasActiveFilters() && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md p-2.5 border border-blue-100">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-1.5 mb-1">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                          <span className="text-xs font-semibold text-gray-800">Bộ lọc đang áp dụng</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {searchTerm && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                              <Search className="h-2.5 w-2.5 mr-1" />
-                              &quot;{searchTerm}&quot;
-                            </span>
-                          )}
-                          {selectedHandler && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
-                              Xử lý: {uniqueHandlers.find(h => h.id === selectedHandler)?.fullName || selectedHandler}
-                            </span>
-                          )}
-                          {selectedStatus && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
-                              Trạng thái: {getStatusLabel(selectedStatus)}
-                            </span>
-                          )}
-                          {selectedDeploymentType && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
-                              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
-                              Loại: {formatDeploymentType(selectedDeploymentType)}
-                            </span>
-                          )}
-                          {selectedCustomer && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
-                              <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
-                              Khách hàng: {uniqueCustomers.find(c => c?.id === selectedCustomer)?.shortName || selectedCustomer}
-                            </span>
-                          )}
-                          {dateFrom && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
-                              <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
-                              Từ: {new Date(dateFrom).toLocaleDateString('vi-VN')}
-                            </span>
-                          )}
-                          {dateTo && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
-                              <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
-                              Đến: {new Date(dateTo).toLocaleDateString('vi-VN')}
-                            </span>
-                          )}
+                          {/* Date To Filter */}
+                          <div>
+                            <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-cyan-500 rounded-full"></div>
+                                <span>Đến ngày</span>
+                              </div>
+                            </label>
+                            <DatePickerInput
+                              value={dateTo}
+                              onChange={(date) => setDateTo(date ? new Date(date) : null)}
+                              placeholder="Chọn đến ngày"
+                              locale="vi"
+                              valueFormat="DD/MM/YYYY"
+                              clearable
+                              minDate={dateFrom || undefined}
+                              styles={{
+                                input: {
+                                  fontSize: '0.875rem',
+                                  padding: '0.5rem 0.75rem',
+                                  minHeight: '40px',
+                                  height: '40px',
+                                  borderColor: '#e5e7eb',
+                                  backgroundColor: '#f9fafb',
+                                  fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                                }
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-1.5">
-                        <button
-                          onClick={clearFilters}
-                          className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors"
-                        >
-                          <X className="h-3 w-3" />
-                          <span>Xóa bộ lọc</span>
-                        </button>
-                      </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Results Summary */}
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                  <div className="text-xs md:text-sm text-gray-600">
-                    Hiển thị <span className="font-medium text-gray-900">{filteredWarranties.length}</span> trong tổng số <span className="font-medium text-gray-900">{deployments.length}</span> triển khai
-                    {hasActiveFilters() && (
-                      <span className="ml-2 text-blue-600 font-medium">
-                        (đã lọc)
-                      </span>
+                    {/* Active Filters & Actions */}
+                    {(hasActiveFilters()) && (
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md p-3 border border-blue-100">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-1.5 mb-1.5">
+                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                              <span className="text-xs font-semibold text-gray-800">Bộ lọc đang áp dụng</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {searchTerm && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                  <Search className="h-2.5 w-2.5 mr-1" />
+                                  &quot;{searchTerm}&quot;
+                                </span>
+                              )}
+                              {selectedHandler && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
+                                  Xử lý: {uniqueHandlers.find(h => h.id === selectedHandler)?.fullName || selectedHandler}
+                                </span>
+                              )}
+                              {selectedStatus && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
+                                  Trạng thái: {getStatusLabel(selectedStatus)}
+                                </span>
+                              )}
+                              {selectedDeploymentType && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
+                                  Loại: {formatDeploymentType(selectedDeploymentType)}
+                                </span>
+                              )}
+                              {selectedCustomer && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                                  <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
+                                  Khách hàng: {uniqueCustomers.find(c => c?.id === selectedCustomer)?.shortName || selectedCustomer}
+                                </span>
+                              )}
+                              {crmCodeFilter && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 border border-pink-200">
+                                  <div className="w-1.5 h-1.5 bg-pink-500 rounded-full mr-1"></div>
+                                  CRM: {crmCodeFilter}
+                                </span>
+                              )}
+                              {dateFrom && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800 border border-teal-200">
+                                  <div className="w-1.5 h-1.5 bg-teal-500 rounded-full mr-1"></div>
+                                  Từ: {formatVietnamDate(dateFrom)}
+                                </span>
+                              )}
+                              {dateTo && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-800 border border-cyan-200">
+                                  <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full mr-1"></div>
+                                  Đến: {formatVietnamDate(dateTo)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-1.5">
+                            <button
+                              onClick={clearFilters}
+                              className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                              <span>Xóa bộ lọc</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     )}
+
+                    {/* Results Summary */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                      <div className="text-xs md:text-sm text-gray-600">
+                        Hiển thị <span className="font-medium text-gray-900">{filteredDeployments.length}</span> trong tổng số <span className="font-medium text-gray-900">{deployments.length}</span> triển khai
+                        {hasActiveFilters() && (
+                          <span className="ml-2 text-blue-600 font-medium">
+                            (đã lọc)
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-              </div>
-            </div>
 
-            {/* Deployments Table/Cards */}
-            <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-sm md:text-base text-gray-600">Đang tải...</span>
-                </div>
-              ) : filteredWarranties.length === 0 ? (
-                <div className="text-center py-12">
-                  <Rocket className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">Không có triển khai nào</h3>
-                  <p className="mt-1 text-xs md:text-sm text-gray-500">
-                    {hasActiveFilters()
-                      ? 'Không tìm thấy triển khai phù hợp với bộ lọc.'
-                      : 'Chưa có triển khai nào được tạo.'}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Mobile Card View */}
-                  <div className="md:hidden space-y-3 p-3">
-                    {paginatedDeployments.map((deployment, index) => {
-                      const isEvaluated = isDeploymentEvaluatedByAdmin(deployment);
-                      const userTotal = (deployment.userDifficultyLevel || 0) + (deployment.userEstimatedTime || 0) + (deployment.userImpactLevel || 0) + (deployment.userUrgencyLevel || 0) + (deployment.userFormScore || 0);
-                      const adminTotal = (deployment.adminDifficultyLevel || 0) + (deployment.adminEstimatedTime || 0) + (deployment.adminImpactLevel || 0) + (deployment.adminUrgencyLevel || 0);
-                      const grandTotal = ((userTotal * 0.4) + (adminTotal * 0.6)).toFixed(1);
-                      
-                      return (
-                        <div 
-                          key={deployment.id} 
-                          className={`p-3 bg-white border border-gray-200 rounded-md shadow-sm ${
-                            !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
-                          } ${
-                            deletedDeployments.has(deployment.id) ? 'opacity-50 bg-red-50/30' : ''
-                          }`}
-                        >
-                          {/* STT & Status */}
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-medium text-gray-500">
-                              #{totalItems - startIndex - index}
-                            </span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${getStatusBadgeColor(deployment.status)}`}>
-                              {getStatusLabel(deployment.status)}
-                            </span>
-                          </div>
+              {/* Deployments Table/Cards */}
+              <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
+                {loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-sm md:text-base text-gray-600">Đang tải...</span>
+                  </div>
+                ) : filteredDeployments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Rocket className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">Không có triển khai nào</h3>
+                    <p className="mt-1 text-xs md:text-sm text-gray-500">
+                      {hasActiveFilters()
+                        ? 'Không tìm thấy triển khai phù hợp với bộ lọc.'
+                        : 'Chưa có triển khai nào được tạo.'}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-3 p-3">
+                      {paginatedDeployments.map((deployment, index) => {
+                        const isEvaluated = isDeploymentEvaluatedByAdmin(deployment);
+                        const userTotal = (deployment.userDifficultyLevel || 0) + (deployment.userEstimatedTime || 0) + (deployment.userImpactLevel || 0) + (deployment.userUrgencyLevel || 0) + (deployment.userFormScore || 0);
+                        const adminTotal = (deployment.adminDifficultyLevel || 0) + (deployment.adminEstimatedTime || 0) + (deployment.adminImpactLevel || 0) + (deployment.adminUrgencyLevel || 0);
+                        const grandTotal = ((userTotal * 0.4) + (adminTotal * 0.6)).toFixed(1);
 
-                          {/* Title & Type */}
-                          <div className="mb-2">
-                            <div className="text-xs font-semibold text-gray-900 break-words mb-1">
-                              {deployment.title}
-                            </div>
-                            <div className="text-[10px] text-blue-600 font-medium">
-                              {formatDeploymentType(deployment.deploymentType)}
-                            </div>
-                          </div>
-
-                          {/* Description */}
-                          <p className="text-[10px] text-gray-600 mb-2 line-clamp-2">
-                            {deployment.description}
-                          </p>
-
-                          {/* Handler & Customer */}
-                          <div className="grid grid-cols-2 gap-2 mb-2 text-[10px]">
-                            <div>
-                              <span className="text-gray-500">Người xử lý:</span>
-                              <div className="font-medium text-gray-900 break-words">{deployment.handler?.fullName}</div>
-                              <div className="text-gray-600">{deployment.handler?.position}</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Khách hàng:</span>
-                              <div className="font-medium text-gray-900 break-words">
-                                {deployment.customer?.shortName || deployment.customerName}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Scores */}
-                          <div className="flex items-center justify-between mb-2 text-[10px]">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <span className="text-gray-500">User: </span>
-                                <span className="font-semibold text-blue-600">{userTotal}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-500">Admin: </span>
-                                <span className="font-semibold text-purple-600">{adminTotal || '-'}</span>
-                              </div>
-                              <div>
-                                <span className="text-gray-500">Tổng: </span>
-                                <span className="font-bold text-green-600">{grandTotal}</span>
-                              </div>
-                            </div>
-                            {!isEvaluated && (
-                              <span className="text-[9px] text-yellow-600 font-medium">Chưa đánh giá</span>
-                            )}
-                          </div>
-
-                          {/* Dates */}
-                          <div className="flex items-center justify-between text-[10px] text-gray-600 mb-2">
-                            <div>
-                              <span>Bắt đầu: </span>
-                              <span className="font-medium">
-                                {formatVietnamDateTime(deployment.startDate)}
+                        return (
+                          <div
+                            key={deployment.id}
+                            className={`p-3 bg-white border border-gray-200 rounded-md shadow-sm ${!isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                              } ${deletedDeployments.has(deployment.id) ? 'opacity-50 bg-red-50/30' : ''
+                              }`}
+                          >
+                            {/* STT & Status */}
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-medium text-gray-500">
+                                #{totalItems - startIndex - index}
+                              </span>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium ${getStatusBadgeColor(deployment.status)}`}>
+                                {getStatusLabel(deployment.status)}
                               </span>
                             </div>
-                            {deployment.endDate && (
-                              <div>
-                                <span>Kết thúc: </span>
-                                <span className="font-medium">
-                                  {formatVietnamDateTime(deployment.endDate)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-1.5 pt-2 border-t border-gray-200">
-                            {!isEvaluated && (
-                              <button
-                                onClick={() => {
-                                  setSelectedDeployment(deployment);
-                                  setShowEvaluationModal(true);
-                                  setEvaluationForm({
-                                    adminDifficultyLevel: deployment.adminDifficultyLevel?.toString() || '',
-                                    adminEstimatedTime: deployment.adminEstimatedTime?.toString() || '',
-                                    adminImpactLevel: deployment.adminImpactLevel?.toString() || '',
-                                    adminUrgencyLevel: deployment.adminUrgencyLevel?.toString() || ''
-                                  });
-                                }}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded hover:bg-yellow-100"
-                              >
-                                <AlertTriangle className="h-3 w-3" />
-                                Đánh giá
-                              </button>
-                            )}
-                            {isEvaluated && (
-                              <button
-                                onClick={() => {
-                                  setSelectedDeployment(deployment);
-                                  setShowEvaluationModal(true);
-                                  setEvaluationForm({
-                                    adminDifficultyLevel: deployment.adminDifficultyLevel?.toString() || '',
-                                    adminEstimatedTime: deployment.adminEstimatedTime?.toString() || '',
-                                    adminImpactLevel: deployment.adminImpactLevel?.toString() || '',
-                                    adminUrgencyLevel: deployment.adminUrgencyLevel?.toString() || ''
-                                  });
-                                }}
-                                className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100"
-                              >
-                                <CheckCircle className="h-3 w-3" />
-                                Xem đánh giá
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                setEditingDeployment(deployment);
-                                setShowCreateModal(true);
-                              }}
-                              disabled={deletedDeployments.has(deployment.id)}
-                              className="flex items-center justify-center px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50"
-                            >
-                              <Edit className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedDeployment(deployment);
-                                setShowDeleteModal(true);
-                              }}
-                              disabled={deletedDeployments.has(deployment.id)}
-                              className="flex items-center justify-center px-2 py-1 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50"
-                            >
-                              <Trash className="h-3 w-3" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Desktop Table */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                        STT
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
-                        Thông tin case
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                        Người xử lý
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
-                        Khách hàng
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                        Trạng thái
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
-                        Thời gian
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                        Tổng điểm User
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                        Điểm Admin
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
-                        Tổng điểm
-                      </th>
-                      <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
-                        Hành động
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedDeployments.map((deployment, index) => (
-                          <React.Fragment key={deployment.id}>
-                        <tr 
-                          className={`hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer ${
-                            !isDeploymentEvaluatedByAdmin(deployment) ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
-                          }`}
-                          onClick={() => toggleRowExpansion(deployment.id)}
-                        >
-                          {/* STT */}
-                          <td className="px-2 py-4 whitespace-nowrap text-center w-16">
-                            <span className="text-xs font-medium text-gray-600">
-                              {totalItems - startIndex - index}
-                            </span>
-                          </td>
-                          
-                          {/* Thông tin case */}
-                          <td className="px-2 py-4 whitespace-nowrap w-64">
-                            <div>
-                              <div className="text-xs font-medium text-gray-900">
+                            {/* Title & Type */}
+                            <div className="mb-2">
+                              <div className="text-xs font-semibold text-gray-900 break-words mb-1">
                                 {deployment.title}
                               </div>
-                              <div className="text-xs text-gray-500">
-                                Tạo: {new Date(deployment.createdAt).toLocaleString('vi-VN')}
+                              <div className="text-[10px] text-blue-600 font-medium">
+                                {formatDeploymentType(deployment.deploymentType)}
                               </div>
                             </div>
-                          </td>
-                          
-                          {/* Người xử lý */}
-                          <td className="px-2 py-4 whitespace-nowrap w-32">
-                            <div className="text-xs text-gray-900">{deployment.handler.fullName}</div>
-                            <div className="text-xs text-gray-500">{deployment.handler.position}</div>
-                          </td>
-                          
-                          {/* Khách hàng */}
-                          <td className="px-2 py-4 whitespace-nowrap w-48">
-                            <div className="text-xs font-medium text-gray-900">
-                              {deployment.customer?.shortName || deployment.customerName}
+
+                            {/* Description */}
+                            <p className="text-[10px] text-gray-600 mb-2 line-clamp-2">
+                              {deployment.description}
+                            </p>
+
+                            {/* Handler & Customer */}
+                            <div className="grid grid-cols-2 gap-2 mb-2 text-[10px]">
+                              <div>
+                                <span className="text-gray-500">Người xử lý:</span>
+                                <div className="font-medium text-gray-900 break-words">{deployment.handler?.fullName}</div>
+                                <div className="text-gray-600">{deployment.handler?.position}</div>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Khách hàng:</span>
+                                <div className="font-medium text-gray-900 break-words">
+                                  {deployment.customer?.shortName || deployment.customerName}
+                                </div>
+                              </div>
                             </div>
-                          </td>
-                          
-                          {/* Trạng thái */}
-                          <td className="px-2 py-4 whitespace-nowrap w-24">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(deployment.status)}`}>
-                              {getStatusLabel(deployment.status)}
-                            </span>
-                          </td>
-                          
-                          {/* Thời gian */}
-                          <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 w-36">
-                            <div>Bắt đầu: {new Date(deployment.startDate).toLocaleString('vi-VN', { 
-                              year: 'numeric', 
-                              month: '2-digit', 
-                              day: '2-digit', 
-                              hour: '2-digit', 
-                              minute: '2-digit',
-                              timeZone: 'Asia/Ho_Chi_Minh'
-                            })}</div>
-                            {deployment.endDate && (
-                              <div>Kết thúc: {new Date(deployment.endDate).toLocaleString('vi-VN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
-                                day: '2-digit', 
-                                hour: '2-digit', 
-                                minute: '2-digit',
-                                timeZone: 'Asia/Ho_Chi_Minh'
-                              })}</div>
-                            )}
-                          </td>
-                          
-                          {/* Tổng điểm User */}
-                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
-                            {deployment.userDifficultyLevel && deployment.userEstimatedTime && deployment.userImpactLevel && deployment.userUrgencyLevel ? (
-                              <span className="text-xs font-medium text-blue-600">
-                                {deployment.userDifficultyLevel + deployment.userEstimatedTime + deployment.userImpactLevel + deployment.userUrgencyLevel}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">-</span>
-                            )}
-                          </td>
-                          
-                          {/* Điểm Admin */}
-                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
-                            {isDeploymentEvaluatedByAdmin(deployment) ? (
-                              <span className="text-xs font-medium text-green-600">
-                                {(deployment.adminDifficultyLevel || 0) + (deployment.adminEstimatedTime || 0) + (deployment.adminImpactLevel || 0) + (deployment.adminUrgencyLevel || 0)}
-                              </span>
-                            ) : (
-                              <div className="flex items-center justify-center space-x-1">
-                                <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                                <span className="text-xs font-medium text-yellow-600">
-                                  Chưa đánh giá
+
+                            {/* Scores */}
+                            <div className="flex items-center justify-between mb-2 text-[10px]">
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <span className="text-gray-500">User: </span>
+                                  <span className="font-semibold text-blue-600">{userTotal}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Admin: </span>
+                                  <span className="font-semibold text-purple-600">{adminTotal || '-'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500">Tổng: </span>
+                                  <span className="font-bold text-green-600">{grandTotal}</span>
+                                </div>
+                              </div>
+                              {!isEvaluated && (
+                                <span className="text-[9px] text-yellow-600 font-medium">Chưa đánh giá</span>
+                              )}
+                            </div>
+
+                            {/* Dates */}
+                            <div className="flex items-center justify-between text-[10px] text-gray-600 mb-2">
+                              <div>
+                                <span>Bắt đầu: </span>
+                                <span className="font-medium">
+                                  {formatVietnamDateTime(deployment.startDate)}
                                 </span>
                               </div>
-                            )}
-                          </td>
-                          
-                          {/* Tổng điểm */}
-                          <td className="px-2 py-4 whitespace-nowrap text-center w-24">
-                            {(() => {
-                              const userScore = deployment.userDifficultyLevel && deployment.userEstimatedTime && deployment.userImpactLevel && deployment.userUrgencyLevel 
-                                ? deployment.userDifficultyLevel + deployment.userEstimatedTime + deployment.userImpactLevel + deployment.userUrgencyLevel 
-                                : 0;
-                              const adminScore = deployment.adminDifficultyLevel && deployment.adminEstimatedTime && deployment.adminImpactLevel && deployment.adminUrgencyLevel 
-                                ? deployment.adminDifficultyLevel + deployment.adminEstimatedTime + deployment.adminImpactLevel + deployment.adminUrgencyLevel 
-                                : 0;
-                              const totalScore = userScore + adminScore;
-                              const isAdminEvaluated = isDeploymentEvaluatedByAdmin(deployment);
-                              
-                              if (totalScore > 0) {
-                                return (
-                                  <span className="text-xs font-bold text-purple-600">
-                                    {totalScore}
+                              {deployment.endDate && (
+                                <div>
+                                  <span>Kết thúc: </span>
+                                  <span className="font-medium">
+                                    {formatVietnamDateTime(deployment.endDate)}
                                   </span>
-                                );
-                              } else if (!isAdminEvaluated) {
-                                return (
-                                  <div className="flex items-center justify-center space-x-1">
-                                    <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                                    <span className="text-xs font-medium text-yellow-600">
-                                      Chưa đánh giá
-                                    </span>
-                                  </div>
-                                );
-                              } else {
-                                return <span className="text-xs text-gray-400">-</span>;
-                              }
-                            })()}
-                          </td>
-                          
-                          {/* Hành động */}
-                          <td className="px-2 py-4 whitespace-nowrap text-sm font-medium w-20">
-                            <div className="flex items-center space-x-1">
-                              {/* Nút chỉnh sửa case */}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex items-center gap-1.5 pt-2 border-t border-gray-200">
+                              {!isEvaluated && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedDeployment(deployment);
+                                    setShowEvaluationModal(true);
+                                    setEvaluationForm({
+                                      adminDifficultyLevel: deployment.adminDifficultyLevel?.toString() || '',
+                                      adminEstimatedTime: deployment.adminEstimatedTime?.toString() || '',
+                                      adminImpactLevel: deployment.adminImpactLevel?.toString() || '',
+                                      adminUrgencyLevel: deployment.adminUrgencyLevel?.toString() || ''
+                                    });
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded hover:bg-yellow-100"
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Đánh giá
+                                </button>
+                              )}
+                              {isEvaluated && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedDeployment(deployment);
+                                    setShowEvaluationModal(true);
+                                    setEvaluationForm({
+                                      adminDifficultyLevel: deployment.adminDifficultyLevel?.toString() || '',
+                                      adminEstimatedTime: deployment.adminEstimatedTime?.toString() || '',
+                                      adminImpactLevel: deployment.adminImpactLevel?.toString() || '',
+                                      adminUrgencyLevel: deployment.adminUrgencyLevel?.toString() || ''
+                                    });
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-green-700 bg-green-50 border border-green-200 rounded hover:bg-green-100"
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                  Xem đánh giá
+                                </button>
+                              )}
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  console.log('=== Edit button clicked ===');
-                                  console.log('Deployment data:', deployment);
-                                  console.log('Customer data:', deployment.customer);
-                                  console.log('Handler data:', deployment.handler);
-                                  console.log('DeploymentType data:', deployment.deploymentType);
-                                  console.log('User assessment data:', {
-                                    userDifficultyLevel: deployment.userDifficultyLevel,
-                                    userEstimatedTime: deployment.userEstimatedTime,
-                                    userImpactLevel: deployment.userImpactLevel,
-                                    userUrgencyLevel: deployment.userUrgencyLevel,
-                                    userFormScore: deployment.userFormScore
-                                  });
+                                onClick={() => {
                                   setEditingDeployment(deployment);
                                   setShowCreateModal(true);
-                                  console.log('showCreateModal should be true now');
                                 }}
-                                className="p-1.5 rounded-md transition-colors duration-200 text-blue-600 hover:text-blue-900 hover:bg-blue-50"
-                                title="Chỉnh sửa case"
+                                disabled={deletedDeployments.has(deployment.id)}
+                                className="flex items-center justify-center px-2 py-1 text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-50"
                               >
                                 <Edit className="h-3 w-3" />
                               </button>
-                              
-                              {/* Nút đánh giá */}
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedDeployment(deployment);
-                                  setShowEvaluationModal(true);
-                                  setEvaluationForm({
-                                    adminDifficultyLevel: deployment.adminDifficultyLevel?.toString() || '',
-                                    adminEstimatedTime: deployment.adminEstimatedTime?.toString() || '',
-                                    adminImpactLevel: deployment.adminImpactLevel?.toString() || '',
-                                    adminUrgencyLevel: deployment.adminUrgencyLevel?.toString() || ''
-                                  });
-                                }}
-                                className={`p-1.5 rounded-md transition-colors duration-200 ${
-                                  isDeploymentEvaluatedByAdmin(deployment) 
-                                    ? 'text-green-600 hover:bg-green-50' 
-                                    : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
-                                }`}
-                                title={isDeploymentEvaluatedByAdmin(deployment) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
-                              >
-                                {isDeploymentEvaluatedByAdmin(deployment) ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-                              </button>
-                              
-                              {/* Nút xóa */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={() => {
                                   setSelectedDeployment(deployment);
                                   setShowDeleteModal(true);
                                 }}
-                                className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200"
-                                title="Xóa"
+                                disabled={deletedDeployments.has(deployment.id)}
+                                className="flex items-center justify-center px-2 py-1 text-[10px] font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100 disabled:opacity-50"
                               >
                                 <Trash className="h-3 w-3" />
                               </button>
                             </div>
-                          </td>
-                        </tr>
-                        
-                        {/* Expanded Row Content */}
-                        {expandedRows.has(deployment.id) && (
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Table */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
                           <tr>
-                            <td colSpan={10} className="px-3 py-6 bg-gray-50" onClick={(e) => e.stopPropagation()}>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Mô tả chi tiết */}
-                                <div>
-                                  <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
-                                    <FileText className="h-3 w-3 mr-2 text-blue-600" />
-                                    Mô tả chi tiết
-                                  </h4>
-                                  <p className="text-xs text-gray-600 leading-relaxed">{deployment.description}</p>
-                                </div>
-                                
-                                {/* Tên công ty đầy đủ */}
-                                <div>
-                                  <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
-                                    <AlertTriangle className="h-3 w-3 mr-2 text-orange-600" />
-                                    Tên công ty đầy đủ
-                                  </h4>
-                                  <div className="text-xs text-gray-600">
-                                    <div className="font-medium text-gray-900">
-                                      {deployment.customer?.fullCompanyName || 'N/A'}
-                                    </div>
-                                    {deployment.customer?.contactPerson && (
-                                      <div className="mt-1 text-gray-500">
-                                        Người liên hệ: {deployment.customer.contactPerson}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                              STT
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-64">
+                              Thông tin case
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
+                              Người xử lý
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48">
+                              Khách hàng
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                              Trạng thái
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                              Thời gian
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                              Tổng điểm User
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                              Điểm Admin
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                              Tổng điểm
+                            </th>
+                            <th className="px-2 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                              Hành động
+                            </th>
                           </tr>
-                        )}
-                      </React.Fragment>
-                    ))}
-                    </tbody>
-                    </table>
-                  </div>
-                  
-                  {/* Pagination */}
-                  {totalPages > 1 && (
-                    <div className="bg-white px-3 md:px-4 py-2 md:py-3 border-t border-gray-200">
-                      {/* Mobile Pagination */}
-                      <div className="sm:hidden">
-                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px w-full justify-center" aria-label="Pagination">
-                          <button
-                            onClick={goToPrevPage}
-                            disabled={currentPage === 1}
-                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                          >
-                            <span className="sr-only">Trước</span>
-                            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                              <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                          
-                          {/* Page numbers */}
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum;
-                            if (totalPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i;
-                            } else {
-                              pageNum = currentPage - 2 + i;
-                            }
-                            
-                            return (
-                              <button
-                                key={pageNum}
-                                onClick={() => goToPage(pageNum)}
-                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium cursor-pointer ${
-                                  pageNum === currentPage
-                                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                }`}
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {paginatedDeployments.map((deployment, index) => (
+                            <React.Fragment key={deployment.id}>
+                              <tr
+                                className={`hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer ${!isDeploymentEvaluatedByAdmin(deployment) ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                                  }`}
+                                onClick={() => toggleRowExpansion(deployment.id)}
                               >
-                                {pageNum}
-                              </button>
-                            );
-                          })}
-                          
-                          <button
-                            onClick={goToNextPage}
-                            disabled={currentPage === totalPages}
-                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                          >
-                            <span className="sr-only">Sau</span>
-                            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                              <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </button>
-                        </nav>
-                      </div>
-                      
-                      {/* Desktop Pagination */}
-                      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-sm text-gray-700">
-                            Hiển thị{' '}
-                            <span className="font-medium">{startIndex + 1}</span>
-                            {' '}đến{' '}
-                            <span className="font-medium">
-                              {Math.min(endIndex, totalItems)}
-                            </span>
-                            {' '}của{' '}
-                            <span className="font-medium">{totalItems}</span>
-                            {' '}kết quả
-                          </p>
-                        </div>
-                        <div>
-                          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                                {/* STT */}
+                                <td className="px-2 py-4 whitespace-nowrap text-center w-16">
+                                  <span className="text-xs font-medium text-gray-600">
+                                    {totalItems - startIndex - index}
+                                  </span>
+                                </td>
+
+                                {/* Thông tin case */}
+                                <td className="px-2 py-4 whitespace-nowrap w-64">
+                                  <div>
+                                    <div className="text-xs font-medium text-gray-900">
+                                      {deployment.title}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Tạo: {new Date(deployment.createdAt).toLocaleString('vi-VN')}
+                                    </div>
+                                  </div>
+                                </td>
+
+                                {/* Người xử lý */}
+                                <td className="px-2 py-4 whitespace-nowrap w-32">
+                                  <div className="text-xs text-gray-900">{deployment.handler.fullName}</div>
+                                  <div className="text-xs text-gray-500">{deployment.handler.position}</div>
+                                </td>
+
+                                {/* Khách hàng */}
+                                <td className="px-2 py-4 whitespace-nowrap w-48">
+                                  <div className="text-xs font-medium text-gray-900">
+                                    {deployment.customer?.shortName || deployment.customerName}
+                                  </div>
+                                </td>
+
+                                {/* Trạng thái */}
+                                <td className="px-2 py-4 whitespace-nowrap w-24">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeColor(deployment.status)}`}>
+                                    {getStatusLabel(deployment.status)}
+                                  </span>
+                                </td>
+
+                                {/* Thời gian */}
+                                <td className="px-2 py-4 whitespace-nowrap text-xs text-gray-900 w-36">
+                                  <div>Bắt đầu: {new Date(deployment.startDate).toLocaleString('vi-VN', {
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    timeZone: 'Asia/Ho_Chi_Minh'
+                                  })}</div>
+                                  {deployment.endDate && (
+                                    <div>Kết thúc: {new Date(deployment.endDate).toLocaleString('vi-VN', {
+                                      year: 'numeric',
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      timeZone: 'Asia/Ho_Chi_Minh'
+                                    })}</div>
+                                  )}
+                                </td>
+
+                                {/* Tổng điểm User */}
+                                <td className="px-2 py-4 whitespace-nowrap text-center w-24">
+                                  {deployment.userDifficultyLevel && deployment.userEstimatedTime && deployment.userImpactLevel && deployment.userUrgencyLevel ? (
+                                    <span className="text-xs font-medium text-blue-600">
+                                      {deployment.userDifficultyLevel + deployment.userEstimatedTime + deployment.userImpactLevel + deployment.userUrgencyLevel}
+                                    </span>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">-</span>
+                                  )}
+                                </td>
+
+                                {/* Điểm Admin */}
+                                <td className="px-2 py-4 whitespace-nowrap text-center w-24">
+                                  {isDeploymentEvaluatedByAdmin(deployment) ? (
+                                    <span className="text-xs font-medium text-green-600">
+                                      {(deployment.adminDifficultyLevel || 0) + (deployment.adminEstimatedTime || 0) + (deployment.adminImpactLevel || 0) + (deployment.adminUrgencyLevel || 0)}
+                                    </span>
+                                  ) : (
+                                    <div className="flex items-center justify-center space-x-1">
+                                      <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                      <span className="text-xs font-medium text-yellow-600">
+                                        Chưa đánh giá
+                                      </span>
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Tổng điểm */}
+                                <td className="px-2 py-4 whitespace-nowrap text-center w-24">
+                                  {(() => {
+                                    const userScore = deployment.userDifficultyLevel && deployment.userEstimatedTime && deployment.userImpactLevel && deployment.userUrgencyLevel
+                                      ? deployment.userDifficultyLevel + deployment.userEstimatedTime + deployment.userImpactLevel + deployment.userUrgencyLevel
+                                      : 0;
+                                    const adminScore = deployment.adminDifficultyLevel && deployment.adminEstimatedTime && deployment.adminImpactLevel && deployment.adminUrgencyLevel
+                                      ? deployment.adminDifficultyLevel + deployment.adminEstimatedTime + deployment.adminImpactLevel + deployment.adminUrgencyLevel
+                                      : 0;
+                                    const totalScore = userScore + adminScore;
+                                    const isAdminEvaluated = isDeploymentEvaluatedByAdmin(deployment);
+
+                                    if (totalScore > 0) {
+                                      return (
+                                        <span className="text-xs font-bold text-purple-600">
+                                          {totalScore}
+                                        </span>
+                                      );
+                                    } else if (!isAdminEvaluated) {
+                                      return (
+                                        <div className="flex items-center justify-center space-x-1">
+                                          <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                          <span className="text-xs font-medium text-yellow-600">
+                                            Chưa đánh giá
+                                          </span>
+                                        </div>
+                                      );
+                                    } else {
+                                      return <span className="text-xs text-gray-400">-</span>;
+                                    }
+                                  })()}
+                                </td>
+
+                                {/* Hành động */}
+                                <td className="px-2 py-4 whitespace-nowrap text-sm font-medium w-20">
+                                  <div className="flex items-center space-x-1">
+                                    {/* Nút chỉnh sửa case */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        console.log('=== Edit button clicked ===');
+                                        console.log('Deployment data:', deployment);
+                                        console.log('Customer data:', deployment.customer);
+                                        console.log('Handler data:', deployment.handler);
+                                        console.log('DeploymentType data:', deployment.deploymentType);
+                                        console.log('User assessment data:', {
+                                          userDifficultyLevel: deployment.userDifficultyLevel,
+                                          userEstimatedTime: deployment.userEstimatedTime,
+                                          userImpactLevel: deployment.userImpactLevel,
+                                          userUrgencyLevel: deployment.userUrgencyLevel,
+                                          userFormScore: deployment.userFormScore
+                                        });
+                                        setEditingDeployment(deployment);
+                                        setShowCreateModal(true);
+                                        console.log('showCreateModal should be true now');
+                                      }}
+                                      className="p-1.5 rounded-md transition-colors duration-200 text-blue-600 hover:text-blue-900 hover:bg-blue-50"
+                                      title="Chỉnh sửa case"
+                                    >
+                                      <Edit className="h-3 w-3" />
+                                    </button>
+
+                                    {/* Nút đánh giá */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedDeployment(deployment);
+                                        setShowEvaluationModal(true);
+                                        setEvaluationForm({
+                                          adminDifficultyLevel: deployment.adminDifficultyLevel?.toString() || '',
+                                          adminEstimatedTime: deployment.adminEstimatedTime?.toString() || '',
+                                          adminImpactLevel: deployment.adminImpactLevel?.toString() || '',
+                                          adminUrgencyLevel: deployment.adminUrgencyLevel?.toString() || ''
+                                        });
+                                      }}
+                                      className={`p-1.5 rounded-md transition-colors duration-200 ${isDeploymentEvaluatedByAdmin(deployment)
+                                        ? 'text-green-600 hover:bg-green-50'
+                                        : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
+                                        }`}
+                                      title={isDeploymentEvaluatedByAdmin(deployment) ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
+                                    >
+                                      {isDeploymentEvaluatedByAdmin(deployment) ? <CheckCircle className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                                    </button>
+
+                                    {/* Nút xóa */}
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedDeployment(deployment);
+                                        setShowDeleteModal(true);
+                                      }}
+                                      className="p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors duration-200"
+                                      title="Xóa"
+                                    >
+                                      <Trash className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+
+                              {/* Expanded Row Content */}
+                              {expandedRows.has(deployment.id) && (
+                                <tr>
+                                  <td colSpan={10} className="px-3 py-6 bg-gray-50" onClick={(e) => e.stopPropagation()}>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      {/* Mô tả chi tiết */}
+                                      <div>
+                                        <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
+                                          <FileText className="h-3 w-3 mr-2 text-blue-600" />
+                                          Mô tả chi tiết
+                                        </h4>
+                                        <p className="text-xs text-gray-600 leading-relaxed">{deployment.description}</p>
+                                      </div>
+
+                                      {/* Tên công ty đầy đủ */}
+                                      <div>
+                                        <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
+                                          <AlertTriangle className="h-3 w-3 mr-2 text-orange-600" />
+                                          Tên công ty đầy đủ
+                                        </h4>
+                                        <div className="text-xs text-gray-600">
+                                          <div className="font-medium text-gray-900">
+                                            {deployment.customer?.fullCompanyName || 'N/A'}
+                                          </div>
+                                          {deployment.customer?.contactPerson && (
+                                            <div className="mt-1 text-gray-500">
+                                              Người liên hệ: {deployment.customer.contactPerson}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="bg-white px-3 md:px-4 py-2 md:py-3 border-t border-gray-200">
+                        {/* Mobile Pagination */}
+                        <div className="sm:hidden">
+                          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px w-full justify-center" aria-label="Pagination">
                             <button
                               onClick={goToPrevPage}
                               disabled={currentPage === 1}
-                              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                             >
                               <span className="sr-only">Trước</span>
                               <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                 <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             </button>
-                            
+
                             {/* Page numbers */}
                             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                               let pageNum;
@@ -1770,26 +1767,25 @@ export default function AdminDeploymentWorkPage() {
                               } else {
                                 pageNum = currentPage - 2 + i;
                               }
-                              
+
                               return (
                                 <button
                                   key={pageNum}
                                   onClick={() => goToPage(pageNum)}
-                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                    pageNum === currentPage
-                                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                                  }`}
+                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium cursor-pointer ${pageNum === currentPage
+                                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                    }`}
                                 >
                                   {pageNum}
                                 </button>
                               );
                             })}
-                            
+
                             <button
                               onClick={goToNextPage}
                               disabled={currentPage === totalPages}
-                              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                             >
                               <span className="sr-only">Sau</span>
                               <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -1798,57 +1794,126 @@ export default function AdminDeploymentWorkPage() {
                             </button>
                           </nav>
                         </div>
+
+                        {/* Desktop Pagination */}
+                        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm text-gray-700">
+                              Hiển thị{' '}
+                              <span className="font-medium">{startIndex + 1}</span>
+                              {' '}đến{' '}
+                              <span className="font-medium">
+                                {Math.min(endIndex, totalItems)}
+                              </span>
+                              {' '}của{' '}
+                              <span className="font-medium">{totalItems}</span>
+                              {' '}kết quả
+                            </p>
+                          </div>
+                          <div>
+                            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                              <button
+                                onClick={goToPrevPage}
+                                disabled={currentPage === 1}
+                                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span className="sr-only">Trước</span>
+                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+
+                              {/* Page numbers */}
+                              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (totalPages <= 5) {
+                                  pageNum = i + 1;
+                                } else if (currentPage <= 3) {
+                                  pageNum = i + 1;
+                                } else if (currentPage >= totalPages - 2) {
+                                  pageNum = totalPages - 4 + i;
+                                } else {
+                                  pageNum = currentPage - 2 + i;
+                                }
+
+                                return (
+                                  <button
+                                    key={pageNum}
+                                    onClick={() => goToPage(pageNum)}
+                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${pageNum === currentPage
+                                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                      }`}
+                                  >
+                                    {pageNum}
+                                  </button>
+                                );
+                              })}
+
+                              <button
+                                onClick={goToNextPage}
+                                disabled={currentPage === totalPages}
+                                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <span className="sr-only">Sau</span>
+                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            </nav>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </>
-              )}
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
-          /* Configuration Tab Content */
-          <ConfigurationTab
-            title="Quản lý loại triển khai"
-            items={deploymentTypes.map(type => ({
-              id: type.id,
-              name: type.name,
-              description: type.description
-            }))}
-            onAdd={async (name) => {
-              const response = await fetch('/api/deployment-types', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-              });
-              if (!response.ok) throw new Error('Failed to add deployment type');
-              await fetchDeploymentTypes();
-            }}
-            onEdit={async (id, name) => {
-              const response = await fetch(`/api/deployment-types/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-              });
-              if (!response.ok) throw new Error('Failed to update deployment type');
-              await fetchDeploymentTypes();
-            }}
-            onDelete={async (id) => {
-              const response = await fetch(`/api/deployment-types/${id}`, {
-                method: 'DELETE'
-              });
-              if (!response.ok) throw new Error('Failed to delete deployment type');
-              await fetchDeploymentTypes();
-            }}
-            iconColor="blue"
-            placeholder="Nhập tên loại triển khai..."
-          />
-        )}
-      </div>
+          ) : (
+            /* Configuration Tab Content */
+            <ConfigurationTab
+              title="Quản lý loại triển khai"
+              items={deploymentTypes.map(type => ({
+                id: type.id,
+                name: type.name,
+                description: type.description
+              }))}
+              onAdd={async (name) => {
+                const response = await fetch('/api/deployment-types', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name })
+                });
+                if (!response.ok) throw new Error('Failed to add deployment type');
+                await fetchDeploymentTypes();
+              }}
+              onEdit={async (id, name) => {
+                const response = await fetch(`/api/deployment-types/${id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name })
+                });
+                if (!response.ok) throw new Error('Failed to update deployment type');
+                await fetchDeploymentTypes();
+              }}
+              onDelete={async (id) => {
+                const response = await fetch(`/api/deployment-types/${id}`, {
+                  method: 'DELETE'
+                });
+                if (!response.ok) throw new Error('Failed to delete deployment type');
+                await fetchDeploymentTypes();
+              }}
+              iconColor="blue"
+              placeholder="Nhập tên loại triển khai..."
+            />
+          )}
+        </div>
 
         {/* Evaluation Modal */}
         {showEvaluationModal && selectedDeployment && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4">
-            <style dangerouslySetInnerHTML={{ __html: `
+            <style dangerouslySetInnerHTML={{
+              __html: `
               .ios-input-fix input, .ios-input-fix select, .ios-input-fix textarea {
                 -webkit-text-fill-color: #111827 !important;
                 opacity: 1 !important;
@@ -1865,7 +1930,7 @@ export default function AdminDeploymentWorkPage() {
                 <h3 className="text-base md:text-lg font-semibold text-gray-900 break-words">Đánh giá Case: {selectedDeployment.title}</h3>
                 <p className="text-xs md:text-sm text-gray-600 hidden sm:block">Đánh giá mức độ khó, thời gian, ảnh hưởng và khẩn cấp</p>
               </div>
-              
+
               <div className="p-3 md:p-6 flex-1 overflow-y-auto">
                 <div className="space-y-4 md:space-y-6">
                   {/* User Assessment Display */}
@@ -1978,7 +2043,7 @@ export default function AdminDeploymentWorkPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="sticky bottom-0 bg-white border-t border-gray-200 px-3 md:px-6 py-3 md:py-4 -mx-3 md:mx-0 flex-shrink-0">
                 <div className="flex gap-2 md:gap-3 md:justify-end">
                   <button
@@ -2134,23 +2199,23 @@ export default function AdminDeploymentWorkPage() {
           </div>
         )}
 
-    </div>
-    
-    {/* Create/Edit Case Modal - Lazy loaded for better performance */}
-    <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>}>
-      <CreateDeploymentModal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          setEditingDeployment(null);
-        }}
-        onSuccess={handleCreateSuccess}
-        editData={editingDeployment}
-        employees={employees}
-        partners={partners}
-        deploymentTypes={deploymentTypes}
-      />
-    </Suspense>
+      </div>
+
+      {/* Create/Edit Case Modal - Lazy loaded for better performance */}
+      <Suspense fallback={<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div></div>}>
+        <CreateDeploymentModal
+          isOpen={showCreateModal}
+          onClose={() => {
+            setShowCreateModal(false);
+            setEditingDeployment(null);
+          }}
+          onSuccess={handleCreateSuccess}
+          editData={editingDeployment}
+          employees={employees}
+          partners={partners}
+          deploymentTypes={deploymentTypes}
+        />
+      </Suspense>
     </>
   );
 }

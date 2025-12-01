@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Settings, Wrench, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X, User } from 'lucide-react';
+import { Plus, Settings, Wrench, FileText, Calendar, Zap, Search, RefreshCw, Eye, Edit, Trash, AlertTriangle, CheckCircle, Download, X, User, Filter, ChevronDown } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
@@ -10,7 +10,9 @@ import toast from 'react-hot-toast';
 import EditInternalCaseModal from './EditInternalCaseModal';
 import ConfigurationTab from '@/components/shared/ConfigurationTab';
 import CreateInternalCaseModal from '../../../user/work/internal/CreateInternalCaseModal';
-import { formatVietnamDateTime } from '@/lib/date-utils';
+import { formatVietnamDateTime, formatVietnamDate } from '@/lib/date-utils';
+import { DatePickerInput } from '@mantine/dates';
+import 'dayjs/locale/vi';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
@@ -89,7 +91,7 @@ export default function AdminInternalWorkPage() {
   const [deleting, setDeleting] = useState(false);
   const [deletedCases, setDeletedCases] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  
+
   // Case Type Management States
   const [showCaseTypeModal, setShowCaseTypeModal] = useState(false);
   const [editingCaseType, setEditingCaseType] = useState<CaseType | null>(null);
@@ -97,7 +99,7 @@ export default function AdminInternalWorkPage() {
     name: '',
     isActive: true
   });
-  
+
   // Inline editing states
   const [isAddingNewRow, setIsAddingNewRow] = useState(false);
   const [newCaseTypeName, setNewCaseTypeName] = useState('');
@@ -110,26 +112,28 @@ export default function AdminInternalWorkPage() {
     }
     return `case-type-temp-${index}-${Date.now()}`;
   };
-  
+
   // States for internal cases list
   const [internalCases, setInternalCases] = useState<InternalCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'config' | 'cases'>('cases');
-  
+
   // Filter states
   const [selectedHandler, setSelectedHandler] = useState<string>('');
   const [selectedRequester, setSelectedRequester] = useState<string>('');
   const [selectedCaseType, setSelectedCaseType] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [dateFrom, setDateFrom] = useState<string>('');
-  const [dateTo, setDateTo] = useState<string>('');
-  
+  const [dateFrom, setDateFrom] = useState<Date | null>(null);
+  const [dateTo, setDateTo] = useState<Date | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [itemsPerPage] = useState<number>(10);
-  
+
   // States for evaluation form
   const [evaluationForm, setEvaluationForm] = useState({
     adminDifficultyLevel: '',
@@ -142,22 +146,22 @@ export default function AdminInternalWorkPage() {
 
   // Helper function to check if case is evaluated by admin
   const isCaseEvaluatedByAdmin = (case_: InternalCase) => {
-    return case_.adminDifficultyLevel !== null && 
-           case_.adminDifficultyLevel !== undefined &&
-           case_.adminEstimatedTime !== null && 
-           case_.adminEstimatedTime !== undefined &&
-           case_.adminImpactLevel !== null && 
-           case_.adminImpactLevel !== undefined &&
-           case_.adminUrgencyLevel !== null && 
-           case_.adminUrgencyLevel !== undefined;
+    return case_.adminDifficultyLevel !== null &&
+      case_.adminDifficultyLevel !== undefined &&
+      case_.adminEstimatedTime !== null &&
+      case_.adminEstimatedTime !== undefined &&
+      case_.adminImpactLevel !== null &&
+      case_.adminImpactLevel !== undefined &&
+      case_.adminUrgencyLevel !== null &&
+      case_.adminUrgencyLevel !== undefined;
   };
 
   // Fetch case types from API with caching
   const fetchCaseTypes = useCallback(async (bypassCache = false) => {
     try {
       setCaseTypesLoading(true);
-      const url = bypassCache 
-        ? `/api/case-types?_t=${Date.now()}` 
+      const url = bypassCache
+        ? `/api/case-types?_t=${Date.now()}`
         : '/api/case-types';
       const response = await fetch(url, {
         method: 'GET',
@@ -268,10 +272,10 @@ export default function AdminInternalWorkPage() {
       if (response.ok) {
         const responseData = await response.json();
         console.log('API Response:', responseData); // Debug log
-        
+
         // Extract case type from response data
         const newCaseType = responseData.data || responseData;
-        
+
         // Only add to state if we have a valid ID from server
         if (newCaseType && newCaseType.id) {
           const newCaseTypeWithId = {
@@ -289,7 +293,7 @@ export default function AdminInternalWorkPage() {
           // If no ID, fallback to refetching
           await fetchCaseTypes();
         }
-        
+
         setIsAddingNewRow(false);
         setNewCaseTypeName('');
       } else {
@@ -330,12 +334,12 @@ export default function AdminInternalWorkPage() {
 
   const handleCaseTypeSubmit = async () => {
     try {
-      const url = editingCaseType 
+      const url = editingCaseType
         ? `/api/case-types/${editingCaseType.id}`
         : '/api/case-types';
-      
+
       const method = editingCaseType ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -347,15 +351,15 @@ export default function AdminInternalWorkPage() {
       if (response.ok) {
         const responseData = await response.json();
         console.log('Modal API Response:', responseData); // Debug log
-        
+
         // Extract case type from response data
         const updatedCaseType = responseData.data || responseData;
-        
+
         if (editingCaseType) {
           // Update existing case type in state
-          setCaseTypes(prevCaseTypes => 
-            prevCaseTypes.map(ct => 
-              ct.id === editingCaseType.id 
+          setCaseTypes(prevCaseTypes =>
+            prevCaseTypes.map(ct =>
+              ct.id === editingCaseType.id
                 ? { ...ct, ...updatedCaseType, id: updatedCaseType.id || ct.id }
                 : ct
             )
@@ -377,7 +381,7 @@ export default function AdminInternalWorkPage() {
             await fetchCaseTypes();
           }
         }
-        
+
         toast.success(editingCaseType ? 'Cập nhật loại case thành công!' : 'Tạo loại case thành công!', {
           duration: 3000,
           position: 'top-right',
@@ -411,7 +415,7 @@ export default function AdminInternalWorkPage() {
 
       if (response.ok) {
         // Optimistically remove the case type from state instead of refetching
-        setCaseTypes(prevCaseTypes => 
+        setCaseTypes(prevCaseTypes =>
           prevCaseTypes.filter(ct => ct.id !== caseType.id)
         );
         toast.success('Xóa loại case thành công!', {
@@ -422,7 +426,7 @@ export default function AdminInternalWorkPage() {
         const error = await response.json();
         if (response.status === 404) {
           // Case type not found, remove from state anyway
-          setCaseTypes(prevCaseTypes => 
+          setCaseTypes(prevCaseTypes =>
             prevCaseTypes.filter(ct => ct.id !== caseType.id)
           );
           toast.error('Case type đã được xóa hoặc không tồn tại', {
@@ -460,9 +464,9 @@ export default function AdminInternalWorkPage() {
 
       if (response.ok) {
         // Optimistically update the case type status in state instead of refetching
-        setCaseTypes(prevCaseTypes => 
-          prevCaseTypes.map(ct => 
-            ct.id === caseType.id 
+        setCaseTypes(prevCaseTypes =>
+          prevCaseTypes.map(ct =>
+            ct.id === caseType.id
               ? { ...ct, isActive: !ct.isActive, updatedAt: new Date().toISOString() }
               : ct
           )
@@ -499,7 +503,7 @@ export default function AdminInternalWorkPage() {
         console.error('Error loading initial data:', error);
       }
     };
-    
+
     loadData();
   }, [fetchInternalCases, fetchCaseTypes]);
 
@@ -509,34 +513,41 @@ export default function AdminInternalWorkPage() {
   const uniqueCaseTypes = Array.from(new Set(internalCases.map(case_ => case_.caseType))).sort();
   const uniqueStatuses = Array.from(new Set(internalCases.map(case_ => case_.status))).sort();
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   // Filter internal cases based on search term and filters
   const filteredInternalCases = internalCases.filter(case_ => {
-    const matchesSearch = case_.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.requester.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    case_.handler.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         case_.caseType.toLowerCase().includes(searchTerm.toLowerCase());
-    
+    const matchesSearch = case_.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      case_.requester.fullName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      case_.handler.fullName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      case_.caseType.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+
     const matchesHandler = !selectedHandler || case_.handler.fullName === selectedHandler;
     const matchesRequester = !selectedRequester || case_.requester.fullName === selectedRequester;
     const matchesCaseType = !selectedCaseType || case_.caseType === selectedCaseType;
     const matchesStatus = !selectedStatus || case_.status === selectedStatus;
-    
+
     // Date range filtering
     let matchesDateRange = true;
     if (dateFrom || dateTo) {
       const caseDate = new Date(case_.startDate);
-      const fromDate = dateFrom ? new Date(dateFrom) : null;
-      const toDate = dateTo ? new Date(dateTo) : null;
-      
-      if (fromDate && toDate) {
-        matchesDateRange = caseDate >= fromDate && caseDate <= toDate;
-      } else if (fromDate) {
-        matchesDateRange = caseDate >= fromDate;
-      } else if (toDate) {
-        matchesDateRange = caseDate <= toDate;
+
+      if (dateFrom && dateTo) {
+        matchesDateRange = caseDate >= dateFrom && caseDate <= dateTo;
+      } else if (dateFrom) {
+        matchesDateRange = caseDate >= dateFrom;
+      } else if (dateTo) {
+        matchesDateRange = caseDate <= dateTo;
       }
     }
-    
+
     return matchesSearch && matchesHandler && matchesRequester && matchesCaseType && matchesStatus && matchesDateRange;
   }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
@@ -567,7 +578,7 @@ export default function AdminInternalWorkPage() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedHandler, selectedRequester, selectedCaseType, selectedStatus, dateFrom, dateTo]);
+  }, [debouncedSearchTerm, selectedHandler, selectedRequester, selectedCaseType, selectedStatus, dateFrom, dateTo]);
 
   // Clear all filters
   const clearFilters = () => {
@@ -576,12 +587,20 @@ export default function AdminInternalWorkPage() {
     setSelectedRequester('');
     setSelectedCaseType('');
     setSelectedStatus('');
-    setDateFrom('');
-    setDateTo('');
+    setDateFrom(null);
+    setDateTo(null);
   };
 
   // Check if any filters are active
-  const hasActiveFilters = searchTerm || selectedHandler || selectedRequester || selectedCaseType || selectedStatus || dateFrom || dateTo;
+  const hasActiveFilters = useCallback(() => {
+    return searchTerm !== '' ||
+      selectedHandler !== '' ||
+      selectedRequester !== '' ||
+      selectedCaseType !== '' ||
+      selectedStatus !== '' ||
+      dateFrom !== null ||
+      dateTo !== null;
+  }, [searchTerm, selectedHandler, selectedRequester, selectedCaseType, selectedStatus, dateFrom, dateTo]);
 
   const handleAddCaseTypeOld = () => {
     setShowAddModal(true);
@@ -600,7 +619,7 @@ export default function AdminInternalWorkPage() {
       adminUrgencyLevel: case_.adminUrgencyLevel?.toString() || ''
     });
     setShowEvaluationModal(true);
-    
+
     // Refresh evaluation configs to get latest options
     fetchConfigs();
   };
@@ -631,21 +650,21 @@ export default function AdminInternalWorkPage() {
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Optimistic update - update the case in the list without full reload
-        setInternalCases(prevCases => 
-          prevCases.map(case_ => 
-            case_.id === selectedCase.id 
+        setInternalCases(prevCases =>
+          prevCases.map(case_ =>
+            case_.id === selectedCase.id
               ? { ...case_, ...result.data }
               : case_
           )
         );
-        
+
         toast.success('Cập nhật đánh giá thành công!', {
           duration: 3000,
           position: 'top-right',
         });
-        
+
         handleCloseEvaluationModal();
       } else {
         const error = await response.json();
@@ -677,14 +696,14 @@ export default function AdminInternalWorkPage() {
 
   const handleEditSuccess = (updatedCase: InternalCase) => {
     // Update the case in the list
-    setInternalCases(prevCases => 
-      prevCases.map(case_ => 
-        case_.id === updatedCase.id 
+    setInternalCases(prevCases =>
+      prevCases.map(case_ =>
+        case_.id === updatedCase.id
           ? updatedCase
           : case_
       )
     );
-    
+
     toast.success('Cập nhật case thành công!', {
       duration: 3000,
       position: 'top-right',
@@ -707,21 +726,21 @@ export default function AdminInternalWorkPage() {
     if (!selectedCase) return;
 
     const caseToDelete = selectedCase;
-    
+
     try {
       setDeleting(true);
-      
+
       // Mark case as being deleted for visual feedback
       setDeletedCases(prev => new Set(prev).add(caseToDelete.id));
-      
+
       // Optimistic update - remove from UI immediately for better UX
-      setInternalCases(prevCases => 
+      setInternalCases(prevCases =>
         prevCases.filter(case_ => case_.id !== caseToDelete.id)
       );
-      
+
       // Close modal immediately
       handleCloseDeleteModal();
-      
+
       // Make API call in background
       const response = await fetch(`/api/internal-cases/${caseToDelete.id}`, {
         method: 'DELETE',
@@ -735,7 +754,7 @@ export default function AdminInternalWorkPage() {
           newSet.delete(caseToDelete.id);
           return newSet;
         });
-        
+
         const error = await response.json();
         console.error('Error deleting case:', error);
       } else {
@@ -746,10 +765,10 @@ export default function AdminInternalWorkPage() {
           return newSet;
         });
       }
-      
+
     } catch (error) {
       console.error('Error deleting case:', error);
-      
+
       // Restore the case to the list on network error
       setInternalCases(prevCases => [...prevCases, caseToDelete]);
       setDeletedCases(prev => {
@@ -773,8 +792,8 @@ export default function AdminInternalWorkPage() {
   };
 
   const toggleCaseTypeStatusOld = (id: string) => {
-    setCaseTypes(prev => 
-      prev.map(ct => 
+    setCaseTypes(prev =>
+      prev.map(ct =>
         ct.id === id ? { ...ct, isActive: !ct.isActive } : ct
       )
     );
@@ -818,12 +837,12 @@ export default function AdminInternalWorkPage() {
     const start = dayjs(startDate).tz('Asia/Ho_Chi_Minh');
     const end = dayjs(endDate).tz('Asia/Ho_Chi_Minh');
     const diffMs = end.diff(start);
-    
+
     if (diffMs < 0) return '0h 0m';
-    
+
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     if (diffHours > 0) {
       return `${diffHours}h ${diffMinutes}m`;
     } else {
@@ -844,21 +863,21 @@ export default function AdminInternalWorkPage() {
 
   const calculateTimeComparison = (startDate: string, endDate: string, estimatedTime: number) => {
     if (!endDate || !estimatedTime) return null;
-    
+
     const start = new Date(startDate);
     const end = new Date(endDate);
     const actualMs = end.getTime() - start.getTime();
     const actualMinutes = Math.floor(actualMs / (1000 * 60));
     const estimatedMinutes = getEstimatedTimeInMinutes(estimatedTime);
-    
+
     const diffMinutes = actualMinutes - estimatedMinutes;
-    
+
     if (diffMinutes <= 0) {
       return 'Đúng dự kiến';
     } else {
       const diffHours = Math.floor(diffMinutes / 60);
       const remainingMinutes = diffMinutes % 60;
-      
+
       if (diffHours > 0) {
         return `Trễ ${diffHours}h ${remainingMinutes}m`;
       } else {
@@ -871,7 +890,7 @@ export default function AdminInternalWorkPage() {
   const calculateTotalTime = () => {
     const completedCases = filteredInternalCases.filter(case_ => case_.endDate);
     let totalMinutes = 0;
-    
+
     completedCases.forEach(case_ => {
       if (case_.endDate) {
         const start = new Date(case_.startDate);
@@ -883,10 +902,10 @@ export default function AdminInternalWorkPage() {
         }
       }
     });
-    
+
     const totalHours = Math.floor(totalMinutes / 60);
     const remainingMinutes = totalMinutes % 60;
-    
+
     return { totalHours, remainingMinutes, totalMinutes };
   };
 
@@ -968,7 +987,7 @@ export default function AdminInternalWorkPage() {
         const userTotalScore = ((case_.userDifficultyLevel || 0) + (case_.userEstimatedTime || 0) + (case_.userImpactLevel || 0) + (case_.userUrgencyLevel || 0) + (case_.userFormScore || 0));
         const adminTotalScore = ((case_.adminDifficultyLevel || 0) + (case_.adminEstimatedTime || 0) + (case_.adminImpactLevel || 0) + (case_.adminUrgencyLevel || 0));
         const grandTotal = ((userTotalScore * 0.4) + (adminTotalScore * 0.6)).toFixed(2);
-        
+
         return {
           'STT': filteredInternalCases.length - index,
           'Tiêu đề Case': case_.title,
@@ -1095,7 +1114,7 @@ export default function AdminInternalWorkPage() {
                   <p className="text-sm text-gray-600 mt-1">
                     Quản lý và theo dõi các case nội bộ của công ty
                   </p>
-                  
+
                   {activeTab === 'cases' && (
                     <div className="mt-2 flex items-center space-x-4 text-xs">
                       <div className="flex items-center space-x-1">
@@ -1110,7 +1129,7 @@ export default function AdminInternalWorkPage() {
                           Chưa đánh giá: {filteredInternalCases.filter(case_ => !isCaseEvaluatedByAdmin(case_)).length}
                         </span>
                       </div>
-                      {hasActiveFilters && (
+                      {hasActiveFilters() && (
                         <div className="flex items-center space-x-1">
                           <Search className="h-4 w-4 text-blue-500" />
                           <span className="text-blue-600">
@@ -1122,7 +1141,7 @@ export default function AdminInternalWorkPage() {
                   )}
                 </div>
               </div>
-              
+
               {/* Create Case Button */}
               {activeTab === 'cases' && (
                 <div className="mr-2">
@@ -1136,38 +1155,35 @@ export default function AdminInternalWorkPage() {
                 </div>
               )}
             </div>
-            
+
             {/* Tabs */}
             <div className="mt-6">
               <div className="border-b border-gray-200">
                 <nav className="-mb-px flex space-x-8">
                   <button
                     onClick={() => setActiveTab('cases')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
-                      activeTab === 'cases'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${activeTab === 'cases'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
                   >
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4" />
                       <span>Danh sách Case</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        hasActiveFilters 
-                          ? 'bg-blue-100 text-blue-600' 
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {hasActiveFilters ? `${filteredInternalCases.length}/${internalCases.length}` : internalCases.length}
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${hasActiveFilters()
+                        ? 'bg-blue-100 text-blue-600'
+                        : 'bg-gray-100 text-gray-600'
+                        }`}>
+                        {hasActiveFilters() ? `${filteredInternalCases.length}/${internalCases.length}` : internalCases.length}
                       </span>
                     </div>
                   </button>
                   <button
                     onClick={() => setActiveTab('config')}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${
-                      activeTab === 'config'
-                        ? 'border-blue-500 text-blue-600'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm cursor-pointer ${activeTab === 'config'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      }`}
                   >
                     <div className="flex items-center space-x-2">
                       <Settings className="h-4 w-4" />
@@ -1192,7 +1208,7 @@ export default function AdminInternalWorkPage() {
             {/* Search and Filter Bar */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-3 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <div className="p-1.5 bg-blue-100 rounded-md">
@@ -1204,7 +1220,7 @@ export default function AdminInternalWorkPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <button 
+                    <button
                       onClick={exportToExcel}
                       disabled={filteredInternalCases.length === 0}
                       className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
@@ -1212,7 +1228,7 @@ export default function AdminInternalWorkPage() {
                       <Download className="h-3.5 w-3.5" />
                       <span className="text-sm font-medium">Xuất Excel</span>
                     </button>
-                    <button 
+                    <button
                       onClick={refreshInternalCases}
                       disabled={refreshing}
                       className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
@@ -1225,15 +1241,12 @@ export default function AdminInternalWorkPage() {
               </div>
 
               {/* Content */}
-              <div className="p-4">
+              <div className="p-3">
                 <div className="space-y-4">
                   {/* Search Section */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tìm kiếm
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 relative flex items-center">
+                      <Search className="absolute left-3 h-4 w-4 text-gray-400" />
                       <input
                         type="text"
                         placeholder="Tìm kiếm theo tên case, người yêu cầu, người xử lý..."
@@ -1242,146 +1255,191 @@ export default function AdminInternalWorkPage() {
                         className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
                       />
                     </div>
+                    <button
+                      onClick={() => setShowFilters(!showFilters)}
+                      className={`flex items-center gap-1 px-3 py-2 border rounded-md transition-all relative ${showFilters
+                        ? 'bg-blue-50 border-blue-300 text-blue-700'
+                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                      <Filter className="h-4 w-4" />
+                      <span className="text-sm font-medium hidden sm:inline">Lọc</span>
+                      {(selectedHandler || selectedRequester || selectedCaseType || selectedStatus || dateFrom || dateTo) && (
+                        <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                          {[selectedHandler, selectedRequester, selectedCaseType, selectedStatus, dateFrom, dateTo].filter(Boolean).length}
+                        </span>
+                      )}
+                      <ChevronDown className={`h-4 w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                    </button>
                   </div>
 
-                  {/* Filters Section */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bộ lọc
-                    </label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                      {/* Handler Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                            <span>Người xử lý</span>
-                          </div>
-                        </label>
-                        <select
-                          value={selectedHandler}
-                          onChange={(e) => setSelectedHandler(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        >
-                          <option value="">Tất cả người xử lý</option>
-                          {uniqueHandlers.map((handler) => (
-                            <option key={handler} value={handler}>
-                              {handler}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                  {/* Filters Section - Collapsible */}
+                  <div className={`overflow-hidden transition-all duration-300 ${showFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Bộ lọc
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                        {/* Handler Filter */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                            <div className="flex items-center space-x-1.5">
+                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                              <span>Người xử lý</span>
+                            </div>
+                          </label>
+                          <select
+                            value={selectedHandler}
+                            onChange={(e) => setSelectedHandler(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                          >
+                            <option value="">Tất cả người xử lý</option>
+                            {uniqueHandlers.map((handler) => (
+                              <option key={handler} value={handler}>
+                                {handler}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      {/* Requester Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span>Người yêu cầu</span>
-                          </div>
-                        </label>
-                        <select
-                          value={selectedRequester}
-                          onChange={(e) => setSelectedRequester(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        >
-                          <option value="">Tất cả người yêu cầu</option>
-                          {uniqueRequesters.map((requester) => (
-                            <option key={requester} value={requester}>
-                              {requester}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        {/* Requester Filter */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                            <div className="flex items-center space-x-1.5">
+                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                              <span>Người yêu cầu</span>
+                            </div>
+                          </label>
+                          <select
+                            value={selectedRequester}
+                            onChange={(e) => setSelectedRequester(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                          >
+                            <option value="">Tất cả người yêu cầu</option>
+                            {uniqueRequesters.map((requester) => (
+                              <option key={requester} value={requester}>
+                                {requester}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      {/* Case Type Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                            <span>Loại case</span>
-                          </div>
-                        </label>
-                        <select
-                          value={selectedCaseType}
-                          onChange={(e) => setSelectedCaseType(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        >
-                          <option value="">Tất cả loại case</option>
-                          {uniqueCaseTypes.map((caseType) => (
-                            <option key={caseType} value={caseType}>
-                              {caseType}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        {/* Case Type Filter */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                            <div className="flex items-center space-x-1.5">
+                              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                              <span>Loại case</span>
+                            </div>
+                          </label>
+                          <select
+                            value={selectedCaseType}
+                            onChange={(e) => setSelectedCaseType(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                          >
+                            <option value="">Tất cả loại case</option>
+                            {uniqueCaseTypes.map((caseType) => (
+                              <option key={caseType} value={caseType}>
+                                {caseType}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      {/* Status Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                            <span>Trạng thái</span>
-                          </div>
-                        </label>
-                        <select
-                          value={selectedStatus}
-                          onChange={(e) => setSelectedStatus(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        >
-                          <option value="">Tất cả trạng thái</option>
-                          {uniqueStatuses.map((status) => (
-                            <option key={status} value={status}>
-                              {getStatusText(status)}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                        {/* Status Filter */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                            <div className="flex items-center space-x-1.5">
+                              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                              <span>Trạng thái</span>
+                            </div>
+                          </label>
+                          <select
+                            value={selectedStatus}
+                            onChange={(e) => setSelectedStatus(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                          >
+                            <option value="">Tất cả trạng thái</option>
+                            {uniqueStatuses.map((status) => (
+                              <option key={status} value={status}>
+                                {getStatusText(status)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      {/* Date From Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                            <span>Từ ngày</span>
-                          </div>
-                        </label>
-                        <input
-                          type="date"
-                          value={dateFrom}
-                          onChange={(e) => setDateFrom(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        />
-                      </div>
+                        {/* Date From Filter */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                            <div className="flex items-center space-x-1.5">
+                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                              <span>Từ ngày</span>
+                            </div>
+                          </label>
+                          <DatePickerInput
+                            value={dateFrom}
+                            onChange={(date) => setDateFrom(date ? new Date(date) : null)}
+                            placeholder="Chọn từ ngày"
+                            locale="vi"
+                            valueFormat="DD/MM/YYYY"
+                            clearable
+                            styles={{
+                              input: {
+                                fontSize: '0.875rem',
+                                padding: '0.5rem 0.75rem',
+                                minHeight: '38px',
+                                height: '38px',
+                                borderColor: '#e5e7eb',
+                                backgroundColor: '#f9fafb',
+                                fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                              }
+                            }}
+                          />
+                        </div>
 
-                      {/* Date To Filter */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                            <span>Đến ngày</span>
-                          </div>
-                        </label>
-                        <input
-                          type="date"
-                          value={dateTo}
-                          onChange={(e) => setDateTo(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        />
+                        {/* Date To Filter */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                            <div className="flex items-center space-x-1.5">
+                              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                              <span>Đến ngày</span>
+                            </div>
+                          </label>
+                          <DatePickerInput
+                            value={dateTo}
+                            onChange={(date) => setDateTo(date ? new Date(date) : null)}
+                            placeholder="Chọn đến ngày"
+                            locale="vi"
+                            valueFormat="DD/MM/YYYY"
+                            clearable
+                            minDate={dateFrom || undefined}
+                            styles={{
+                              input: {
+                                fontSize: '0.875rem',
+                                padding: '0.5rem 0.75rem',
+                                minHeight: '38px',
+                                height: '38px',
+                                borderColor: '#e5e7eb',
+                                backgroundColor: '#f9fafb',
+                                fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                              }
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Active Filters & Actions */}
-                  {hasActiveFilters && (
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md p-3 border border-blue-100">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  {hasActiveFilters() && (
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-md p-2.5 border border-blue-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-1.5 mb-1.5">
+                          <div className="flex items-center space-x-1.5 mb-1">
                             <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                             <span className="text-xs font-semibold text-gray-800">Bộ lọc đang áp dụng</span>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-wrap gap-1">
                             {searchTerm && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                                 <Search className="h-2.5 w-2.5 mr-1" />
@@ -1394,6 +1452,18 @@ export default function AdminInternalWorkPage() {
                                 {selectedHandler}
                               </span>
                             )}
+                            {selectedRequester && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1.5"></div>
+                                {selectedRequester}
+                              </span>
+                            )}
+                            {selectedCaseType && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1.5"></div>
+                                {selectedCaseType}
+                              </span>
+                            )}
                             {selectedStatus && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
                                 <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1.5"></div>
@@ -1403,378 +1473,375 @@ export default function AdminInternalWorkPage() {
                             {dateFrom && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                                 <Calendar className="h-2.5 w-2.5 mr-1" />
-                                Từ: {new Date(dateFrom + 'T00:00:00').toLocaleDateString('vi-VN')}
+                                Từ: {formatVietnamDate(dateFrom)}
                               </span>
                             )}
                             {dateTo && (
                               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
                                 <Calendar className="h-2.5 w-2.5 mr-1" />
-                                Đến: {new Date(dateTo + 'T00:00:00').toLocaleDateString('vi-VN')}
+                                Đến: {formatVietnamDate(dateTo)}
                               </span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="text-right">
-                            <div className="text-xs font-semibold text-gray-800">
-                              {filteredInternalCases.length} kết quả
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              từ {internalCases.length} case
-                            </div>
-                          </div>
+                        <div className="flex items-center space-x-1.5">
                           <button
                             onClick={clearFilters}
-                            className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
+                            className="flex items-center space-x-1 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-white/50 rounded-md transition-colors"
                           >
-                            <span className="text-xs font-medium">Xóa bộ lọc</span>
-                            <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
-                              {[searchTerm, selectedHandler, selectedStatus, dateFrom, dateTo].filter(Boolean).length}
-                            </span>
+                            <X className="h-3 w-3" />
+                            <span>Xóa bộ lọc</span>
                           </button>
                         </div>
                       </div>
                     </div>
                   )}
+
+                  {/* Results Summary */}
+                  <div className="flex items-center justify-between px-3 py-3 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      Hiển thị <span className="font-medium text-gray-900">{filteredInternalCases.length}</span> trong tổng số <span className="font-medium text-gray-900">{internalCases.length}</span> case
+                      {hasActiveFilters() && (
+                        <span className="ml-2 text-blue-600 font-medium">
+                          (đã lọc)
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-          {/* Cases Table */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gradient-to-r from-gray-50 to-blue-50">
-                  <tr>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      STT
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Thông tin Case
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Người xử lý
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
-                      Trạng thái
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">
-                      Thời gian
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Tổng điểm User
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Điểm Admin
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Tổng điểm
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Hành động
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {loading ? (
+            {/* Cases Table */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gradient-to-r from-gray-50 to-blue-50">
                     <tr>
-                      <td colSpan={9} className="px-3 py-8 text-center">
-                        <div className="flex items-center justify-center space-x-2">
-                          <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
-                          <span className="text-gray-600">Đang tải danh sách case...</span>
-                        </div>
-                      </td>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        STT
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Thông tin Case
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Người xử lý
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
+                        Trạng thái
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-40">
+                        Thời gian
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Tổng điểm User
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Điểm Admin
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Tổng điểm
+                      </th>
+                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Hành động
+                      </th>
                     </tr>
-                  ) : paginatedCases.length > 0 ? (
-                    paginatedCases.map((case_, index) => {
-                      const isExpanded = expandedRows.has(case_.id);
-                      const userTotalScore = ((case_.userDifficultyLevel || 0) + (case_.userEstimatedTime || 0) + (case_.userImpactLevel || 0) + (case_.userUrgencyLevel || 0) + (case_.userFormScore || 0));
-                      const adminTotalScore = ((case_.adminDifficultyLevel || 0) + (case_.adminEstimatedTime || 0) + (case_.adminImpactLevel || 0) + (case_.adminUrgencyLevel || 0));
-                      const grandTotal = ((userTotalScore * 0.4) + (adminTotalScore * 0.6)).toFixed(2);
-                      const isEvaluated = isCaseEvaluatedByAdmin(case_);
-                      
-                      return (
-                                                    <React.Fragment key={case_.id}>
-                              {/* Main Row */}
-                              <tr 
-                                className={`hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer ${
-                                  !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
-                                } ${
-                                  deletedCases.has(case_.id) ? 'opacity-50 bg-red-50/30' : ''
-                                }`}
-                                onClick={() => !deletedCases.has(case_.id) && toggleRowExpansion(case_.id)}
-                              >
-                                <td className="px-3 py-2 text-center">
-                          <span className="text-xs font-medium text-gray-600">
-                            {totalItems - startIndex - index}
-                          </span>
-                        </td>
-                                <td className="px-3 py-2">
-                          <div>
-                                    <div className="text-xs font-medium text-gray-900">
-                              {case_.title}
-                            </div>
-                            <div className="text-xs text-gray-600 mt-1">
-                              {case_.description}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                                      Tạo: {formatDate(case_.createdAt)}
-                            </div>
-                          </div>
-                        </td>
-                            <td className="px-3 py-2 text-center">
-                          <div>
-                            <div className="text-xs text-gray-900">{case_.handler.fullName}</div>
-                            <div className="text-xs text-gray-500">{case_.handler.position}</div>
-                          </div>
-                        </td>
-                            <td className="px-3 py-2 text-center w-32">
-                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
-                            {getStatusText(case_.status)}
-                          </span>
-                        </td>
-                            <td className="px-3 py-2 w-40">
-                          <div className="text-xs">
-                            <div className="text-blue-600 font-medium whitespace-nowrap">
-                              Bắt đầu: {formatDate(case_.startDate)}
-                            </div>
-                            {case_.endDate && (
-                              <>
-                                <div className="text-red-600 font-medium whitespace-nowrap">
-                                  Kết thúc: {formatDate(case_.endDate)}
-                                </div>
-                                <div className="text-purple-600 font-semibold whitespace-nowrap mt-1">
-                                  Thời gian: {calculateDuration(case_.startDate, case_.endDate)}
-                                </div>
-                              </>
-                            )}
-                            {!case_.endDate && (
-                              <div className="text-gray-500 font-medium whitespace-nowrap">
-                                Đang xử lý...
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                            <td className="px-3 py-2 text-center">
-                              <span className="text-xs font-medium text-blue-600">
-                                {userTotalScore}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              {isEvaluated ? (
-                                <span className="text-xs font-medium text-green-600">
-                                  {adminTotalScore}
-                                </span>
-                              ) : (
-                                <div className="flex items-center justify-center space-x-1">
-                                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
-                                  <span className="text-xs font-medium text-yellow-600">
-                                    Chưa đánh giá
-                                  </span>
-                                </div>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <span className="text-xs font-bold text-purple-600">
-                                {grandTotal}
-                              </span>
-                            </td>
-                                                            <td className="px-3 py-2 text-center">
-                                  <div className="flex items-center justify-center space-x-1">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingCase(case_);
-                                        setShowCreateModal(true);
-                                      }}
-                                      className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors duration-200 cursor-pointer"
-                                      title="Chỉnh sửa case"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleOpenEvaluationModal(case_);
-                                      }}
-                                      className={`p-1.5 rounded-md transition-colors duration-200 cursor-pointer ${
-                                        isEvaluated 
-                                          ? 'text-green-600 hover:bg-green-50' 
-                                          : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
-                                      }`}
-                                      title={isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
-                                    >
-                              {isEvaluated ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                            </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (!deletedCases.has(case_.id)) {
-                                          handleOpenDeleteModal(case_);
-                                        }
-                                      }}
-                                      disabled={deletedCases.has(case_.id)}
-                                      className={`p-1.5 rounded-md transition-colors duration-200 ${
-                                        deletedCases.has(case_.id) 
-                                          ? 'text-gray-400 cursor-not-allowed' 
-                                          : 'text-red-600 hover:bg-red-50 cursor-pointer'
-                                      }`}
-                                      title={deletedCases.has(case_.id) ? "Đang xóa..." : "Xóa case"}
-                                    >
-                              {deletedCases.has(case_.id) ? (
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <Trash className="h-4 w-4" />
-                              )}
-                            </button>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={9} className="px-3 py-8 text-center">
+                          <div className="flex items-center justify-center space-x-2">
+                            <RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
+                            <span className="text-gray-600">Đang tải danh sách case...</span>
                           </div>
                         </td>
                       </tr>
-                          
-                          {/* Expanded Row */}
-                          {isExpanded && (
-                            <tr className="bg-gray-50/30">
-                              <td colSpan={9} className="px-3 py-4">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                  <div>
-                                    <h4 className="text-xs font-medium text-gray-900 mb-2">Mô tả chi tiết</h4>
-                                    <p className="text-xs text-gray-600">{case_.description}</p>
+                    ) : paginatedCases.length > 0 ? (
+                      paginatedCases.map((case_, index) => {
+                        const isExpanded = expandedRows.has(case_.id);
+                        const userTotalScore = ((case_.userDifficultyLevel || 0) + (case_.userEstimatedTime || 0) + (case_.userImpactLevel || 0) + (case_.userUrgencyLevel || 0) + (case_.userFormScore || 0));
+                        const adminTotalScore = ((case_.adminDifficultyLevel || 0) + (case_.adminEstimatedTime || 0) + (case_.adminImpactLevel || 0) + (case_.adminUrgencyLevel || 0));
+                        const grandTotal = ((userTotalScore * 0.4) + (adminTotalScore * 0.6)).toFixed(2);
+                        const isEvaluated = isCaseEvaluatedByAdmin(case_);
+
+                        return (
+                          <React.Fragment key={case_.id}>
+                            {/* Main Row */}
+                            <tr
+                              className={`hover:bg-gray-50/50 transition-colors duration-150 cursor-pointer ${!isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                                } ${deletedCases.has(case_.id) ? 'opacity-50 bg-red-50/30' : ''
+                                }`}
+                              onClick={() => !deletedCases.has(case_.id) && toggleRowExpansion(case_.id)}
+                            >
+                              <td className="px-3 py-2 text-center">
+                                <span className="text-xs font-medium text-gray-600">
+                                  {totalItems - startIndex - index}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2">
+                                <div>
+                                  <div className="text-xs font-medium text-gray-900">
+                                    {case_.title}
                                   </div>
-                                  <div>
-                                    <h4 className="text-xs font-medium text-gray-900 mb-2">Người yêu cầu</h4>
-                                    <div className="text-xs text-gray-600">
-                                      <div>{case_.requester.fullName}</div>
-                                      <div className="text-xs text-gray-500">{case_.requester.position} - {case_.requester.department}</div>
-                                    </div>
+                                  <div className="text-xs text-gray-600 mt-1">
+                                    {case_.description}
                                   </div>
-                                  <div>
-                                    <h4 className="text-xs font-medium text-gray-900 mb-2">Loại case</h4>
-                                    <div className="text-xs text-gray-600">{formatCaseType(case_.caseType)}</div>
-                                  </div>
-                                  <div>
-                                    <h4 className="text-xs font-medium text-gray-900 mb-2">Thời gian xử lý</h4>
-                                    <div className="text-xs text-gray-600">
-                                      <div>Bắt đầu: {formatDate(case_.startDate)}</div>
-                                      {case_.endDate && (
-                                        <>
-                                          <div>Kết thúc: {formatDate(case_.endDate)}</div>
-                                        </>
-                                      )}
-                                    </div>
+                                  <div className="text-xs text-gray-500">
+                                    Tạo: {formatDate(case_.createdAt)}
                                   </div>
                                 </div>
                               </td>
+                              <td className="px-3 py-2 text-center">
+                                <div>
+                                  <div className="text-xs text-gray-900">{case_.handler.fullName}</div>
+                                  <div className="text-xs text-gray-500">{case_.handler.position}</div>
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-center w-32">
+                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(case_.status)}`}>
+                                  {getStatusText(case_.status)}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 w-40">
+                                <div className="text-xs">
+                                  <div className="text-blue-600 font-medium whitespace-nowrap">
+                                    Bắt đầu: {formatDate(case_.startDate)}
+                                  </div>
+                                  {case_.endDate && (
+                                    <>
+                                      <div className="text-red-600 font-medium whitespace-nowrap">
+                                        Kết thúc: {formatDate(case_.endDate)}
+                                      </div>
+                                      <div className="text-purple-600 font-semibold whitespace-nowrap mt-1">
+                                        Thời gian: {calculateDuration(case_.startDate, case_.endDate)}
+                                      </div>
+                                    </>
+                                  )}
+                                  {!case_.endDate && (
+                                    <div className="text-gray-500 font-medium whitespace-nowrap">
+                                      Đang xử lý...
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <span className="text-xs font-medium text-blue-600">
+                                  {userTotalScore}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                {isEvaluated ? (
+                                  <span className="text-xs font-medium text-green-600">
+                                    {adminTotalScore}
+                                  </span>
+                                ) : (
+                                  <div className="flex items-center justify-center space-x-1">
+                                    <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                                    <span className="text-xs font-medium text-yellow-600">
+                                      Chưa đánh giá
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <span className="text-xs font-bold text-purple-600">
+                                  {grandTotal}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                <div className="flex items-center justify-center space-x-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingCase(case_);
+                                      setShowCreateModal(true);
+                                    }}
+                                    className="p-1.5 rounded-md text-blue-600 hover:bg-blue-50 transition-colors duration-200 cursor-pointer"
+                                    title="Chỉnh sửa case"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenEvaluationModal(case_);
+                                    }}
+                                    className={`p-1.5 rounded-md transition-colors duration-200 cursor-pointer ${isEvaluated
+                                      ? 'text-green-600 hover:bg-green-50'
+                                      : 'text-yellow-600 hover:bg-yellow-50 bg-yellow-100'
+                                      }`}
+                                    title={isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
+                                  >
+                                    {isEvaluated ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (!deletedCases.has(case_.id)) {
+                                        handleOpenDeleteModal(case_);
+                                      }
+                                    }}
+                                    disabled={deletedCases.has(case_.id)}
+                                    className={`p-1.5 rounded-md transition-colors duration-200 ${deletedCases.has(case_.id)
+                                      ? 'text-gray-400 cursor-not-allowed'
+                                      : 'text-red-600 hover:bg-red-50 cursor-pointer'
+                                      }`}
+                                    title={deletedCases.has(case_.id) ? "Đang xóa..." : "Xóa case"}
+                                  >
+                                    {deletedCases.has(case_.id) ? (
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </div>
+                              </td>
                             </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={9} className="px-3 py-8 text-center">
-                        <div className="text-gray-400 mb-4">
-                          <Search className="h-16 w-16 mx-auto" />
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy case nào</h3>
-                        <p className="text-gray-500">Thử thay đổi từ khóa tìm kiếm</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-                <div className="flex-1 flex justify-between sm:hidden">
-                  <button
-                    onClick={goToPrevPage}
-                    disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Trước
-                  </button>
-                  <button
-                    onClick={goToNextPage}
-                    disabled={currentPage === totalPages}
-                    className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Sau
-                  </button>
-                </div>
-                <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm text-gray-700">
-                      Hiển thị{' '}
-                      <span className="font-medium">{startIndex + 1}</span>
-                      {' '}đến{' '}
-                      <span className="font-medium">
-                        {Math.min(endIndex, totalItems)}
-                      </span>
-                      {' '}của{' '}
-                      <span className="font-medium">{totalItems}</span>
-                      {' '}kết quả
-                    </p>
+
+                            {/* Expanded Row */}
+                            {isExpanded && (
+                              <tr className="bg-gray-50/30">
+                                <td colSpan={9} className="px-3 py-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div>
+                                      <h4 className="text-xs font-medium text-gray-900 mb-2">Mô tả chi tiết</h4>
+                                      <p className="text-xs text-gray-600">{case_.description}</p>
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-medium text-gray-900 mb-2">Người yêu cầu</h4>
+                                      <div className="text-xs text-gray-600">
+                                        <div>{case_.requester.fullName}</div>
+                                        <div className="text-xs text-gray-500">{case_.requester.position} - {case_.requester.department}</div>
+                                      </div>
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-medium text-gray-900 mb-2">Loại case</h4>
+                                      <div className="text-xs text-gray-600">{formatCaseType(case_.caseType)}</div>
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-medium text-gray-900 mb-2">Thời gian xử lý</h4>
+                                      <div className="text-xs text-gray-600">
+                                        <div>Bắt đầu: {formatDate(case_.startDate)}</div>
+                                        {case_.endDate && (
+                                          <>
+                                            <div>Kết thúc: {formatDate(case_.endDate)}</div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={9} className="px-3 py-8 text-center">
+                          <div className="text-gray-400 mb-4">
+                            <Search className="h-16 w-16 mx-auto" />
+                          </div>
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy case nào</h3>
+                          <p className="text-gray-500">Thử thay đổi từ khóa tìm kiếm</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                  <div className="flex-1 flex justify-between sm:hidden">
+                    <button
+                      onClick={goToPrevPage}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Trước
+                    </button>
+                    <button
+                      onClick={goToNextPage}
+                      disabled={currentPage === totalPages}
+                      className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Sau
+                    </button>
                   </div>
-                  <div>
-                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                      <button
-                        onClick={goToPrevPage}
-                        disabled={currentPage === 1}
-                        className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="sr-only">Trước</span>
-                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                      
-                      {/* Page numbers */}
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                        
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => goToPage(pageNum)}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                              pageNum === currentPage
+                  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm text-gray-700">
+                        Hiển thị{' '}
+                        <span className="font-medium">{startIndex + 1}</span>
+                        {' '}đến{' '}
+                        <span className="font-medium">
+                          {Math.min(endIndex, totalItems)}
+                        </span>
+                        {' '}của{' '}
+                        <span className="font-medium">{totalItems}</span>
+                        {' '}kết quả
+                      </p>
+                    </div>
+                    <div>
+                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                        <button
+                          onClick={goToPrevPage}
+                          disabled={currentPage === 1}
+                          className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="sr-only">Trước</span>
+                          <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+
+                        {/* Page numbers */}
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => goToPage(pageNum)}
+                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${pageNum === currentPage
                                 ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                                 : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-                      
-                      <button
-                        onClick={goToNextPage}
-                        disabled={currentPage === totalPages}
-                        className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <span className="sr-only">Sau</span>
-                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </nav>
+                                }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+
+                        <button
+                          onClick={goToNextPage}
+                          disabled={currentPage === totalPages}
+                          className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <span className="sr-only">Sau</span>
+                          <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </nav>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
         ) : (
           /* Configuration Tab Content */
           <ConfigurationTab
@@ -2167,17 +2234,17 @@ export default function AdminInternalWorkPage() {
         editingCase={editingCase}
         onSuccess={(internalCase: any) => {
           console.log('Internal case saved:', internalCase);
-          
+
           if (editingCase) {
             // Update existing case in state (no reload needed)
-            setInternalCases(prev => prev.map(c => 
+            setInternalCases(prev => prev.map(c =>
               c.id === internalCase.id ? internalCase as InternalCase : c
             ));
           } else {
             // Add new case to the beginning of the list
             setInternalCases(prev => [internalCase as InternalCase, ...prev]);
           }
-          
+
           setEditingCase(null);
           // Don't show toast here - modal already shows it
         }}

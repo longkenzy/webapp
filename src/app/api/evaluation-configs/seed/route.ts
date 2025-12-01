@@ -129,7 +129,7 @@ export async function POST() {
     const allSampleData = [...userSampleData, ...adminSampleData];
 
     let createdCount = 0;
-    let skippedCount = 0;
+    const skippedCount = 0;
 
     // Create configurations
     for (const configData of allSampleData) {
@@ -145,12 +145,12 @@ export async function POST() {
 
         if (existingConfig) {
           console.log(`Config already exists: ${configData.type}-${configData.category}, updating options...`);
-          
+
           // Delete existing options
           await db.evaluationOption.deleteMany({
             where: { configId: existingConfig.id }
           });
-          
+
           // Create new options
           await db.evaluationOption.createMany({
             data: configData.options.map((option, index) => ({
@@ -161,7 +161,7 @@ export async function POST() {
               isActive: true,
             }))
           });
-          
+
           console.log(`Updated config: ${configData.type}-${configData.category} with ${configData.options.length} options`);
           createdCount++;
           continue;
@@ -205,8 +205,8 @@ export async function POST() {
   } catch (error) {
     console.error('Error seeding evaluation configs:', error);
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Có lỗi xảy ra khi tạo dữ liệu mẫu',
         details: error instanceof Error ? error.message : String(error)
       },

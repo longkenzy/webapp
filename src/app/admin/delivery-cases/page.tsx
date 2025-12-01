@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Search, Filter, Download, RefreshCw, FileText, Trash2, ChevronDown } from 'lucide-react';
+import { Package, Search, Filter, Download, RefreshCw, Trash2, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DeliveryCaseTable from '@/components/admin/DeliveryCaseTable';
 import CreateDeliveryCaseModal from './CreateDeliveryCaseModal';
 import * as XLSX from 'xlsx';
 import { DeliveryCaseStatus } from '@prisma/client';
-import { getCurrentDateForFilename, formatVietnamDateTime } from '@/lib/date-utils';
+import { getCurrentDateForFilename, formatVietnamDate, formatVietnamDateTime } from '@/lib/date-utils';
+import { DatePickerInput } from '@mantine/dates';
+import 'dayjs/locale/vi';
 
 interface DeliveryCase {
   id: string;
@@ -75,18 +77,19 @@ export default function DeliveryCasesPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [deliveryPersonFilter, setDeliveryPersonFilter] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [deliveryPersons, setDeliveryPersons] = useState<Array<{id: string, fullName: string}>>([]);
-  const [customers, setCustomers] = useState<Array<{id: string, shortName: string}>>([]);
+  const [crmCodeFilter, setCrmCodeFilter] = useState('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [deliveryPersons, setDeliveryPersons] = useState<Array<{ id: string, fullName: string }>>([]);
+  const [customers, setCustomers] = useState<Array<{ id: string, shortName: string }>>([]);
   const [allCases, setAllCases] = useState<DeliveryCase[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Delete modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletedCases, setDeletedCases] = useState<Set<string>>(new Set());
-  
+
   // Create/Edit modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingCase, setEditingCase] = useState<DeliveryCase | null>(null);
@@ -103,16 +106,11 @@ export default function DeliveryCasesPage() {
 
   // Fetch all data function
   const fetchAllData = useCallback(async () => {
-    console.log('🔄🔄🔄 fetchAllData called - THIS WILL OVERWRITE STATE!');
-    console.trace('Call stack:');
-    
     try {
       // Fetch all cases for stats
       const casesResponse = await fetch('/api/delivery-cases?limit=1000');
       if (casesResponse.ok) {
         const casesData = await casesResponse.json();
-        console.log('🔄 Fetched from API:', casesData.deliveryCases.length, 'cases');
-        console.log('🔄 First case handler from API:', casesData.deliveryCases[0]?.handler?.fullName);
         setAllCases(casesData.deliveryCases);
       }
 
@@ -122,7 +120,7 @@ export default function DeliveryCasesPage() {
         const deliveryPersonsResult = await deliveryPersonsResponse.json();
         // Handle both old and new API response formats
         const deliveryPersonsData = deliveryPersonsResult.data || deliveryPersonsResult;
-        setDeliveryPersons(deliveryPersonsData.map((emp: any) => ({
+        setDeliveryPersons(deliveryPersonsData.map((emp: { id: string; fullName: string }) => ({
           id: emp.id,
           fullName: emp.fullName
         })));
@@ -132,7 +130,7 @@ export default function DeliveryCasesPage() {
       const customersResponse = await fetch('/api/partners/list');
       if (customersResponse.ok) {
         const customersData = await customersResponse.json();
-        setCustomers(customersData.map((customer: any) => ({
+        setCustomers(customersData.map((customer: { id: string; shortName: string }) => ({
           id: customer.id,
           shortName: customer.shortName
         })));
@@ -182,21 +180,21 @@ export default function DeliveryCasesPage() {
     if (!selectedCase) return;
 
     const caseToDelete = selectedCase;
-    
+
     try {
       setDeleting(true);
-      
+
       // Mark case as being deleted for visual feedback
       setDeletedCases(prev => new Set(prev).add(caseToDelete.id));
-      
+
       // Optimistic update - remove from UI immediately for better UX
-      setAllCases(prevCases => 
+      setAllCases(prevCases =>
         prevCases.filter(c => c.id !== caseToDelete.id)
       );
-      
+
       // Close modal immediately
       handleCloseDeleteModal();
-      
+
       // Make API call in background
       const response = await fetch(`/api/delivery-cases/${caseToDelete.id}`, {
         method: 'DELETE',
@@ -210,7 +208,7 @@ export default function DeliveryCasesPage() {
           newSet.delete(caseToDelete.id);
           return newSet;
         });
-        
+
         const error = await response.json();
         toast.error(`Lỗi: ${error.error || 'Không thể xóa case'}`, {
           duration: 4000,
@@ -223,7 +221,7 @@ export default function DeliveryCasesPage() {
           newSet.delete(caseToDelete.id);
           return newSet;
         });
-        
+
         toast.success('Xóa case thành công!', {
           duration: 3000,
           position: 'top-right',
@@ -233,10 +231,10 @@ export default function DeliveryCasesPage() {
           },
         });
       }
-      
+
     } catch (error) {
       console.error('Error deleting case:', error);
-      
+
       // Restore the case to the list on network error
       setAllCases(prevCases => [...prevCases, caseToDelete]);
       setDeletedCases(prev => {
@@ -244,7 +242,7 @@ export default function DeliveryCasesPage() {
         newSet.delete(caseToDelete.id);
         return newSet;
       });
-      
+
       toast.error('Lỗi kết nối. Vui lòng thử lại!', {
         duration: 4000,
         position: 'top-right',
@@ -254,21 +252,11 @@ export default function DeliveryCasesPage() {
     }
   };
 
-  const handleCreateSuccess = (newCase: any) => {
-    console.log('✅ handleCreateSuccess called with:', newCase);
-    console.log('✅ New status:', newCase.status);
-    console.log('✅ New endDate:', newCase.endDate);
-    console.log('✅ New handler:', newCase.handler?.fullName);
-    console.log('✅ Full newCase data:', JSON.stringify(newCase, null, 2));
-    
+  const handleCreateSuccess = (newCase: DeliveryCase) => {
     if (editingCase) {
       // EDIT mode: Update the case in the list immediately (optimistic update)
       const updatedCases = allCases.map(c => {
         if (c.id === newCase.id) {
-          console.log('🔄 FOUND case to update! ID:', c.id);
-          console.log('🔄 OLD handler:', c.handler?.fullName, '(', c.handler?.id, ')');
-          console.log('🔄 NEW handler:', newCase.handler?.fullName, '(', newCase.handler?.id, ')');
-          
           const updated = {
             ...c,  // Keep existing data
             ...newCase,  // Override with new data
@@ -282,35 +270,28 @@ export default function DeliveryCasesPage() {
             endDate: newCase.endDate !== undefined ? newCase.endDate : c.endDate,
             startDate: newCase.startDate || c.startDate
           };
-          
-          console.log('🔄 FINAL updated object handler:', updated.handler?.fullName, '(', updated.handler?.id, ')');
+
           return updated;
         }
         return c;
       });
-      
-      console.log('✅ Setting new allCases array with', updatedCases.length, 'items');
-      console.log('✅ Updated case in new array:', updatedCases.find(c => c.id === newCase.id)?.handler?.fullName);
+
       setAllCases(updatedCases);
-      console.log('✅ Updated case in list (optimistic):', newCase.id);
-      
+
       // Fetch fresh data from server after a short delay to ensure consistency
       setTimeout(() => {
-        console.log('🔄 Fetching fresh data from server after edit...');
         fetchAllData();
       }, 500);
     } else {
       // CREATE mode: Add new case to the list
       setAllCases(prev => [newCase, ...prev]);
-      console.log('✅ Added new case to list:', newCase.id);
-      
+
       // Also fetch for create to get complete data
       setTimeout(() => {
-        console.log('🔄 Fetching fresh data from server after create...');
         fetchAllData();
       }, 500);
     }
-    
+
     setShowCreateModal(false);
     setEditingCase(null);
   };
@@ -335,6 +316,11 @@ export default function DeliveryCasesPage() {
           return false;
         }
 
+        // CRM Code filter
+        if (crmCodeFilter && !case_.crmReferenceCode?.toLowerCase().includes(crmCodeFilter.toLowerCase())) {
+          return false;
+        }
+
         // Date range filter
         if (startDate || endDate) {
           const caseDate = new Date(case_.createdAt);
@@ -352,13 +338,13 @@ export default function DeliveryCasesPage() {
         // Search filter
         if (searchTerm) {
           const searchLower = searchTerm.toLowerCase();
-          const matchesSearch = 
+          const matchesSearch =
             case_.title.toLowerCase().includes(searchLower) ||
             case_.description.toLowerCase().includes(searchLower) ||
             case_.requester?.fullName.toLowerCase().includes(searchLower) ||
             case_.handler?.fullName.toLowerCase().includes(searchLower) ||
             case_.customer?.shortName.toLowerCase().includes(searchLower);
-          
+
           if (!matchesSearch) {
             return false;
           }
@@ -372,7 +358,7 @@ export default function DeliveryCasesPage() {
         const userTotalScore = ((case_.userDifficultyLevel || 0) + (case_.userEstimatedTime || 0) + (case_.userImpactLevel || 0) + (case_.userUrgencyLevel || 0) + (case_.userFormScore || 0));
         const adminTotalScore = ((case_.adminDifficultyLevel || 0) + (case_.adminEstimatedTime || 0) + (case_.adminImpactLevel || 0) + (case_.adminUrgencyLevel || 0));
         const grandTotal = ((userTotalScore * 0.4) + (adminTotalScore * 0.6)).toFixed(2);
-        
+
         return {
           'STT': filteredCases.length - index,
           'Tiêu đề Case': case_.title,
@@ -388,59 +374,59 @@ export default function DeliveryCasesPage() {
           'Người liên hệ': case_.customer?.contactPerson || 'Không xác định',
           'SĐT liên hệ': case_.customer?.contactPhone || 'Không xác định',
           'Hình thức': case_.form,
-          'Trạng thái': case_.status === 'RECEIVED' ? 'Tiếp nhận' : 
-                       case_.status === 'IN_PROGRESS' ? 'Đang xử lý' :
-                       case_.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy',
+          'Trạng thái': case_.status === 'RECEIVED' ? 'Tiếp nhận' :
+            case_.status === 'IN_PROGRESS' ? 'Đang xử lý' :
+              case_.status === 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy',
           'Ngày bắt đầu': formatVietnamDateTime(case_.startDate),
           'Ngày kết thúc': case_.endDate ? formatVietnamDateTime(case_.endDate) : 'Chưa hoàn thành',
           'Ngày tạo': formatVietnamDateTime(case_.createdAt),
           'Ngày cập nhật': formatVietnamDateTime(case_.updatedAt),
           'Ghi chú': case_.notes || '',
           // User evaluation
-          'User - Mức độ khó': case_.userDifficultyLevel ? 
+          'User - Mức độ khó': case_.userDifficultyLevel ?
             (case_.userDifficultyLevel === 1 ? 'Rất dễ' :
-             case_.userDifficultyLevel === 2 ? 'Dễ' :
-             case_.userDifficultyLevel === 3 ? 'Trung bình' :
-             case_.userDifficultyLevel === 4 ? 'Khó' : 'Rất khó') : 'Chưa đánh giá',
+              case_.userDifficultyLevel === 2 ? 'Dễ' :
+                case_.userDifficultyLevel === 3 ? 'Trung bình' :
+                  case_.userDifficultyLevel === 4 ? 'Khó' : 'Rất khó') : 'Chưa đánh giá',
           'User - Thời gian ước tính': case_.userEstimatedTime ?
             (case_.userEstimatedTime === 1 ? '< 30 phút' :
-             case_.userEstimatedTime === 2 ? '30-60 phút' :
-             case_.userEstimatedTime === 3 ? '1-2 giờ' :
-             case_.userEstimatedTime === 4 ? '2-4 giờ' : '> 4 giờ') : 'Chưa đánh giá',
+              case_.userEstimatedTime === 2 ? '30-60 phút' :
+                case_.userEstimatedTime === 3 ? '1-2 giờ' :
+                  case_.userEstimatedTime === 4 ? '2-4 giờ' : '> 4 giờ') : 'Chưa đánh giá',
           'User - Mức độ ảnh hưởng': case_.userImpactLevel ?
             (case_.userImpactLevel === 1 ? 'Rất thấp' :
-             case_.userImpactLevel === 2 ? 'Thấp' :
-             case_.userImpactLevel === 3 ? 'Trung bình' :
-             case_.userImpactLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
+              case_.userImpactLevel === 2 ? 'Thấp' :
+                case_.userImpactLevel === 3 ? 'Trung bình' :
+                  case_.userImpactLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
           'User - Mức độ khẩn cấp': case_.userUrgencyLevel ?
             (case_.userUrgencyLevel === 1 ? 'Rất thấp' :
-             case_.userUrgencyLevel === 2 ? 'Thấp' :
-             case_.userUrgencyLevel === 3 ? 'Trung bình' :
-             case_.userUrgencyLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
-          'User - Hình thức': case_.userFormScore === 1 ? 'Offsite/Remote' : 
-                             case_.userFormScore === 2 ? 'Onsite' : 'Chưa đánh giá',
+              case_.userUrgencyLevel === 2 ? 'Thấp' :
+                case_.userUrgencyLevel === 3 ? 'Trung bình' :
+                  case_.userUrgencyLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
+          'User - Hình thức': case_.userFormScore === 1 ? 'Offsite/Remote' :
+            case_.userFormScore === 2 ? 'Onsite' : 'Chưa đánh giá',
           'User - Tổng điểm': userTotalScore,
           // Admin evaluation
-          'Admin - Mức độ khó': case_.adminDifficultyLevel ? 
+          'Admin - Mức độ khó': case_.adminDifficultyLevel ?
             (case_.adminDifficultyLevel === 1 ? 'Rất dễ' :
-             case_.adminDifficultyLevel === 2 ? 'Dễ' :
-             case_.adminDifficultyLevel === 3 ? 'Trung bình' :
-             case_.adminDifficultyLevel === 4 ? 'Khó' : 'Rất khó') : 'Chưa đánh giá',
+              case_.adminDifficultyLevel === 2 ? 'Dễ' :
+                case_.adminDifficultyLevel === 3 ? 'Trung bình' :
+                  case_.adminDifficultyLevel === 4 ? 'Khó' : 'Rất khó') : 'Chưa đánh giá',
           'Admin - Thời gian ước tính': case_.adminEstimatedTime ?
             (case_.adminEstimatedTime === 1 ? '< 30 phút' :
-             case_.adminEstimatedTime === 2 ? '30-60 phút' :
-             case_.adminEstimatedTime === 3 ? '1-2 giờ' :
-             case_.adminEstimatedTime === 4 ? '2-4 giờ' : '> 4 giờ') : 'Chưa đánh giá',
+              case_.adminEstimatedTime === 2 ? '30-60 phút' :
+                case_.adminEstimatedTime === 3 ? '1-2 giờ' :
+                  case_.adminEstimatedTime === 4 ? '2-4 giờ' : '> 4 giờ') : 'Chưa đánh giá',
           'Admin - Mức độ ảnh hưởng': case_.adminImpactLevel ?
             (case_.adminImpactLevel === 1 ? 'Rất thấp' :
-             case_.adminImpactLevel === 2 ? 'Thấp' :
-             case_.adminImpactLevel === 3 ? 'Trung bình' :
-             case_.adminImpactLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
+              case_.adminImpactLevel === 2 ? 'Thấp' :
+                case_.adminImpactLevel === 3 ? 'Trung bình' :
+                  case_.adminImpactLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
           'Admin - Mức độ khẩn cấp': case_.adminUrgencyLevel ?
             (case_.adminUrgencyLevel === 1 ? 'Rất thấp' :
-             case_.adminUrgencyLevel === 2 ? 'Thấp' :
-             case_.adminUrgencyLevel === 3 ? 'Trung bình' :
-             case_.adminUrgencyLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
+              case_.adminUrgencyLevel === 2 ? 'Thấp' :
+                case_.adminUrgencyLevel === 3 ? 'Trung bình' :
+                  case_.adminUrgencyLevel === 4 ? 'Cao' : 'Rất cao') : 'Chưa đánh giá',
           'Admin - Tổng điểm': adminTotalScore || 'Chưa đánh giá',
           'Admin - Ngày đánh giá': case_.adminAssessmentDate ? formatVietnamDateTime(case_.adminAssessmentDate) : 'Chưa đánh giá',
           'Admin - Ghi chú đánh giá': case_.adminAssessmentNotes || '',
@@ -522,13 +508,13 @@ export default function DeliveryCasesPage() {
     }
   };
 
-  // Count active filters
-  const activeFiltersCount = [statusFilter, deliveryPersonFilter, customerFilter, startDate, endDate, searchTerm].filter(Boolean).length;
+
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* iOS Safari input fix */}
-      <style dangerouslySetInnerHTML={{__html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         input, select, textarea {
           -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
           opacity: 1 !important;
@@ -545,358 +531,405 @@ export default function DeliveryCasesPage() {
           opacity: 1 !important;
         }
       `}} />
-      
-        {/* Header */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 md:space-x-4">
-                <div className="p-1.5 md:p-2 bg-green-100 rounded-lg">
-                  <Package className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
-                </div>
-                <div>
-                  <h1 className="text-lg md:text-2xl font-bold text-gray-900">Quản lý case giao hàng</h1>
-                  <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">
-                    Quản lý và theo dõi các case giao hàng đến khách hàng
-                  </p>
-                </div>
+
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <div className="p-1.5 md:p-2 bg-green-100 rounded-lg">
+                <Package className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
               </div>
-              
-              {/* Create Case Button */}
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="flex items-center space-x-1 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-md md:rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-sm text-xs md:text-sm cursor-pointer"
-              >
-                <Package className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                <span className="font-medium hidden sm:inline">Tạo Case</span>
-                <span className="font-medium sm:hidden">Tạo</span>
-              </button>
+              <div>
+                <h1 className="text-lg md:text-2xl font-bold text-gray-900">Quản lý case giao hàng</h1>
+                <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1 hidden sm:block">
+                  Quản lý và theo dõi các case giao hàng đến khách hàng
+                </p>
+              </div>
             </div>
-            
+
+            {/* Create Case Button */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center space-x-1 md:space-x-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-md md:rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-sm text-xs md:text-sm cursor-pointer"
+            >
+              <Package className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="font-medium hidden sm:inline">Tạo Case</span>
+              <span className="font-medium sm:hidden">Tạo</span>
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-8">
+      {/* Main Content */}
+      <div className="max-w-full mx-auto px-3 md:px-4 py-4 md:py-8">
+        <div className="space-y-3 md:space-y-6">
+          {/* Search and Filter Bar */}
+          <div className="mb-3 md:mb-6 bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-1.5 md:space-x-2 flex-1 min-w-0">
+                  <div className="p-1 md:p-1.5 bg-green-100 rounded-md flex-shrink-0">
+                    <Search className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-xs md:text-base font-semibold text-gray-900">Tìm kiếm & Lọc</h3>
+                    <p className="text-[10px] md:text-xs text-gray-600 hidden sm:block">Tìm kiếm và lọc case giao hàng theo nhiều tiêu chí</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-1 md:space-x-2 flex-shrink-0">
+                  <button
+                    onClick={exportToExcel}
+                    disabled={allCases.length === 0}
+                    className="flex items-center space-x-1 md:space-x-1.5 px-2 md:px-3 py-1 md:py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+                  >
+                    <Download className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="text-[10px] md:text-sm font-medium hidden sm:inline">Xuất Excel</span>
+                  </button>
+                  <button
+                    onClick={fetchAllData}
+                    className="flex items-center space-x-1 md:space-x-1.5 px-2 md:px-3 py-1 md:py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
+                  >
+                    <RefreshCw className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="text-[10px] md:text-sm font-medium hidden sm:inline">Làm mới</span>
+                  </button>
+                </div>
+              </div>
+            </div>
 
-        {/* Main Content */}
-        <div className="space-y-4 md:space-y-6">
+            {/* Content */}
+            <div className="p-2 md:p-4">
+              <div className="space-y-2 md:space-y-4">
+                {/* Search Section */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 relative flex items-center">
+                    <Search className="absolute left-2 md:left-3 h-3 w-3 md:h-4 md:w-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Tìm kiếm theo tên case, người giao, khách hàng..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-7 md:pl-10 pr-2 md:pr-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                      style={{ WebkitAppearance: 'none', lineHeight: 'normal' }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`flex items-center gap-1 px-2 md:px-3 py-1.5 md:py-2 border rounded-md transition-all relative ${showFilters
+                      ? 'bg-green-50 border-green-300 text-green-700'
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Filter className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="text-xs md:text-sm font-medium hidden sm:inline">Lọc</span>
+                    {(statusFilter || deliveryPersonFilter || customerFilter || startDate || endDate || crmCodeFilter) && (
+                      <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 text-[9px] font-bold text-white bg-red-500 rounded-full">
+                        {[statusFilter, deliveryPersonFilter, customerFilter, startDate, endDate, crmCodeFilter].filter(Boolean).length}
+                      </span>
+                    )}
+                    <ChevronDown className={`h-3 w-3 md:h-4 md:w-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
 
-        {/* Search and Filter Bar */}
-        <div className="mb-4 md:mb-6 bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <button
-                      onClick={() => setShowFilters(!showFilters)}
-                      className="flex items-center space-x-2 flex-1 cursor-pointer"
-                    >
-                      <div className="p-1 md:p-1.5 bg-green-100 rounded-md">
-                        <Search className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-600" />
+                {/* Filters Section - Collapsible */}
+                <div className={`overflow-hidden transition-all duration-300 ${showFilters ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                  <div>
+                    <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1 md:mb-2">
+                      Bộ lọc
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2 md:gap-4">
+                      {/* Status Filter */}
+                      <div>
+                        <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-purple-500 rounded-full"></div>
+                            <span>Trạng thái</span>
+                          </div>
+                        </label>
+                        <select
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                          style={{ WebkitAppearance: 'none' }}
+                        >
+                          <option value="">Tất cả trạng thái</option>
+                          <option value="RECEIVED">Tiếp nhận</option>
+                          <option value="IN_PROGRESS">Đang xử lý</option>
+                          <option value="COMPLETED">Hoàn thành</option>
+                          <option value="CANCELLED">Đã hủy</option>
+                        </select>
                       </div>
+
+                      {/* Delivery Person Filter */}
+                      <div>
+                        <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-green-500 rounded-full"></div>
+                            <span>Người giao hàng</span>
+                          </div>
+                        </label>
+                        <select
+                          value={deliveryPersonFilter}
+                          onChange={(e) => setDeliveryPersonFilter(e.target.value)}
+                          className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                          style={{ WebkitAppearance: 'none' }}
+                        >
+                          <option value="">Tất cả người giao</option>
+                          {deliveryPersons.map((person) => (
+                            <option key={person.id} value={person.id}>
+                              {person.fullName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Customer Filter */}
+                      <div>
+                        <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-orange-500 rounded-full"></div>
+                            <span>Khách hàng</span>
+                          </div>
+                        </label>
+                        <select
+                          value={customerFilter}
+                          onChange={(e) => setCustomerFilter(e.target.value)}
+                          className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                          style={{ WebkitAppearance: 'none' }}
+                        >
+                          <option value="">Tất cả khách hàng</option>
+                          {customers.map((customer) => (
+                            <option key={customer.id} value={customer.id}>
+                              {customer.shortName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* CRM Code Filter */}
+                      <div>
+                        <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-pink-500 rounded-full"></div>
+                            <span>Mã CRM</span>
+                          </div>
+                        </label>
+                        <input
+                          type="text"
+                          value={crmCodeFilter}
+                          onChange={(e) => setCrmCodeFilter(e.target.value)}
+                          className="w-full px-2 md:px-3 py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
+                          placeholder="Nhập mã CRM..."
+                        />
+                      </div>
+
+                      {/* Date From Filter */}
+                      <div>
+                        <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-blue-500 rounded-full"></div>
+                            <span>Từ ngày</span>
+                          </div>
+                        </label>
+                        <DatePickerInput
+                          value={startDate}
+                          onChange={(date) => setStartDate(date ? new Date(date) : null)}
+                          placeholder="Chọn từ ngày"
+                          locale="vi"
+                          valueFormat="DD/MM/YYYY"
+                          clearable
+                          styles={{
+                            input: {
+                              fontSize: '0.875rem',
+                              padding: '0.5rem 0.75rem',
+                              minHeight: '40px',
+                              height: '40px',
+                              borderColor: '#e5e7eb',
+                              backgroundColor: '#f9fafb',
+                              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                            }
+                          }}
+                        />
+                      </div>
+
+                      {/* Date To Filter */}
+                      <div>
+                        <label className="block text-[10px] md:text-xs font-medium text-gray-600 mb-1">
+                          <div className="flex items-center space-x-1">
+                            <div className="w-1 h-1 md:w-1.5 md:h-1.5 bg-indigo-500 rounded-full"></div>
+                            <span>Đến ngày</span>
+                          </div>
+                        </label>
+                        <DatePickerInput
+                          value={endDate}
+                          onChange={(date) => setEndDate(date ? new Date(date) : null)}
+                          placeholder="Chọn đến ngày"
+                          locale="vi"
+                          valueFormat="DD/MM/YYYY"
+                          clearable
+                          minDate={startDate || undefined}
+                          styles={{
+                            input: {
+                              fontSize: '0.875rem',
+                              padding: '0.5rem 0.75rem',
+                              minHeight: '40px',
+                              height: '40px',
+                              borderColor: '#e5e7eb',
+                              backgroundColor: '#f9fafb',
+                              fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Active Filters & Actions */}
+                {(statusFilter || deliveryPersonFilter || customerFilter || startDate || endDate || searchTerm || crmCodeFilter) && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-md p-3 border border-green-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1">
-                        <h3 className="text-sm md:text-base font-semibold text-gray-900 flex items-center gap-2">
-                          Tìm kiếm & Lọc
-                          {activeFiltersCount > 0 && (
-                            <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-green-600 rounded-full">
-                              {activeFiltersCount}
+                        <div className="flex items-center space-x-1.5 mb-1.5">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                          <span className="text-xs font-semibold text-gray-800">Bộ lọc đang áp dụng</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {searchTerm && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                              <Search className="h-2.5 w-2.5 mr-1" />
+                              &quot;{searchTerm}&quot;
                             </span>
                           )}
-                        </h3>
-                        <p className="text-[10px] md:text-xs text-gray-600 hidden md:block">Tìm kiếm và lọc case giao hàng theo nhiều tiêu chí</p>
+                          {statusFilter && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                              <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
+                              Trạng thái: {statusFilter === 'RECEIVED' ? 'Tiếp nhận' :
+                                statusFilter === 'IN_PROGRESS' ? 'Đang xử lý' :
+                                  statusFilter === 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy'}
+                            </span>
+                          )}
+                          {deliveryPersonFilter && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
+                              Người giao: {deliveryPersons.find(d => d.id === deliveryPersonFilter)?.fullName}
+                            </span>
+                          )}
+                          {customerFilter && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
+                              Khách hàng: {customers.find(c => c.id === customerFilter)?.shortName}
+                            </span>
+                          )}
+                          {crmCodeFilter && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-800 border border-pink-200">
+                              <div className="w-1.5 h-1.5 bg-pink-500 rounded-full mr-1"></div>
+                              CRM: {crmCodeFilter}
+                            </span>
+                          )}
+                          {startDate && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></div>
+                              Từ: {formatVietnamDate(startDate.toISOString())}
+                            </span>
+                          )}
+                          {endDate && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                              <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
+                              Đến: {formatVietnamDate(endDate.toISOString())}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <ChevronDown className={`h-4 w-4 md:h-5 md:w-5 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-                    </button>
-                    <div className="hidden md:flex items-center space-x-2 ml-2">
-                      <button 
-                        onClick={exportToExcel}
-                        disabled={allCases.length === 0}
-                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        <span className="text-sm font-medium">Xuất Excel</span>
-                      </button>
-                      <button 
-                        onClick={fetchAllData}
-                        className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5" />
-                        <span className="text-sm font-medium">Làm mới</span>
-                      </button>
-                    </div>
-                  </div>
-          </div>
-
-          {/* Content */}
-          <div className={`transition-all duration-300 overflow-hidden ${showFilters ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="p-3 md:p-4">
-            <div className="space-y-3 md:space-y-4">
-              {/* Search Section */}
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">
-                  Tìm kiếm
-                </label>
-                <div className="relative">
-                  <Search className="absolute left-2.5 md:left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 md:h-4 md:w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm theo tên case, người giao hàng, khách hàng..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 md:pl-10 pr-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
-                    style={{ WebkitAppearance: 'none' }}
-                  />
-                </div>
-              </div>
-
-              {/* Filters Section */}
-              <div>
-                <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1.5 md:mb-2">
-                  Bộ lọc
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-                  {/* Status Filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                        <span>Trạng thái</span>
-                      </div>
-                    </label>
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
-                      style={{ WebkitAppearance: 'none' }}
-                    >
-                      <option value="">Tất cả trạng thái</option>
-                      <option value="RECEIVED">Tiếp nhận</option>
-                      <option value="IN_PROGRESS">Đang xử lý</option>
-                      <option value="COMPLETED">Hoàn thành</option>
-                      <option value="CANCELLED">Đã hủy</option>
-                    </select>
-                  </div>
-
-                  {/* Delivery Person Filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span>Người giao hàng</span>
-                      </div>
-                    </label>
-                    <select
-                      value={deliveryPersonFilter}
-                      onChange={(e) => setDeliveryPersonFilter(e.target.value)}
-                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
-                      style={{ WebkitAppearance: 'none' }}
-                    >
-                      <option value="">Tất cả người giao hàng</option>
-                      {deliveryPersons.map((deliveryPerson) => (
-                        <option key={deliveryPerson.id} value={deliveryPerson.id}>
-                          {deliveryPerson.fullName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Customer Filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                        <span>Khách hàng</span>
-                      </div>
-                    </label>
-                    <select
-                      value={customerFilter}
-                      onChange={(e) => setCustomerFilter(e.target.value)}
-                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
-                      style={{ WebkitAppearance: 'none' }}
-                    >
-                      <option value="">Tất cả khách hàng</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.shortName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Date From Filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                        <span>Từ ngày</span>
-                      </div>
-                    </label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
-                      style={{ WebkitAppearance: 'none' }}
-                    />
-                  </div>
-
-                  {/* Date To Filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
-                      <div className="flex items-center space-x-1.5">
-                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
-                        <span>Đến ngày</span>
-                      </div>
-                    </label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm"
-                      style={{ WebkitAppearance: 'none' }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Active Filters & Actions */}
-              {(statusFilter || deliveryPersonFilter || customerFilter || startDate || endDate || searchTerm) && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-md p-2 md:p-3 border border-green-100">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-1.5 mb-1.5">
-                        <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                        <span className="text-xs font-semibold text-gray-800">Bộ lọc đang áp dụng</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {searchTerm && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                            <Search className="h-2.5 w-2.5 mr-1" />
-                            &quot;{searchTerm}&quot;
-                          </span>
-                        )}
-                        {statusFilter && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
-                            <div className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-1"></div>
-                            Trạng thái: {statusFilter === 'RECEIVED' ? 'Tiếp nhận' : 
-                                         statusFilter === 'IN_PROGRESS' ? 'Đang xử lý' :
-                                         statusFilter === 'COMPLETED' ? 'Hoàn thành' : 'Đã hủy'}
-                          </span>
-                        )}
-                        {deliveryPersonFilter && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1"></div>
-                            Người giao: {deliveryPersons.find(d => d.id === deliveryPersonFilter)?.fullName}
-                          </span>
-                        )}
-                        {customerFilter && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
-                            <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-1"></div>
-                            Khách hàng: {customers.find(c => c.id === customerFilter)?.shortName}
-                          </span>
-                        )}
-                        {startDate && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-1"></div>
-                            Từ: {new Date(startDate).toLocaleDateString('vi-VN')}
-                          </span>
-                        )}
-                        {endDate && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
-                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mr-1"></div>
-                            Đến: {new Date(endDate).toLocaleDateString('vi-VN')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
                       <button
-                      onClick={() => {
-                        setStatusFilter('');
-                        setDeliveryPersonFilter('');
-                        setCustomerFilter('');
-                        setStartDate('');
-                        setEndDate('');
-                        setSearchTerm('');
-                      }}
-                      className="flex items-center space-x-1 md:space-x-1.5 px-2.5 md:px-3 py-1 md:py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
-                    >
-                      <span className="text-xs md:text-sm font-medium">Xóa tất cả</span>
-                    </button>
+                        onClick={() => {
+                          setStatusFilter('');
+                          setDeliveryPersonFilter('');
+                          setCustomerFilter('');
+                          setCrmCodeFilter('');
+                          setStartDate(null);
+                          setEndDate(null);
+                          setSearchTerm('');
+                        }}
+                        className="flex items-center space-x-1 md:space-x-1.5 px-2.5 md:px-3 py-1 md:py-1.5 bg-white border border-gray-200 rounded-md text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 cursor-pointer shadow-sm"
+                      >
+                        <span className="text-xs md:text-sm font-medium">Xóa tất cả</span>
+                      </button>
+                    </div>
                   </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-8">
+            <div className="bg-white rounded-md shadow p-3 md:p-6">
+              <div className="flex items-center">
+                <div className="p-1.5 md:p-2 bg-green-100 rounded-md md:rounded-lg">
+                  <Package className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
                 </div>
-              )}
+                <div className="ml-2 md:ml-4">
+                  <p className="text-[10px] md:text-sm font-medium text-gray-600">Tổng Case</p>
+                  <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.total}</p>
+                </div>
+              </div>
             </div>
-          </div>
-          </div>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-4 md:mb-8">
-          <div className="bg-white rounded-md shadow p-3 md:p-6">
-            <div className="flex items-center">
-              <div className="p-1.5 md:p-2 bg-green-100 rounded-md md:rounded-lg">
-                <Package className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
-              </div>
-              <div className="ml-2 md:ml-4">
-                <p className="text-[10px] md:text-sm font-medium text-gray-600">Tổng Case</p>
-                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.total}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-md shadow p-3 md:p-6">
-            <div className="flex items-center">
-              <div className="p-1.5 md:p-2 bg-yellow-100 rounded-md md:rounded-lg">
-                <Package className="h-4 w-4 md:h-6 md:w-6 text-yellow-600" />
-              </div>
-              <div className="ml-2 md:ml-4">
-                <p className="text-[10px] md:text-sm font-medium text-gray-600">Đang xử lý</p>
-                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.inProgress}</p>
+            <div className="bg-white rounded-md shadow p-3 md:p-6">
+              <div className="flex items-center">
+                <div className="p-1.5 md:p-2 bg-yellow-100 rounded-md md:rounded-lg">
+                  <Package className="h-4 w-4 md:h-6 md:w-6 text-yellow-600" />
+                </div>
+                <div className="ml-2 md:ml-4">
+                  <p className="text-[10px] md:text-sm font-medium text-gray-600">Đang xử lý</p>
+                  <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.inProgress}</p>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <div className="bg-white rounded-md shadow p-3 md:p-6">
-            <div className="flex items-center">
-              <div className="p-1.5 md:p-2 bg-green-100 rounded-md md:rounded-lg">
-                <Package className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
-              </div>
-              <div className="ml-2 md:ml-4">
-                <p className="text-[10px] md:text-sm font-medium text-gray-600">Hoàn thành</p>
-                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.completed}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-md shadow p-3 md:p-6">
-            <div className="flex items-center">
-              <div className="p-1.5 md:p-2 bg-red-100 rounded-md md:rounded-lg">
-                <Package className="h-4 w-4 md:h-6 md:w-6 text-red-600" />
-              </div>
-              <div className="ml-2 md:ml-4">
-                <p className="text-[10px] md:text-sm font-medium text-gray-600">Đã hủy</p>
-                <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.cancelled}</p>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Table */}
-        <DeliveryCaseTable
-          onView={handleViewCase}
-          onEdit={handleEditCase}
-          onDelete={handleOpenDeleteModal}
-          searchTerm={debouncedSearchTerm}
-          statusFilter={statusFilter}
-          deliveryPersonFilter={deliveryPersonFilter}
-          customerFilter={customerFilter}
-          startDate={startDate}
-          endDate={endDate}
-          allCases={allCases}
-          deletedCases={deletedCases}
-        />
+            <div className="bg-white rounded-md shadow p-3 md:p-6">
+              <div className="flex items-center">
+                <div className="p-1.5 md:p-2 bg-green-100 rounded-md md:rounded-lg">
+                  <Package className="h-4 w-4 md:h-6 md:w-6 text-green-600" />
+                </div>
+                <div className="ml-2 md:ml-4">
+                  <p className="text-[10px] md:text-sm font-medium text-gray-600">Hoàn thành</p>
+                  <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.completed}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-md shadow p-3 md:p-6">
+              <div className="flex items-center">
+                <div className="p-1.5 md:p-2 bg-red-100 rounded-md md:rounded-lg">
+                  <Package className="h-4 w-4 md:h-6 md:w-6 text-red-600" />
+                </div>
+                <div className="ml-2 md:ml-4">
+                  <p className="text-[10px] md:text-sm font-medium text-gray-600">Đã hủy</p>
+                  <p className="text-lg md:text-2xl font-bold text-gray-900">{stats.cancelled}</p>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Table */}
+          <DeliveryCaseTable
+            onView={handleViewCase}
+            onEdit={handleEditCase}
+            onDelete={handleOpenDeleteModal}
+            searchTerm={debouncedSearchTerm}
+            statusFilter={statusFilter}
+            deliveryPersonFilter={deliveryPersonFilter}
+            customerFilter={customerFilter}
+            startDate={startDate}
+            endDate={endDate}
+            allCases={allCases}
+            deletedCases={deletedCases}
+          />
         </div>
+      </div>
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedCase && (

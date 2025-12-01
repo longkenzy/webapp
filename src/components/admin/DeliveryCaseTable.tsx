@@ -1,16 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  Package, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  MoreHorizontal,
+import {
+  Package,
+  Edit,
+  Trash2,
   Calendar,
-  User,
-  Truck,
-  FileText,
   Clock,
   CheckCircle,
   RefreshCw,
@@ -87,8 +82,8 @@ interface DeliveryCaseTableProps {
   statusFilter?: string;
   deliveryPersonFilter?: string;
   customerFilter?: string;
-  startDate?: string;
-  endDate?: string;
+  startDate?: Date | null;
+  endDate?: Date | null;
   allCases?: DeliveryCase[];
   deletedCases?: Set<string>;
 }
@@ -116,16 +111,16 @@ const statusConfig = {
   }
 };
 
-export default function DeliveryCaseTable({ 
-  onView, 
-  onEdit, 
-  onDelete, 
-  searchTerm = '', 
-  statusFilter = '', 
-  deliveryPersonFilter = '', 
+export default function DeliveryCaseTable({
+  onView,
+  onEdit,
+  onDelete,
+  searchTerm = '',
+  statusFilter = '',
+  deliveryPersonFilter = '',
   customerFilter = '',
-  startDate = '',
-  endDate = '',
+  startDate = null,
+  endDate = null,
   allCases: propAllCases = [],
   deletedCases = new Set()
 }: DeliveryCaseTableProps) {
@@ -136,12 +131,12 @@ export default function DeliveryCaseTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
-  
+
   // Evaluation modal states
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
   const [selectedCase, setSelectedCase] = useState<DeliveryCase | null>(null);
   const [evaluating, setEvaluating] = useState(false);
-  
+
   // Admin evaluation categories
   const adminCategories = [
     EvaluationCategory.DIFFICULTY,
@@ -149,42 +144,40 @@ export default function DeliveryCaseTable({
     EvaluationCategory.IMPACT,
     EvaluationCategory.URGENCY,
   ];
-  
+
   const { getFieldOptions } = useEvaluationForm(EvaluationType.ADMIN, adminCategories);
 
   // Sync internal state with props when props change
   useEffect(() => {
-    console.log('📊 DeliveryCaseTable - Props allCases changed:', propAllCases.length);
-    console.log('📊 First case handler:', propAllCases[0]?.handler?.fullName);
     setAllCases(propAllCases);
   }, [propAllCases]);
 
   // Helper function to check if case is evaluated by admin
   const isDeliveryCaseEvaluatedByAdmin = (caseItem: DeliveryCase) => {
     return caseItem.adminDifficultyLevel !== null &&
-           caseItem.adminDifficultyLevel !== undefined &&
-           caseItem.adminEstimatedTime !== null &&
-           caseItem.adminEstimatedTime !== undefined &&
-           caseItem.adminImpactLevel !== null &&
-           caseItem.adminImpactLevel !== undefined &&
-           caseItem.adminUrgencyLevel !== null &&
-           caseItem.adminUrgencyLevel !== undefined;
+      caseItem.adminDifficultyLevel !== undefined &&
+      caseItem.adminEstimatedTime !== null &&
+      caseItem.adminEstimatedTime !== undefined &&
+      caseItem.adminImpactLevel !== null &&
+      caseItem.adminImpactLevel !== undefined &&
+      caseItem.adminUrgencyLevel !== null &&
+      caseItem.adminUrgencyLevel !== undefined;
   };
 
   // Helper functions for score calculations
   const calculateUserTotalScore = (caseItem: DeliveryCase) => {
-    return (caseItem.userDifficultyLevel || 0) + 
-           (caseItem.userEstimatedTime || 0) + 
-           (caseItem.userImpactLevel || 0) + 
-           (caseItem.userUrgencyLevel || 0) + 
-           (caseItem.userFormScore || 0);
+    return (caseItem.userDifficultyLevel || 0) +
+      (caseItem.userEstimatedTime || 0) +
+      (caseItem.userImpactLevel || 0) +
+      (caseItem.userUrgencyLevel || 0) +
+      (caseItem.userFormScore || 0);
   };
 
   const calculateAdminTotalScore = (caseItem: DeliveryCase) => {
-    return (caseItem.adminDifficultyLevel || 0) + 
-           (caseItem.adminEstimatedTime || 0) + 
-           (caseItem.adminImpactLevel || 0) + 
-           (caseItem.adminUrgencyLevel || 0);
+    return (caseItem.adminDifficultyLevel || 0) +
+      (caseItem.adminEstimatedTime || 0) +
+      (caseItem.adminImpactLevel || 0) +
+      (caseItem.adminUrgencyLevel || 0);
   };
 
   const calculateGrandTotal = (userTotal: number, adminTotal: number) => {
@@ -296,16 +289,16 @@ export default function DeliveryCaseTable({
 
       if (response.ok) {
         const result = await response.json();
-        
+
         // Update the case in the list
-        setAllCases(prevCases => 
-          prevCases.map(case_ => 
-            case_.id === selectedCase.id 
+        setAllCases(prevCases =>
+          prevCases.map(case_ =>
+            case_.id === selectedCase.id
               ? { ...case_, ...result.data }
               : case_
           )
         );
-        
+
         handleCloseEvaluationModal();
       } else {
         const error = await response.json();
@@ -360,13 +353,13 @@ export default function DeliveryCaseTable({
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        const matchesSearch = 
+        const matchesSearch =
           case_.title.toLowerCase().includes(searchLower) ||
           case_.description.toLowerCase().includes(searchLower) ||
           case_.requester?.fullName.toLowerCase().includes(searchLower) ||
           case_.handler?.fullName.toLowerCase().includes(searchLower) ||
           case_.customer?.shortName.toLowerCase().includes(searchLower);
-        
+
         if (!matchesSearch) {
           return false;
         }
@@ -381,9 +374,9 @@ export default function DeliveryCaseTable({
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch('/api/delivery-cases?limit=1000'); // Get all cases
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch cases');
       }
@@ -401,7 +394,7 @@ export default function DeliveryCaseTable({
   const refreshData = async () => {
     try {
       const response = await fetch('/api/delivery-cases?limit=1000');
-      
+
       if (response.ok) {
         const data = await response.json();
         setAllCases(data.deliveryCases);
@@ -413,19 +406,13 @@ export default function DeliveryCaseTable({
 
   // Apply filters and pagination
   useEffect(() => {
-    console.log('🔄 Filtering cases... allCases length:', allCases.length);
-    console.log('🔄 First case in allCases:', allCases[0]?.id, allCases[0]?.handler?.fullName);
-    
     const filtered = filterCases(allCases);
-    
-    console.log('🔄 Filtered cases length:', filtered.length);
-    console.log('🔄 First filtered case:', filtered[0]?.id, filtered[0]?.handler?.fullName);
-    
+
     setFilteredCases(filtered);
-    
+
     // Reset to page 1 when filters change
     setCurrentPage(1);
-    
+
     // Calculate total pages
     const total = Math.ceil(filtered.length / itemsPerPage);
     setTotalPages(total);
@@ -436,13 +423,7 @@ export default function DeliveryCaseTable({
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const pageData = filteredCases.slice(startIndex, endIndex);
-    
-    console.log('📄 Getting page', currentPage, '- Total filtered:', filteredCases.length);
-    console.log('📄 Page data (items', startIndex, '-', endIndex, '):', pageData.length);
-    if (pageData[0]) {
-      console.log('📄 First item on page:', pageData[0].id, pageData[0].handler?.fullName);
-    }
-    
+
     return pageData;
   };
 
@@ -484,7 +465,7 @@ export default function DeliveryCaseTable({
   const getStatusBadge = (status: DeliveryCaseStatus) => {
     const config = statusConfig[status];
     const Icon = config.icon;
-    
+
     return (
       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
         <Icon className="w-3 h-3" />
@@ -518,7 +499,7 @@ export default function DeliveryCaseTable({
     );
   };
 
-  const getProcessFlow = (caseItem: any) => {
+  const getProcessFlow = (caseItem: DeliveryCase) => {
     if (caseItem.status === 'CANCELLED') {
       return (
         <div className="text-center py-1">
@@ -530,15 +511,15 @@ export default function DeliveryCaseTable({
       );
     }
 
-    const currentStep = caseItem.status === 'RECEIVED' ? 1 : 
-                      caseItem.status === 'IN_PROGRESS' ? 2 : 3;
+    const currentStep = caseItem.status === 'RECEIVED' ? 1 :
+      caseItem.status === 'IN_PROGRESS' ? 2 : 3;
 
     // Determine timestamps for each step
     const receivedTime = caseItem.createdAt; // Case được tạo = tiếp nhận
-    const inProgressTime = caseItem.status === 'IN_PROGRESS' || caseItem.status === 'COMPLETED' ? 
-                          caseItem.updatedAt : null; // Có thể cần thêm field riêng
-    const completedTime = caseItem.status === 'COMPLETED' ? 
-                         caseItem.endDate || caseItem.updatedAt : null;
+    const inProgressTime = caseItem.status === 'IN_PROGRESS' || caseItem.status === 'COMPLETED' ?
+      caseItem.updatedAt : null; // Có thể cần thêm field riêng
+    const completedTime = caseItem.status === 'COMPLETED' ?
+      caseItem.endDate || caseItem.updatedAt : null;
 
     return (
       <div className="py-1">
@@ -550,49 +531,46 @@ export default function DeliveryCaseTable({
               <div className="text-xs font-medium text-gray-700 mb-1">
                 Tiếp nhận
               </div>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${
-                currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'
+                }`}>
                 <Package className="w-3 h-3" />
               </div>
               <div className="text-xs text-gray-500 text-center">
                 {formatDateTime(receivedTime)}
               </div>
             </div>
-            
+
             {/* Line */}
             <div className="flex items-center justify-center h-6 -mt-3">
               <div className={`w-8 h-0.5 ${currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
             </div>
-            
+
             {/* Step 2: Đang xử lý */}
             <div className="flex flex-col items-center">
               <div className="text-xs font-medium text-gray-700 mb-1">
                 Đang xử lý
               </div>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${
-                currentStep >= 2 ? 'bg-yellow-500 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${currentStep >= 2 ? 'bg-yellow-500 text-white' : 'bg-gray-300 text-gray-600'
+                }`}>
                 <Clock className="w-3 h-3" />
               </div>
               <div className="text-xs text-gray-500 text-center">
                 {inProgressTime ? formatDateTime(inProgressTime) : '-'}
               </div>
             </div>
-            
+
             {/* Line */}
             <div className="flex items-center justify-center h-6 -mt-3">
               <div className={`w-8 h-0.5 ${currentStep >= 3 ? 'bg-yellow-500' : 'bg-gray-300'}`}></div>
             </div>
-            
+
             {/* Step 3: Hoàn thành */}
             <div className="flex flex-col items-center">
               <div className="text-xs font-medium text-gray-700 mb-1">
                 Hoàn thành
               </div>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${
-                currentStep >= 3 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center mb-1 ${currentStep >= 3 ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'
+                }`}>
                 <CheckCircle className="w-3 h-3" />
               </div>
               <div className="text-xs text-gray-500 text-center">
@@ -619,7 +597,7 @@ export default function DeliveryCaseTable({
     return (
       <div className="text-center py-8">
         <div className="text-red-600 mb-2">Lỗi: {error}</div>
-        <button 
+        <button
           onClick={fetchAllCases}
           className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
         >
@@ -637,7 +615,7 @@ export default function DeliveryCaseTable({
           <h3 className="text-xs md:text-sm font-semibold text-gray-900">
             Danh sách Case Giao Hàng
           </h3>
-          
+
           {/* Status Filter and Refresh */}
           <div className="flex items-center gap-2 md:gap-3">
             {statusFilter && (
@@ -660,22 +638,22 @@ export default function DeliveryCaseTable({
             <div className="flex items-center">
               <span className="text-xs font-medium text-gray-700">Tiếp nhận</span>
             </div>
-            
+
             {/* Line */}
             <div className="flex items-center justify-center h-6 -mt-1">
               <div className="w-8 h-0.5 bg-gray-300"></div>
             </div>
-            
+
             {/* Step 2: Đang xử lý */}
             <div className="flex items-center">
               <span className="text-xs font-medium text-gray-700">Đang xử lý</span>
             </div>
-            
+
             {/* Line */}
             <div className="flex items-center justify-center h-6 -mt-1">
               <div className="w-8 h-0.5 bg-gray-300"></div>
             </div>
-            
+
             {/* Step 3: Hoàn thành */}
             <div className="flex items-center">
               <span className="text-xs font-medium text-gray-700">Hoàn thành</span>
@@ -692,15 +670,13 @@ export default function DeliveryCaseTable({
           const adminTotalScore = calculateAdminTotalScore(caseItem);
           const grandTotal = calculateGrandTotal(userTotalScore, adminTotalScore);
           const StatusIcon = statusConfig[caseItem.status].icon;
-          
+
           return (
-            <div 
-              key={caseItem.id} 
-              className={`p-3 bg-white border border-gray-200 rounded-md shadow-sm ${
-                !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
-              } ${
-                deletedCases.has(caseItem.id) ? 'opacity-50 bg-red-50/30' : ''
-              }`}
+            <div
+              key={caseItem.id}
+              className={`p-3 bg-white border border-gray-200 rounded-md shadow-sm ${!isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                } ${deletedCases.has(caseItem.id) ? 'opacity-50 bg-red-50/30' : ''
+                }`}
             >
               {/* STT & Status */}
               <div className="flex items-center justify-between mb-2">
@@ -781,13 +757,13 @@ export default function DeliveryCaseTable({
                 <div>
                   <span>Bắt đầu: </span>
                   <span className="font-medium">
-                    {new Date(caseItem.startDate).toLocaleString('vi-VN', { 
-                      day: '2-digit', 
-                      month: '2-digit', 
-                      year: 'numeric', 
-                      hour: '2-digit', 
+                    {new Date(caseItem.startDate).toLocaleString('vi-VN', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
                       minute: '2-digit',
-                      timeZone: 'Asia/Ho_Chi_Minh' 
+                      timeZone: 'Asia/Ho_Chi_Minh'
                     })}
                   </span>
                 </div>
@@ -843,7 +819,7 @@ export default function DeliveryCaseTable({
             </div>
           );
         })}
-        
+
         {/* Empty State - Mobile */}
         {filteredCases.length === 0 && (
           <div className="text-center py-8">
@@ -890,126 +866,121 @@ export default function DeliveryCaseTable({
           <tbody className="bg-white divide-y divide-gray-200">
             {getCurrentPageData().map((caseItem, index) => {
               const isEvaluated = isDeliveryCaseEvaluatedByAdmin(caseItem);
-              
-              // Debug log with FULL ID
-              console.log(`🎨 Row ${index}: ${caseItem.id} → Handler: ${caseItem.handler?.fullName} (ID: ${caseItem.handler?.id})`);
-              
+
               return (
-                <tr key={caseItem.id} className={`hover:bg-gray-50 ${
-                  !isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
-                }`}>
-                <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-900 text-center">
-                  {filteredCases.length - ((currentPage - 1) * itemsPerPage + index)}
-                </td>
-                
-                {/* Người giao hàng */}
-                <td className="px-2 py-1 whitespace-nowrap">
-                  <div>
-                    <div className="text-xs font-medium text-gray-900">
-                      {caseItem.handler?.fullName || 'N/A'}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {caseItem.handler?.position || ''}
-                    </div>
-                  </div>
-                </td>
+                <tr key={caseItem.id} className={`hover:bg-gray-50 ${!isEvaluated ? 'bg-yellow-50/50 border-l-4 border-l-yellow-400' : ''
+                  }`}>
+                  <td className="px-2 py-1 whitespace-nowrap text-xs text-gray-900 text-center">
+                    {filteredCases.length - ((currentPage - 1) * itemsPerPage + index)}
+                  </td>
 
-                {/* Nội dung giao hàng */}
-                <td className="px-2 py-1">
-                  <div className="max-w-lg">
-                    <div className="text-xs font-medium text-gray-900 mb-1">
-                      {caseItem.title.replace('Giao hàng đến ', '')}
-                    </div>
-                    {caseItem.products && caseItem.products.length > 0 ? (
-                      <div className="space-y-1">
-                        {caseItem.products.map((product, idx) => (
-                          <div key={product.id} className="text-xs text-gray-700">
-                            <span className="font-medium">{product.name}</span>
-                            <span className="text-gray-600"> | SL: {product.quantity}</span>
-                            {product.code && (
-                              <span className="text-gray-600"> | Mã: {product.code}</span>
-                            )}
-                            {product.serialNumber && (
-                              <span className="text-gray-600"> | S/N: {product.serialNumber}</span>
-                            )}
-                          </div>
-                        ))}
+                  {/* Người giao hàng */}
+                  <td className="px-2 py-1 whitespace-nowrap">
+                    <div>
+                      <div className="text-xs font-medium text-gray-900">
+                        {caseItem.handler?.fullName || 'N/A'}
                       </div>
-                    ) : (
-                      <div className="text-xs text-gray-500 italic">
-                        {caseItem.description || 'Không có mô tả sản phẩm'}
+                      <div className="text-xs text-gray-500">
+                        {caseItem.handler?.position || ''}
                       </div>
-                    )}
-                  </div>
-                </td>
+                    </div>
+                  </td>
 
-                {/* Quy trình xử lý */}
-                <td className="px-2 py-1 text-center">
-                  {getProcessFlow(caseItem)}
-                </td>
+                  {/* Nội dung giao hàng */}
+                  <td className="px-2 py-1">
+                    <div className="max-w-lg">
+                      <div className="text-xs font-medium text-gray-900 mb-1">
+                        {caseItem.title.replace('Giao hàng đến ', '')}
+                      </div>
+                      {caseItem.products && caseItem.products.length > 0 ? (
+                        <div className="space-y-1">
+                          {caseItem.products.map((product, idx) => (
+                            <div key={product.id} className="text-xs text-gray-700">
+                              <span className="font-medium">{product.name}</span>
+                              <span className="text-gray-600"> | SL: {product.quantity}</span>
+                              {product.code && (
+                                <span className="text-gray-600"> | Mã: {product.code}</span>
+                              )}
+                              {product.serialNumber && (
+                                <span className="text-gray-600"> | S/N: {product.serialNumber}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-500 italic">
+                          {caseItem.description || 'Không có mô tả sản phẩm'}
+                        </div>
+                      )}
+                    </div>
+                  </td>
 
-                {/* Điểm User */}
-                <td className="px-2 py-1 text-center">
-                  <span className="text-xs font-medium text-blue-600">
-                    {((caseItem.userDifficultyLevel || 0) + (caseItem.userEstimatedTime || 0) + (caseItem.userImpactLevel || 0) + (caseItem.userUrgencyLevel || 0) + (caseItem.userFormScore || 0))}
-                  </span>
-                </td>
+                  {/* Quy trình xử lý */}
+                  <td className="px-2 py-1 text-center">
+                    {getProcessFlow(caseItem)}
+                  </td>
 
-                {/* Điểm Admin */}
-                <td className="px-2 py-1 text-center">
-                  <span className="text-xs font-medium text-green-600">
-                    {((caseItem.adminDifficultyLevel || 0) + (caseItem.adminEstimatedTime || 0) + (caseItem.adminImpactLevel || 0) + (caseItem.adminUrgencyLevel || 0))}
-                  </span>
-                </td>
+                  {/* Điểm User */}
+                  <td className="px-2 py-1 text-center">
+                    <span className="text-xs font-medium text-blue-600">
+                      {((caseItem.userDifficultyLevel || 0) + (caseItem.userEstimatedTime || 0) + (caseItem.userImpactLevel || 0) + (caseItem.userUrgencyLevel || 0) + (caseItem.userFormScore || 0))}
+                    </span>
+                  </td>
 
-                {/* Tổng điểm */}
-                <td className="px-2 py-1 text-center">
-                  <span className="text-xs font-bold text-purple-600">
-                    {(() => {
-                      const userTotal = ((caseItem.userDifficultyLevel || 0) + (caseItem.userEstimatedTime || 0) + (caseItem.userImpactLevel || 0) + (caseItem.userUrgencyLevel || 0) + (caseItem.userFormScore || 0));
-                      const adminTotal = ((caseItem.adminDifficultyLevel || 0) + (caseItem.adminEstimatedTime || 0) + (caseItem.adminImpactLevel || 0) + (caseItem.adminUrgencyLevel || 0));
-                      return ((userTotal * 0.4) + (adminTotal * 0.6)).toFixed(1);
-                    })()}
-                  </span>
-                </td>
+                  {/* Điểm Admin */}
+                  <td className="px-2 py-1 text-center">
+                    <span className="text-xs font-medium text-green-600">
+                      {((caseItem.adminDifficultyLevel || 0) + (caseItem.adminEstimatedTime || 0) + (caseItem.adminImpactLevel || 0) + (caseItem.adminUrgencyLevel || 0))}
+                    </span>
+                  </td>
 
-                 {/* Hành động */}
-                 <td className="px-2 py-1 whitespace-nowrap text-xs font-medium text-center">
-                   <div className="flex items-center justify-center gap-2">
-                     {/* Nút chỉnh sửa case */}
-                     {onEdit && (
-                       <button
-                         onClick={() => onEdit(caseItem)}
-                         className="p-1 rounded transition-colors text-blue-600 hover:text-blue-900 hover:bg-blue-50 cursor-pointer"
-                         title="Chỉnh sửa case"
-                       >
-                         <Edit className="h-4 w-4" />
-                       </button>
-                     )}
-                     
-                     {/* Nút đánh giá */}
-                     <button
-                       onClick={() => handleOpenEvaluationModal(caseItem)}
-                       className={`p-1 rounded transition-colors ${
-                         isEvaluated 
-                           ? 'text-green-600 hover:text-green-900 hover:bg-green-50 cursor-pointer' 
-                           : 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 bg-yellow-100 cursor-pointer'
-                       }`}
-                       title={isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
-                     >
-                       {isEvaluated ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
-                     </button>
-                     {onDelete && (
-                       <button
-                         onClick={() => onDelete(caseItem)}
-                         className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
-                         title="Xóa"
-                       >
-                         <Trash2 className="h-4 w-4" />
-                       </button>
-                     )}
-                   </div>
-                 </td>
+                  {/* Tổng điểm */}
+                  <td className="px-2 py-1 text-center">
+                    <span className="text-xs font-bold text-purple-600">
+                      {(() => {
+                        const userTotal = ((caseItem.userDifficultyLevel || 0) + (caseItem.userEstimatedTime || 0) + (caseItem.userImpactLevel || 0) + (caseItem.userUrgencyLevel || 0) + (caseItem.userFormScore || 0));
+                        const adminTotal = ((caseItem.adminDifficultyLevel || 0) + (caseItem.adminEstimatedTime || 0) + (caseItem.adminImpactLevel || 0) + (caseItem.adminUrgencyLevel || 0));
+                        return ((userTotal * 0.4) + (adminTotal * 0.6)).toFixed(1);
+                      })()}
+                    </span>
+                  </td>
+
+                  {/* Hành động */}
+                  <td className="px-2 py-1 whitespace-nowrap text-xs font-medium text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      {/* Nút chỉnh sửa case */}
+                      {onEdit && (
+                        <button
+                          onClick={() => onEdit(caseItem)}
+                          className="p-1 rounded transition-colors text-blue-600 hover:text-blue-900 hover:bg-blue-50 cursor-pointer"
+                          title="Chỉnh sửa case"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      )}
+
+                      {/* Nút đánh giá */}
+                      <button
+                        onClick={() => handleOpenEvaluationModal(caseItem)}
+                        className={`p-1 rounded transition-colors ${isEvaluated
+                          ? 'text-green-600 hover:text-green-900 hover:bg-green-50 cursor-pointer'
+                          : 'text-yellow-600 hover:text-yellow-900 hover:bg-yellow-50 bg-yellow-100 cursor-pointer'
+                          }`}
+                        title={isEvaluated ? "Đánh giá case" : "⚠️ Chưa đánh giá - Click để đánh giá"}
+                      >
+                        {isEvaluated ? <CheckCircle className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                      </button>
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(caseItem)}
+                          className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50"
+                          title="Xóa"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
@@ -1033,7 +1004,7 @@ export default function DeliveryCaseTable({
                   <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
-              
+
               {/* Page numbers */}
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let pageNum;
@@ -1046,22 +1017,21 @@ export default function DeliveryCaseTable({
                 } else {
                   pageNum = currentPage - 2 + i;
                 }
-                
+
                 return (
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium cursor-pointer ${
-                      pageNum === currentPage
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    }`}
+                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium cursor-pointer ${pageNum === currentPage
+                      ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                      : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                      }`}
                   >
                     {pageNum}
                   </button>
                 );
               })}
-              
+
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
@@ -1074,7 +1044,7 @@ export default function DeliveryCaseTable({
               </button>
             </nav>
           </div>
-          
+
           {/* Desktop Pagination */}
           <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
             <div>
@@ -1102,7 +1072,7 @@ export default function DeliveryCaseTable({
                     <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
-                
+
                 {/* Page numbers */}
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNum;
@@ -1115,22 +1085,21 @@ export default function DeliveryCaseTable({
                   } else {
                     pageNum = currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium cursor-pointer ${
-                        pageNum === currentPage
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
+                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium cursor-pointer ${pageNum === currentPage
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }`}
                     >
                       {pageNum}
                     </button>
                   );
                 })}
-                
+
                 <button
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -1161,7 +1130,8 @@ export default function DeliveryCaseTable({
       {/* Evaluation Modal */}
       {showEvaluationModal && selectedCase && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end md:items-center justify-center md:p-4">
-          <style dangerouslySetInnerHTML={{ __html: `
+          <style dangerouslySetInnerHTML={{
+            __html: `
             .ios-input-fix input, .ios-input-fix select, .ios-input-fix textarea {
               -webkit-text-fill-color: #111827 !important;
               opacity: 1 !important;
@@ -1201,7 +1171,7 @@ export default function DeliveryCaseTable({
                     <h4 className="text-xs md:text-sm font-semibold text-green-800">Đánh giá của Admin</h4>
                     <button
                       type="button"
-                      onClick={() => {/* fetchConfigs */}}
+                      onClick={() => {/* fetchConfigs */ }}
                       className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors cursor-pointer"
                       title="Làm mới options đánh giá"
                     >

@@ -578,12 +578,7 @@ export default function UserDashboardPage() {
     customer.name.toLowerCase().includes(customerSearch.toLowerCase())
   );
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Chào buổi sáng';
-    if (hour < 18) return 'Chào buổi chiều';
-    return 'Chào buổi tối';
-  };
+
 
   if (loading) {
     return (
@@ -632,7 +627,7 @@ export default function UserDashboardPage() {
                 <span>{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
               </div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                {getGreeting()}, <span className="text-blue-600">User</span>
+                Dashboard
               </h1>
             </div>
 

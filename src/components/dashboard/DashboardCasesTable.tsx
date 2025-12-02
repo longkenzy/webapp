@@ -48,7 +48,7 @@ export default function DashboardCasesTable() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  
+
   const { registerRefreshCases } = useDashboardRefresh();
 
   const fetchCases = async (showLoading = false) => {
@@ -56,14 +56,14 @@ export default function DashboardCasesTable() {
       if (showLoading) {
         setLoading(true);
       }
-      
+
       const response = await fetch('/api/dashboard/cases', {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache',
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setCases(data.data || []);
@@ -97,7 +97,7 @@ export default function DashboardCasesTable() {
 
   useEffect(() => {
     fetchCases(true); // Show loading only on initial load
-    
+
     // Register refresh function with context
     registerRefreshCases(() => fetchCases(false));
   }, [registerRefreshCases]);
@@ -258,7 +258,7 @@ export default function DashboardCasesTable() {
               cases.map((case_) => (
                 <tr key={case_.id} className="hover:bg-gray-50 transition-colors duration-150">
                   <td className="px-4 py-4">
-                    <div className="flex items-start space-x-3">
+                    <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
                         <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                           <FileText className="h-4 w-4 text-blue-600" />
@@ -295,8 +295,8 @@ export default function DashboardCasesTable() {
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 rounded-full overflow-hidden">
                         {case_.handler.avatar ? (
-                          <img 
-                            src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`} 
+                          <img
+                            src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`}
                             alt={case_.handler.fullName}
                             className="w-full h-full object-cover"
                           />

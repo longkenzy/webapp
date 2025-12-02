@@ -33,6 +33,7 @@ interface UnifiedCase {
     avatar?: string;
   };
   customerName: string;
+  fullCustomerName?: string;
   status: string;
   startDate: string;
   endDate?: string;
@@ -263,6 +264,7 @@ export default function UserDashboardPage() {
               avatar: case_.handler.avatar
             } : undefined,
             customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || 'Khách hàng',
+            fullCustomerName: case_.customer?.fullCompanyName,
             status: case_.status,
             startDate: case_.startDate,
             endDate: case_.endDate,
@@ -307,6 +309,7 @@ export default function UserDashboardPage() {
               avatar: case_.handler.avatar
             } : undefined,
             customerName: case_.supplier?.shortName || case_.supplier?.fullCompanyName || 'Nhà cung cấp',
+            fullCustomerName: case_.supplier?.fullCompanyName,
             status: case_.status,
             startDate: case_.startDate,
             endDate: case_.endDate,
@@ -333,6 +336,7 @@ export default function UserDashboardPage() {
               avatar: case_.handler.avatar
             } : undefined,
             customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || case_.customerName || 'Khách hàng',
+            fullCustomerName: case_.customer?.fullCompanyName,
             status: case_.status,
             startDate: case_.startDate,
             endDate: case_.endDate,
@@ -359,6 +363,7 @@ export default function UserDashboardPage() {
               avatar: case_.handler.avatar
             } : undefined,
             customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || 'Khách hàng',
+            fullCustomerName: case_.customer?.fullCompanyName,
             status: case_.status,
             startDate: case_.startDate,
             endDate: case_.endDate,
@@ -385,6 +390,7 @@ export default function UserDashboardPage() {
               avatar: case_.handler.avatar
             } : undefined,
             customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || 'Khách hàng',
+            fullCustomerName: case_.customer?.fullCompanyName,
             status: case_.status,
             startDate: case_.startDate,
             endDate: case_.endDate,
@@ -411,6 +417,7 @@ export default function UserDashboardPage() {
               avatar: case_.handler.avatar
             } : undefined,
             customerName: case_.customer?.shortName || case_.customer?.fullCompanyName || case_.customerName || 'Khách hàng',
+            fullCustomerName: case_.customer?.fullCompanyName,
             status: case_.status,
             startDate: case_.startDate,
             endDate: case_.endDate,
@@ -821,8 +828,8 @@ export default function UserDashboardPage() {
                         {filteredCases.length - (startIndex + index)}
                       </td>
                       <td className="px-6 py-2.5 max-w-md">
-                        <div className="flex items-start gap-3">
-                          <div className={`mt-1 p-2 rounded-lg flex-shrink-0 ${case_.type === 'internal' ? 'bg-blue-100 text-blue-600' :
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg flex-shrink-0 ${case_.type === 'internal' ? 'bg-blue-100 text-blue-600' :
                             case_.type === 'delivery' ? 'bg-green-100 text-green-600' :
                               case_.type === 'receiving' ? 'bg-yellow-100 text-yellow-600' :
                                 case_.type === 'maintenance' ? 'bg-purple-100 text-purple-600' :
@@ -875,8 +882,14 @@ export default function UserDashboardPage() {
                             <p className="font-medium text-gray-900 line-clamp-1" title={case_.customerName}>
                               {case_.type === 'internal' ? 'Smart Services' : case_.customerName}
                             </p>
-                            {case_.type === 'internal' && (
+                            {case_.type === 'internal' ? (
                               <p className="text-xs text-gray-500">{case_.customerName.split('\n')[1]}</p>
+                            ) : (
+                              case_.fullCustomerName && case_.fullCustomerName !== case_.customerName && (
+                                <p className="text-xs text-gray-500 line-clamp-1" title={case_.fullCustomerName}>
+                                  {case_.fullCustomerName}
+                                </p>
+                              )
                             )}
                           </div>
                         </div>

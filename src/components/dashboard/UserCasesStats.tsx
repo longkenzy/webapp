@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  RefreshCw, 
-  TrendingUp, 
-  User, 
+import {
+  RefreshCw,
+  TrendingUp,
+  User,
   Users,
   BarChart3,
   Award,
@@ -41,7 +41,7 @@ export default function UserCasesStats() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isAutoRefreshing, setIsAutoRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'current' | 'total'>('current');
-  
+
   const { registerRefreshStats } = useDashboardRefresh();
 
   const fetchStats = async (showLoading = false) => {
@@ -49,7 +49,7 @@ export default function UserCasesStats() {
       if (showLoading) {
         setLoading(true);
       }
-      
+
       // Fetch all case types data
       const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes, deploymentRes] = await Promise.all([
         fetch('/api/internal-cases?limit=1000'),
@@ -75,7 +75,7 @@ export default function UserCasesStats() {
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
-      
+
       // Filter function for current month
       const isCurrentMonth = (dateString: string) => {
         const date = new Date(dateString);
@@ -259,7 +259,7 @@ export default function UserCasesStats() {
       })).sort((a, b) => b.totalCases - a.totalCases); // Sort by total cases
 
       const totalCases = users.reduce((sum, user) => sum + user.totalCases, 0);
-      const averageCompletionRate = users.length > 0 
+      const averageCompletionRate = users.length > 0
         ? Math.round(users.reduce((sum, user) => sum + user.completionRate, 0) / users.length)
         : 0;
 
@@ -298,7 +298,7 @@ export default function UserCasesStats() {
 
   useEffect(() => {
     fetchStats(true);
-    
+
     // Register refresh function with context
     registerRefreshStats(() => fetchStats(false));
   }, [registerRefreshStats]);
@@ -385,11 +385,10 @@ export default function UserCasesStats() {
           <nav className="flex gap-3 md:gap-4 px-3 md:px-4" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('current')}
-              className={`py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200 ${
-                activeTab === 'current'
+              className={`py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200 ${activeTab === 'current'
                   ? 'border-purple-500 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-1">
                 <TrendingUp className="h-3 w-3" />
@@ -398,11 +397,10 @@ export default function UserCasesStats() {
             </button>
             <button
               onClick={() => setActiveTab('total')}
-              className={`py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200 ${
-                activeTab === 'total'
+              className={`py-2 px-1 border-b-2 font-medium text-xs transition-colors duration-200 ${activeTab === 'total'
                   ? 'border-purple-500 text-purple-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <div className="flex items-center space-x-1">
                 <Target className="h-3 w-3" />
@@ -454,8 +452,8 @@ export default function UserCasesStats() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis 
-                        dataKey="name" 
+                      <XAxis
+                        dataKey="name"
                         tick={{ fontSize: 10 }}
                         angle={-45}
                         textAnchor="end"
@@ -463,7 +461,7 @@ export default function UserCasesStats() {
                         interval={0}
                       />
                       <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value: number, name: string) => {
                           const labels: { [key: string]: string } = {
                             total: 'Tổng cases',
@@ -499,14 +497,14 @@ export default function UserCasesStats() {
               {/* User Details Table - Responsive */}
               <div className="space-y-2">
                 <h4 className="text-xs md:text-sm font-semibold text-gray-900">Chi tiết từng User</h4>
-                <div className="space-y-2">
-                  {stats.users.slice(0, 5).map((user, index) => (
+                <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar">
+                  {stats.users.map((user, index) => (
                     <div key={user.userId} className="flex items-center justify-between p-2 md:p-3 bg-white rounded-md border border-gray-200 hover:shadow-sm transition-shadow duration-200">
                       <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
                         <div className="flex items-center justify-center w-7 h-7 md:w-8 md:h-8 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full flex-shrink-0">
                           {user.avatar ? (
-                            <img 
-                              src={user.avatar.startsWith('/avatars/') ? user.avatar : `/avatars/${user.avatar}`} 
+                            <img
+                              src={user.avatar.startsWith('/avatars/') ? user.avatar : `/avatars/${user.avatar}`}
                               alt={user.userName}
                               className="w-full h-full object-cover rounded-full"
                             />
@@ -549,8 +547,8 @@ export default function UserCasesStats() {
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có dữ liệu</h3>
               <p className="text-gray-500">
-                {activeTab === 'current' 
-                  ? 'Chưa có user nào xử lý case trong tháng này' 
+                {activeTab === 'current'
+                  ? 'Chưa có user nào xử lý case trong tháng này'
                   : 'Chưa có user nào xử lý case trong hệ thống'
                 }
               </p>

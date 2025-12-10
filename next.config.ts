@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  eslint: {
+  /* eslint: {
     // Skip ESLint during production builds on Vercel
     ignoreDuringBuilds: true,
-  },
+  }, */
   // Enable standalone output for Docker deployment
   output: 'standalone',
   // Disable automatic static optimization for dynamic routes
@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     // Optimize page loading
     optimizePackageImports: ['lucide-react'],
   },
-  
+
   // Turbopack configuration
   turbopack: {
     rules: {
@@ -22,13 +22,13 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  
+
   // Optimize images
   images: {
     domains: [],
     unoptimized: false,
   },
-  
+
   // Reduce bundle size
   webpack: (config, { dev, isServer }) => {
     // Optimize for production
@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
         },
       };
     }
-    
+
     return config;
   },
 };

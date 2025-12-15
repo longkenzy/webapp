@@ -6,18 +6,21 @@ import UnifiedSessionManager from "@/components/shared/common/UnifiedSessionMana
 import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
+import { SocketProvider } from "@/providers/SocketProvider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider 
+    <SessionProvider
       refetchInterval={0} // Disable automatic refetching
       refetchOnWindowFocus={false} // Disable refetch on window focus
     >
       <MantineProvider>
         <EvaluationProvider>
           <AvatarRefreshProvider>
-            <UnifiedSessionManager showTimer={false} showWarning={false} warningMinutes={5} />
-            {children}
+            <SocketProvider>
+              <UnifiedSessionManager showTimer={false} showWarning={false} warningMinutes={5} />
+              {children}
+            </SocketProvider>
           </AvatarRefreshProvider>
         </EvaluationProvider>
       </MantineProvider>

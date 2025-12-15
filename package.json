@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 8080",
+    "dev": "tsx server.ts",
     "build": "prisma generate --schema src/prisma/schema.prisma && next build",
     "start": "next start",
     "lint": "eslint",
@@ -47,6 +47,8 @@
     "react-hook-form": "^7.62.0",
     "react-hot-toast": "^2.6.0",
     "recharts": "^3.1.2",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.1.5"
   },

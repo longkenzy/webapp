@@ -22,12 +22,12 @@ interface Product {
 
 export async function GET(request: NextRequest) {
   console.log('=== API Receiving Case GET START ===');
-  
+
   try {
     console.log('Getting session...');
     const session = await getSession();
     console.log('Session result:', session ? 'Found' : 'Not found');
-    
+
     if (!session) {
       console.log('No session found - returning 401');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -111,11 +111,11 @@ export async function GET(request: NextRequest) {
     ]);
 
     console.log('Database query completed successfully');
-    console.log('Query results:', { 
-      casesCount: receivingCases.length, 
-      total, 
-      page, 
-      limit 
+    console.log('Query results:', {
+      casesCount: receivingCases.length,
+      total,
+      page,
+      limit
     });
 
     console.log('Preparing response...');
@@ -128,13 +128,13 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit)
       }
     };
-    
+
     console.log('Returning response with', receivingCases.length, 'cases');
     return NextResponse.json(response);
   } catch (error) {
     console.error("Error fetching receiving cases:", error);
     return NextResponse.json(
-      { 
+      {
         error: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error',
         timestamp: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   console.log('=== API Receiving Case POST START ===');
-  
+
   try {
     // Check session first
     const session = await getSession();
@@ -273,8 +273,8 @@ export async function POST(request: NextRequest) {
       handlerId,
       supplierId,
       form: form || 'Onsite',
-        startDate: startDate ? new Date(startDate) : new Date(),
-        endDate: endDate ? new Date(endDate) : null,
+      startDate: startDate ? new Date(startDate) : new Date(),
+      endDate: endDate ? new Date(endDate) : null,
       status: (status as ReceivingCaseStatus) || ReceivingCaseStatus.RECEIVED,
       notes: notes || null,
       crmReferenceCode: crmReferenceCode || null,
@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
     try {
       const adminUsers = await getAdminUsers();
       const requesterName = employee.fullName;
-      
+
       for (const admin of adminUsers) {
         await createCaseCreatedNotification(
           'receiving',
@@ -367,6 +367,23 @@ export async function POST(request: NextRequest) {
         );
       }
       console.log(`Notifications sent to ${adminUsers.length} admin users`);
+
+      // Emit socket event to admin room
+      if (global.io) {
+        global.io.to('admin_notifications').emit('refresh_notifications');
+
+        // Optional: Emit a toast notification
+        global.io.to('admin_notifications').emit('new_notification', {
+          title: 'Case Nhận hàng mới',
+          message: `${employee.fullName} đã tạo "${title}"`,
+          type: 'CASE_CREATED'
+        });
+
+        // Emit dashboard refresh event
+        global.io.to('admin_notifications').emit('refresh_dashboard');
+
+        console.log('Socket event emitted to admin_notifications');
+      }
     } catch (notificationError) {
       console.error('Error creating notifications:', notificationError);
       // Don't fail the case creation if notifications fail
@@ -376,12 +393,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("Error creating receiving case:", error);
-    
+
     // More detailed error handling
     if (error instanceof Error) {
       console.error("Error message:", error.message);
       console.error("Error stack:", error.stack);
-      
+
       // Check for specific Prisma errors
       if (error.message.includes('Unique constraint')) {
         return NextResponse.json(
@@ -389,7 +406,7 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-      
+
       if (error.message.includes('Foreign key constraint')) {
         return NextResponse.json(
           { error: "Invalid reference to employee or partner" },
@@ -397,7 +414,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-    
+
     return NextResponse.json(
       { error: "Internal server error", details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

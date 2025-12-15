@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+import { useSocket } from '@/providers/SocketProvider';
+import toast from 'react-hot-toast';
+
 interface Notification {
   id: string;
   title: string;
@@ -37,35 +40,37 @@ export function useNotifications(): UseNotificationsReturn {
   const lastFetchTimeRef = useRef<number>(0);
   const CACHE_DURATION = 15000; // 15 seconds cache
 
+  const { socket } = useSocket();
+
   const fetchNotifications = useCallback(async (showLoading = true) => {
     try {
       if (showLoading) {
         setLoading(true);
       }
       setError(null);
-      
+
       // Track last fetch time
       const now = Date.now();
       lastFetchTimeRef.current = now;
       (window as any).lastNotificationFetch = now;
-      
+
       const response = await fetch('/api/notifications?limit=50', {
         headers: {
           'Cache-Control': 'max-age=30' // Cache for 30 seconds
         }
       });
-      
+
       // Handle 401 Unauthorized gracefully (session expired or not logged in)
       if (response.status === 401) {
         setNotifications([]);
         setUnreadCount(0);
         return;
       }
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch notifications');
       }
-      
+
       const data = await response.json();
       setNotifications(data.notifications || []);
       setUnreadCount(data.notifications?.filter((n: Notification) => !n.isRead).length || 0);
@@ -84,20 +89,20 @@ export function useNotifications(): UseNotificationsReturn {
     if (isUserInteractingRef.current) {
       return;
     }
-    
+
     try {
       const response = await fetch('/api/notifications/unread-count');
-      
+
       // Handle 401 Unauthorized gracefully
       if (response.status === 401) {
         setUnreadCount(0);
         return;
       }
-      
+
       if (response.ok) {
         const data = await response.json();
         const newUnreadCount = data.unreadCount || 0;
-        
+
         // Only update if count actually changed
         if (newUnreadCount !== unreadCount) {
           setUnreadCount(newUnreadCount);
@@ -166,27 +171,49 @@ export function useNotifications(): UseNotificationsReturn {
 
   useEffect(() => {
     fetchNotifications();
-    
+
     // Only poll when tab is visible and user is active
     let unreadInterval: NodeJS.Timeout;
     let fullInterval: NodeJS.Timeout;
-    
+
+    // Poll less frequently if socket is connected
+    const POLL_INTERVAL = socket ? 60000 : 15000;
+
     const startPolling = () => {
-      // Poll for unread count every 15 seconds (less frequent)
-      unreadInterval = setInterval(fetchUnreadCount, 15000);
-      
-      // Poll for full notifications every 30 seconds
-      fullInterval = setInterval(fetchNotifications, 30000);
+      // Poll for unread count
+      unreadInterval = setInterval(fetchUnreadCount, POLL_INTERVAL);
+
+      // Poll for full notifications (less frequent)
+      fullInterval = setInterval(() => fetchNotifications(false), POLL_INTERVAL * 2);
     };
-    
+
     const stopPolling = () => {
       if (unreadInterval) clearInterval(unreadInterval);
       if (fullInterval) clearInterval(fullInterval);
     };
-    
+
     // Start polling initially
     startPolling();
-    
+
+    // Socket listeners
+    if (socket) {
+      socket.on('refresh_notifications', () => {
+        console.log('Socket: Refreshing notifications');
+        fetchNotifications(false);
+        fetchUnreadCount();
+      });
+
+      socket.on('new_notification', (data: any) => {
+        // Show toast
+        toast(data.message, {
+          icon: '🔔',
+          duration: 4000
+        });
+        // Also refresh
+        fetchNotifications(false);
+      });
+    }
+
     // Handle visibility change
     const handleVisibilityChange = () => {
       try {
@@ -209,18 +236,22 @@ export function useNotifications(): UseNotificationsReturn {
         console.error('Error in visibility change handler:', error);
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     return () => {
       stopPolling();
+      if (socket) {
+        socket.off('refresh_notifications');
+        socket.off('new_notification');
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       // Clear debounce timeout on cleanup
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
     };
-  }, [fetchNotifications, fetchUnreadCount]);
+  }, [fetchNotifications, fetchUnreadCount, socket]);
 
   // Add a function to force refresh notifications with debounce
   const forceRefresh = useCallback(() => {
@@ -228,7 +259,7 @@ export function useNotifications(): UseNotificationsReturn {
     if (debounceTimeoutRef.current) {
       clearTimeout(debounceTimeoutRef.current);
     }
-    
+
     // Set a new timeout to debounce rapid calls
     debounceTimeoutRef.current = setTimeout(() => {
       fetchNotifications(true).catch(error => {
@@ -241,13 +272,13 @@ export function useNotifications(): UseNotificationsReturn {
   const refreshIfNeeded = useCallback(() => {
     const now = Date.now();
     const timeSinceLastFetch = now - lastFetchTimeRef.current;
-    
+
     // If data is fresh (< 15 seconds), don't fetch
     if (timeSinceLastFetch < CACHE_DURATION) {
       console.log(`Using cached notifications (${Math.round(timeSinceLastFetch / 1000)}s old)`);
       return;
     }
-    
+
     // Data is stale, fetch in background without showing loader
     console.log(`Refreshing notifications in background (${Math.round(timeSinceLastFetch / 1000)}s old)`);
     fetchNotifications(false).catch(error => {

@@ -13,6 +13,8 @@ RUN npx prisma generate --schema src/prisma/schema.prisma
 
 # Build Next.js in standalone mode
 RUN npm run build
+# Compile custom server.ts
+RUN npx tsc server.ts --module CommonJS --moduleResolution node --target es2020 --esModuleInterop --skipLibCheck --outDir ./
 
 
 FROM node:20-bullseye-slim AS runner
@@ -26,6 +28,7 @@ ENV TZ=Asia/Ho_Chi_Minh
 
 # Copy standalone server output, static assets, and runtime necessities
 COPY --from=deps /app/.next/standalone ./
+COPY --from=deps /app/server.js ./server.js
 COPY --from=deps /app/.next/static ./.next/static
 COPY --from=deps /app/public ./public
 

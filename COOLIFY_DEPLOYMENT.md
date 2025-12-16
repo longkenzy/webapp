@@ -59,7 +59,7 @@ NODE_ENV=production
 Trong Coolify, đảm bảo các settings sau:
 
 - **Build Command**: `npm run build`
-- **Start Command**: `npm run start`
+- **Start Command**: `npm run start` (Run custom server for Socket.io)
 - **Port**: `3000`
 - **Dockerfile**: Sử dụng Dockerfile trong root directory
 

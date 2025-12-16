@@ -12,10 +12,8 @@ COPY . .
 RUN npx prisma generate --schema src/prisma/schema.prisma
 
 # Build Next.js in standalone mode
+# Build Next.js in standalone mode
 RUN npm run build
-# Compile custom server.ts
-RUN npx tsc server.ts --module CommonJS --moduleResolution node --target es2020 --esModuleInterop --skipLibCheck --outFile ./server-socket.js
-
 
 FROM node:20-bullseye-slim AS runner
 WORKDIR /app
@@ -28,7 +26,7 @@ ENV TZ=Asia/Ho_Chi_Minh
 
 # Copy standalone server output, static assets, and runtime necessities
 COPY --from=deps /app/.next/standalone ./
-COPY --from=deps /app/server-socket.js ./server-socket.js
+COPY --from=deps /app/server.ts ./server.ts
 COPY --from=deps /app/.next/static ./.next/static
 COPY --from=deps /app/public ./public
 
@@ -38,6 +36,6 @@ COPY --from=deps /app/package.json ./package.json
 COPY --from=deps /app/src/prisma ./src/prisma
 
 # Run migrations (if any) then start the server
-CMD sh -c "npx prisma migrate deploy --schema src/prisma/schema.prisma || true; node server-socket.js"
+CMD sh -c "npx prisma migrate deploy --schema src/prisma/schema.prisma || true; npx tsx server.ts"
 
 

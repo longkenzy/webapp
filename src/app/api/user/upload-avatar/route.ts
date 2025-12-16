@@ -17,14 +17,14 @@ dayjs.extend(timezone);
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await request.formData();
     const file = formData.get("avatar") as File;
-    
+
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Ensure avatars directory exists with fallback for production
     let avatarsDir: string = '';
-    
+
     // Try different directory paths for production
     const possiblePaths = [
       join(process.cwd(), "public", "avatars"),
@@ -59,16 +59,16 @@ export async function POST(request: NextRequest) {
       "/tmp/avatars",
       "/var/www/avatars"
     ];
-    
+
     console.log("Attempting to find/create avatars directory...");
     console.log("Current working directory:", process.cwd());
     console.log("NODE_ENV:", process.env.NODE_ENV);
-    
+
     let directoryCreated = false;
     for (const dirPath of possiblePaths) {
       try {
         console.log("Trying directory:", dirPath);
-        
+
         if (!existsSync(dirPath)) {
           console.log("Directory does not exist, creating...");
           await mkdir(dirPath, { recursive: true });
@@ -76,23 +76,23 @@ export async function POST(request: NextRequest) {
         } else {
           console.log("Directory already exists at:", dirPath);
         }
-        
+
         // Test write permissions
         const testFile = join(dirPath, "test-write-permissions.tmp");
         await writeFile(testFile, "test");
         await unlink(testFile);
         console.log("Write permissions test passed for:", dirPath);
-        
+
         avatarsDir = dirPath;
         directoryCreated = true;
         break;
-        
+
       } catch (dirError) {
         console.error(`Failed to use directory ${dirPath}:`, dirError);
         continue;
       }
     }
-    
+
     if (!directoryCreated) {
       throw new Error("Failed to create or access any avatars directory. Please check server permissions and configuration.");
     }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer and save
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    
+
     await writeFile(filePath, buffer);
 
     // Delete old avatar if exists
@@ -127,83 +127,94 @@ export async function POST(request: NextRequest) {
         data: { avatar: fileName }
       });
     } else {
-      // If user doesn't have employee record, create one
-      const newEmployee = await db.employee.create({
-        data: {
-          fullName: user.name || "Unknown",
-          dateOfBirth: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
-          gender: "Unknown",
-          hometown: "Unknown",
-          religion: "Unknown",
-          ethnicity: "Unknown",
-          startDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
-          primaryPhone: user.phone || "",
-          secondaryPhone: null, // Optional field
-          personalEmail: user.email,
-          companyEmail: user.email,
-          placeOfBirth: "Unknown",
-          permanentAddress: "Unknown",
-          temporaryAddress: null, // Optional field
-          avatar: fileName
-        }
+      // Check if an employee with this email already exists to avoid unique constraint error
+      const existingEmployee = await db.employee.findUnique({
+        where: { companyEmail: user.email }
       });
-      
-      // Update user with employeeId
-      await db.user.update({
-        where: { id: user.id },
-        data: { employeeId: newEmployee.id }
-      });
+
+      if (existingEmployee) {
+        // Link existing employee to user and update avatar
+        await db.employee.update({
+          where: { id: existingEmployee.id },
+          data: { avatar: fileName }
+        });
+
+        await db.user.update({
+          where: { id: user.id },
+          data: { employeeId: existingEmployee.id }
+        });
+      } else {
+        // Create new employee record
+        const newEmployee = await db.employee.create({
+          data: {
+            fullName: user.name || "Unknown",
+            dateOfBirth: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
+            gender: "Unknown",
+            hometown: "Unknown",
+            religion: "Unknown",
+            ethnicity: "Unknown",
+            startDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate(),
+            primaryPhone: user.phone || "",
+            secondaryPhone: null,
+            personalEmail: user.email,
+            companyEmail: user.email,
+            placeOfBirth: "Unknown",
+            permanentAddress: "Unknown",
+            temporaryAddress: null,
+            avatar: fileName
+          }
+        });
+
+        // Update user with employeeId
+        await db.user.update({
+          where: { id: user.id },
+          data: { employeeId: newEmployee.id }
+        });
+      }
     }
 
     // Always use API route for avatar URLs to ensure consistency
     const avatarUrl = `/api/avatars/${fileName}`;
-    
+
     console.log("Avatar saved successfully:", {
       fileName,
       filePath,
       avatarUrl,
       avatarsDir
     });
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    return NextResponse.json({
+      success: true,
       avatar: fileName,
       avatarUrl: avatarUrl
     });
 
   } catch (error) {
     console.error("Error uploading avatar:", error);
-    
-    // More detailed error logging
+
+    // Detailed error logging
     if (error instanceof Error) {
       console.error("Error message:", error.message);
       console.error("Error stack:", error.stack);
-      console.error("Current working directory:", process.cwd());
-      console.error("Avatars directory path:", join(process.cwd(), "public", "avatars"));
-      console.error("File system access test:", existsSync(join(process.cwd(), "public")));
     }
-    
-    // Return more specific error message based on error type
+
+    // Return specific error message to client for debugging
     let errorMessage = "Internal server error";
     let statusCode = 500;
-    
+
     if (error instanceof Error) {
+      // Expose the actual error message for debugging purposes since this is an internal tools app
+      errorMessage = error.message;
+
       if (error.message.includes("ENOENT")) {
-        errorMessage = "Directory not found. Please check server configuration.";
-        statusCode = 500;
+        errorMessage = `Directory not found or not writable: ${error.message}`;
       } else if (error.message.includes("EACCES") || error.message.includes("EPERM")) {
-        errorMessage = "Permission denied. Please check file system permissions.";
-        statusCode = 500;
-      } else if (error.message.includes("database")) {
-        errorMessage = "Database error occurred.";
-        statusCode = 500;
-      } else {
-        errorMessage = process.env.NODE_ENV === 'development' 
-          ? error.message 
-          : "File upload failed. Please try again.";
+        errorMessage = `Permission denied writing to disk: ${error.message}`;
+      } else if (error.message.includes("Unique constraint")) {
+        errorMessage = "Database error: Email already exists in employee records.";
       }
     }
-    
+
     return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }

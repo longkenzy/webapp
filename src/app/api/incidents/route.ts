@@ -9,7 +9,7 @@ import { validateCaseDates, processUserAssessment } from "@/lib/case-helpers";
 export async function POST(request: NextRequest) {
   try {
     console.log("=== Incident API Called ===");
-    
+
     const session = await getSession();
     if (!session) {
       console.log("No session found");
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("Request body:", body);
     console.log("Incident type received:", body.incidentType);
-    
+
     const {
       title,
       description,
@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
     const dateValidationError = validateCaseDates(startDate, endDate);
     if (dateValidationError) {
       console.log("Invalid date:", dateValidationError);
-      return NextResponse.json({ 
-        error: dateValidationError 
+      return NextResponse.json({
+        error: dateValidationError
       }, { status: 400 });
     }
 
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     try {
       const adminUsers = await getAdminUsers();
       const requesterName = handler.fullName; // Using handler as reporter for incidents
-      
+
       for (const admin of adminUsers) {
         await createCaseCreatedNotification(
           'incident',
@@ -189,6 +189,19 @@ export async function POST(request: NextRequest) {
         );
       }
       console.log(`Notifications sent to ${adminUsers.length} admin users`);
+
+      if (global.io) {
+        global.io.to('admin_notifications').emit('refresh_notifications');
+
+        global.io.to('admin_notifications').emit('new_notification', {
+          title: 'Case Sự cố mới',
+          message: `${requesterName} đã tạo "${incident.title}"`,
+          type: 'CASE_CREATED'
+        });
+
+        global.io.to('admin_notifications').emit('refresh_dashboard');
+        console.log('Socket event emitted for incident case');
+      }
     } catch (notificationError) {
       console.error('Error creating notifications:', notificationError);
       // Don't fail the case creation if notifications fail
@@ -202,7 +215,7 @@ export async function POST(request: NextRequest) {
         console.error("Created incident missing incidentType:", incident.id);
         throw new Error(`Created incident ${incident.id} is missing incidentType`);
       }
-      
+
       transformedIncident = {
         ...incident,
         incidentType: incident.incidentType.name, // Convert incidentType object to string
@@ -237,7 +250,7 @@ export async function GET(request: NextRequest) {
   try {
     console.log("=== GET Incidents API Called ===");
     console.log("Request headers:", Object.fromEntries(request.headers.entries()));
-    
+
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -327,7 +340,7 @@ export async function GET(request: NextRequest) {
       console.error("Database query error:", dbError);
       throw dbError;
     }
-    
+
     // Transform incidents to match frontend interface
     console.log("Transforming incidents data...");
     let transformedIncidents;
@@ -353,7 +366,7 @@ export async function GET(request: NextRequest) {
       console.error("Data transformation error:", transformError);
       throw transformError;
     }
-    
+
     console.log("Incidents fetched:", incidents.length);
     console.log("Total count:", total);
 
@@ -380,9 +393,9 @@ export async function GET(request: NextRequest) {
     console.error("Error message:", error instanceof Error ? error.message : String(error));
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack");
     console.error("Full error object:", error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: "Internal server error",
         details: error instanceof Error ? error.message : String(error)
       },

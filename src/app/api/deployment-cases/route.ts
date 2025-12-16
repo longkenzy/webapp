@@ -9,7 +9,7 @@ import { validateCaseDates, processUserAssessment } from "@/lib/case-helpers";
 export async function POST(request: NextRequest) {
   try {
     console.log("=== Deployment Case API Called ===");
-    
+
     const session = await getSession();
     if (!session) {
       console.log("No session found");
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     console.log("Request body:", body);
-    
+
     const {
       title,
       description,
@@ -63,11 +63,11 @@ export async function POST(request: NextRequest) {
     const dateValidationError = validateCaseDates(startDate, endDate);
     if (dateValidationError) {
       console.log("Invalid date:", dateValidationError);
-      return NextResponse.json({ 
-        error: dateValidationError 
+      return NextResponse.json({
+        error: dateValidationError
       }, { status: 400 });
     }
-    
+
     if (startDate && endDate) {
       console.log("=== API Deployment Date Validation (Create) ===");
       console.log("Start Date:", startDate);
@@ -79,14 +79,14 @@ export async function POST(request: NextRequest) {
     let reporter = await db.employee.findUnique({
       where: { id: reporterId }
     });
-    
+
     // If not found in employee, try to find user and create/find employee
     if (!reporter) {
       const user = await db.user.findUnique({
         where: { id: reporterId },
         include: { employee: true }
       });
-      
+
       if (user?.employee) {
         reporter = user.employee;
       } else if (user) {
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
         try {
           const adminUsers = await getAdminUsers();
           const reporterName = reporter.fullName;
-          
+
           // Create all notifications in parallel
           await Promise.all(
             adminUsers.map(admin =>
@@ -201,6 +201,19 @@ export async function POST(request: NextRequest) {
             )
           );
           console.log(`Notifications sent to ${adminUsers.length} admin users`);
+
+          if (global.io) {
+            global.io.to('admin_notifications').emit('refresh_notifications');
+
+            global.io.to('admin_notifications').emit('new_notification', {
+              title: 'Case Triển khai mới',
+              message: `${reporterName} đã tạo "${deploymentCase.title}"`,
+              type: 'CASE_CREATED'
+            });
+
+            global.io.to('admin_notifications').emit('refresh_dashboard');
+            console.log('Socket event emitted for deployment case');
+          }
         } catch (notificationError) {
           console.error('Error creating notifications:', notificationError);
         }
@@ -224,7 +237,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
-    
+
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -299,7 +312,7 @@ export async function GET(request: NextRequest) {
     response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     response.headers.set('Pragma', 'no-cache');
     response.headers.set('Expires', '0');
-    
+
     return response;
 
   } catch (error) {

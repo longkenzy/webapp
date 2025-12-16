@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     const {
       title,
       description,
@@ -55,11 +55,11 @@ export async function POST(request: NextRequest) {
     const dateValidationError = validateCaseDates(startDate, endDate);
     if (dateValidationError) {
       console.log("Invalid date:", dateValidationError);
-      return NextResponse.json({ 
-        error: dateValidationError 
+      return NextResponse.json({
+        error: dateValidationError
       }, { status: 400 });
     }
-    
+
     if (startDate && endDate) {
       console.log("=== API Warranty Date Validation (Create) ===");
       console.log("Start Date:", startDate);
@@ -70,14 +70,14 @@ export async function POST(request: NextRequest) {
     let warrantyTypeRecord = null;
     if (warrantyTypeId) {
       // Try to find by ID first
-      warrantyTypeRecord = await db.warrantyType.findUnique({ 
-        where: { id: warrantyTypeId } 
+      warrantyTypeRecord = await db.warrantyType.findUnique({
+        where: { id: warrantyTypeId }
       });
       console.log('Warranty type found by ID:', warrantyTypeRecord?.name);
     } else if (warrantyType) {
       // Fallback to finding by name
-      warrantyTypeRecord = await db.warrantyType.findFirst({ 
-        where: { name: warrantyType } 
+      warrantyTypeRecord = await db.warrantyType.findFirst({
+        where: { name: warrantyType }
       });
       console.log('Warranty type found by name:', warrantyTypeRecord?.name);
     }
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
         try {
           const adminUsers = await getAdminUsers();
           const requesterName = defaultEmployee.fullName;
-          
+
           // Create all notifications in parallel
           await Promise.all(
             adminUsers.map(admin =>
@@ -147,6 +147,19 @@ export async function POST(request: NextRequest) {
             )
           );
           console.log(`Notifications sent to ${adminUsers.length} admin users`);
+
+          if (global.io) {
+            global.io.to('admin_notifications').emit('refresh_notifications');
+
+            global.io.to('admin_notifications').emit('new_notification', {
+              title: 'Case Bảo hành mới',
+              message: `${requesterName} đã tạo "${newWarranty.title}"`,
+              type: 'CASE_CREATED'
+            });
+
+            global.io.to('admin_notifications').emit('refresh_dashboard');
+            console.log('Socket event emitted for warranty case');
+          }
         } catch (notificationError) {
           console.error('Error creating notifications:', notificationError);
         }
@@ -186,44 +199,44 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
         include: {
-          reporter: { 
-            select: { 
-              id: true, 
-              fullName: true, 
-              position: true, 
+          reporter: {
+            select: {
+              id: true,
+              fullName: true,
+              position: true,
               department: true,
               avatar: true
             }
           },
-          handler: { 
-            select: { 
-              id: true, 
-              fullName: true, 
-              position: true, 
+          handler: {
+            select: {
+              id: true,
+              fullName: true,
+              position: true,
               department: true,
               avatar: true
             }
           },
-          warrantyType: { 
-            select: { 
-              id: true, 
-              name: true 
-            } 
+          warrantyType: {
+            select: {
+              id: true,
+              name: true
+            }
           },
-          customer: { 
-            select: { 
-              id: true, 
-              fullCompanyName: true, 
+          customer: {
+            select: {
+              id: true,
+              fullCompanyName: true,
               shortName: true,
               contactPerson: true,
               contactPhone: true
-            } 
+            }
           }
         }
       }),
       db.warranty.count()
     ]);
-    
+
     const response = NextResponse.json({
       data: warranties,
       pagination: {

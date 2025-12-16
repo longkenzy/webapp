@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit)
       }
     });
-    
+
     // Disable caching to ensure fresh data after updates
     response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     response.headers.set('Pragma', 'no-cache');
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('=== Received POST request body ===');
     console.log('Body:', JSON.stringify(body, null, 2));
-    
+
     const {
       title,
       description,
@@ -195,11 +195,11 @@ export async function POST(request: NextRequest) {
     const dateValidationError = validateCaseDates(startDate, endDate);
     if (dateValidationError) {
       console.log("Invalid date:", dateValidationError);
-      return NextResponse.json({ 
-        error: dateValidationError 
+      return NextResponse.json({
+        error: dateValidationError
       }, { status: 400 });
     }
-    
+
     if (startDate && endDate) {
       console.log("=== API Delivery Date Validation (Create) ===");
       console.log("Start Date:", startDate);
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
         try {
           const adminUsers = await getAdminUsers();
           const requesterName = employee.fullName;
-          
+
           // Create all notifications in parallel
           await Promise.all(
             adminUsers.map(admin =>
@@ -317,6 +317,19 @@ export async function POST(request: NextRequest) {
             )
           );
           console.log(`Notifications sent to ${adminUsers.length} admin users`);
+
+          if (global.io) {
+            global.io.to('admin_notifications').emit('refresh_notifications');
+
+            global.io.to('admin_notifications').emit('new_notification', {
+              title: 'Case Giao hàng mới',
+              message: `${requesterName} đã tạo "${deliveryCase.title}"`,
+              type: 'CASE_CREATED'
+            });
+
+            global.io.to('admin_notifications').emit('refresh_dashboard');
+            console.log('Socket event emitted for delivery case');
+          }
         } catch (notificationError) {
           console.error('Error creating notifications:', notificationError);
         }
@@ -330,7 +343,7 @@ export async function POST(request: NextRequest) {
     console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

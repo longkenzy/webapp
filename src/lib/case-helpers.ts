@@ -10,33 +10,33 @@ dayjs.extend(timezone);
 // Common case validation
 export function validateCaseDates(startDate: string, endDate?: string) {
   if (!endDate) return null;
-  
+
   const startDateObj = dayjs(startDate).tz('Asia/Ho_Chi_Minh');
   const endDateObj = dayjs(endDate).tz('Asia/Ho_Chi_Minh');
-  
+
   if (endDateObj.isBefore(startDateObj) || endDateObj.isSame(startDateObj)) {
     return "Ngày kết thúc phải lớn hơn ngày bắt đầu";
   }
-  
+
   return null;
 }
 
 // Common user assessment data processing
 export function processUserAssessment(body: any) {
   const assessment = {
-    userDifficultyLevel: body.userDifficultyLevel !== undefined && body.userDifficultyLevel !== null 
+    userDifficultyLevel: body.userDifficultyLevel !== undefined && body.userDifficultyLevel !== null
       ? parseInt(body.userDifficultyLevel) : null,
-    userEstimatedTime: body.userEstimatedTime !== undefined && body.userEstimatedTime !== null 
+    userEstimatedTime: body.userEstimatedTime !== undefined && body.userEstimatedTime !== null
       ? parseInt(body.userEstimatedTime) : null,
-    userImpactLevel: body.userImpactLevel !== undefined && body.userImpactLevel !== null 
+    userImpactLevel: body.userImpactLevel !== undefined && body.userImpactLevel !== null
       ? parseInt(body.userImpactLevel) : null,
-    userUrgencyLevel: body.userUrgencyLevel !== undefined && body.userUrgencyLevel !== null 
+    userUrgencyLevel: body.userUrgencyLevel !== undefined && body.userUrgencyLevel !== null
       ? parseInt(body.userUrgencyLevel) : null,
-    userFormScore: body.userFormScore !== undefined && body.userFormScore !== null 
+    userFormScore: body.userFormScore !== undefined && body.userFormScore !== null
       ? parseInt(body.userFormScore) : null,
     userAssessmentDate: dayjs().tz('Asia/Ho_Chi_Minh').toDate()
   };
-  
+
   console.log('Processed user assessment:', assessment);
   return assessment;
 }
@@ -54,7 +54,7 @@ export async function validateEmployees(requesterId: string, handlerId: string) 
       where: { id: requesterId },
       include: { employee: true }
     });
-    
+
     if (user?.employee) {
       return { requester: user.employee, handler };
     } else if (user) {
@@ -72,7 +72,7 @@ export async function validateEmployees(requesterId: string, handlerId: string) 
       where: { id: handlerId },
       include: { employee: true }
     });
-    
+
     if (user?.employee) {
       return { requester, handler: user.employee };
     } else if (user) {
@@ -96,7 +96,7 @@ export async function sendCaseNotifications(
 ) {
   try {
     const adminUsers = await getAdminUsers();
-    
+
     await Promise.all(
       adminUsers.map(admin =>
         createCaseCreatedNotification(
@@ -108,8 +108,39 @@ export async function sendCaseNotifications(
         )
       )
     );
-    
+
     console.log(`Notifications sent to ${adminUsers.length} admin users for ${caseType} case`);
+
+    // Create notifications for admin users
+    if (global.io) {
+      // Emit socket event to admin room
+      global.io.to('admin_notifications').emit('refresh_notifications');
+
+      // Map caseType to friendly name
+      const friendlyMap: Record<string, string> = {
+        'internal': 'Nội bộ',
+        'deployment': 'Triển khai',
+        'maintenance': 'Bảo trì',
+        'warranty': 'Bảo hành',
+        'receiving': 'Nhận hàng',
+        'incident': 'Sự cố',
+        'delivery': 'Giao hàng'
+      };
+      const friendlyName = friendlyMap[caseType] || caseType;
+
+      // Optional: Emit a toast notification
+      global.io.to('admin_notifications').emit('new_notification', {
+        title: `Case ${friendlyName} mới`,
+        message: `${requesterName} đã tạo "${title}"`,
+        type: 'CASE_CREATED'
+      });
+
+      // Emit dashboard refresh event
+      global.io.to('admin_notifications').emit('refresh_dashboard');
+
+      console.log(`Socket event emitted for ${caseType} case`);
+    }
+
   } catch (error) {
     console.error('Error sending case notifications:', error);
     // Don't throw - notifications are not critical
@@ -119,7 +150,7 @@ export async function sendCaseNotifications(
 // Common case query builder
 export function buildCaseWhereClause(searchParams: URLSearchParams) {
   const where: Record<string, any> = {};
-  
+
   const status = searchParams.get("status");
   const search = searchParams.get("search");
   const requesterId = searchParams.get("requesterId");
@@ -130,7 +161,7 @@ export function buildCaseWhereClause(searchParams: URLSearchParams) {
   if (requesterId) where.requesterId = requesterId;
   if (handlerId) where.handlerId = handlerId;
   if (caseType) where.caseType = caseType;
-  
+
   if (search) {
     where.OR = [
       { title: { contains: search, mode: 'insensitive' } },

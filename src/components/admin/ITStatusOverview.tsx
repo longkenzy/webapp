@@ -132,7 +132,7 @@ export default function ITStatusOverview() {
                         <div className="relative mb-2">
                             <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden ring-2 ring-white shadow-sm">
                                 {member.avatar ? (
-                                    <img src={member.avatar.startsWith('/') ? member.avatar : `/avatars/${member.avatar}`} alt={member.name} className="w-full h-full object-cover" />
+                                    <img src={member.avatar.startsWith('/') ? member.avatar : `/api/avatars/${member.avatar}`} alt={member.name} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center bg-blue-100 text-blue-600 font-bold text-lg">
                                         {member.name.charAt(0)}

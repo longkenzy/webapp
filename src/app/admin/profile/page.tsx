@@ -266,7 +266,7 @@ export default function AdminProfilePage() {
                     <div className="relative group">
                         <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white relative">
                             <Image
-                                src={profile.avatarUrl ? (profile.avatarUrl.startsWith('/avatars/') ? profile.avatarUrl : `/avatars/${profile.avatarUrl}`) : "/logo/logo.png"}
+                                src={profile.avatarUrl || "/logo/logo.png"}
                                 alt="Avatar"
                                 fill
                                 className="object-cover"

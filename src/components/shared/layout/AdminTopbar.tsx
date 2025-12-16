@@ -29,7 +29,7 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           },
           credentials: 'include',
         });
-        
+
         if (response.ok) {
           const profileData = await response.json();
           setUserAvatar(profileData.avatarUrl);
@@ -100,9 +100,9 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
           >
             <div className="w-8 h-8 rounded-full overflow-hidden">
               {userAvatar ? (
-                <img 
-                  src={userAvatar.startsWith('/avatars/') ? userAvatar : `/avatars/${userAvatar}`} 
-                  alt="Avatar" 
+                <img
+                  src={userAvatar.includes('/') ? userAvatar : `/api/avatars/${userAvatar}`}
+                  alt="Avatar"
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -135,7 +135,7 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
                   {data?.user?.email}
                 </p>
               </div>
-              
+
               <div className="py-1">
                 <Link
                   href="/admin/profile"
@@ -144,7 +144,7 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
                   <User className="h-4 w-4" />
                   <span>Profile</span>
                 </Link>
-                
+
                 <Link
                   href="/admin/settings"
                   className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -153,7 +153,7 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
                   <span>Settings</span>
                 </Link>
               </div>
-              
+
               <div className="border-t border-gray-100 pt-1">
                 <button
                   onClick={async () => {

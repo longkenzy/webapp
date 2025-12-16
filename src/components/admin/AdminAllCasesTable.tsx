@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { 
-  Ticket, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
-  Plus, 
+import {
+  Ticket,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Plus,
   Calendar,
   TrendingUp,
   User,
@@ -96,8 +96,8 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
       <div className="flex items-center space-x-1">
         <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center overflow-hidden">
           {case_.handler?.avatar ? (
-            <img 
-              src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`} 
+            <img
+              src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`}
               alt={case_.handlerName}
               className="w-full h-full object-cover"
             />
@@ -143,8 +143,8 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
           <span className="text-blue-700 font-medium text-xs">Bắt đầu</span>
         </div>
         <div className="text-gray-600 text-xs">
-          {new Date(case_.startDate).toLocaleTimeString('vi-VN', { 
-            hour: '2-digit', 
+          {new Date(case_.startDate).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
             minute: '2-digit',
             hour12: false,
             timeZone: 'Asia/Ho_Chi_Minh'
@@ -157,8 +157,8 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
               <span className="text-green-700 font-medium text-xs">Kết thúc</span>
             </div>
             <div className="text-gray-600 text-xs">
-              {new Date(case_.endDate).toLocaleTimeString('vi-VN', { 
-                hour: '2-digit', 
+              {new Date(case_.endDate).toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
                 minute: '2-digit',
                 hour12: false,
                 timeZone: 'Asia/Ho_Chi_Minh'
@@ -194,7 +194,7 @@ function AdminAllCasesTable() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     caseType: '',
@@ -204,7 +204,7 @@ function AdminAllCasesTable() {
     dateFrom: '',
     dateTo: ''
   });
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
@@ -319,7 +319,7 @@ function AdminAllCasesTable() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Add cache control headers
       const fetchOptions = {
         headers: {
@@ -327,7 +327,7 @@ function AdminAllCasesTable() {
           'Pragma': 'no-cache'
         }
       };
-      
+
       const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes, deploymentRes] = await Promise.all([
         fetch('/api/internal-cases?limit=100', fetchOptions),
         fetch('/api/delivery-cases?limit=100', fetchOptions),
@@ -354,7 +354,7 @@ function AdminAllCasesTable() {
       if (internalData.data) {
         internalData.data.forEach((case_: any) => {
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
-          
+
           unifiedCases.push({
             id: case_.id,
             title: titleWithForm,
@@ -379,10 +379,10 @@ function AdminAllCasesTable() {
       if (deliveryData.deliveryCases) {
         deliveryData.deliveryCases.forEach((case_: any) => {
           // Format products for delivery cases
-          const productsInfo = case_.products && case_.products.length > 0 
-            ? case_.products.map((product: any) => 
-                `**${product.name}** | SL: ${product.quantity} | Mã: ${product.code || product.serialNumber || ''}`
-              ).join('\n')
+          const productsInfo = case_.products && case_.products.length > 0
+            ? case_.products.map((product: any) =>
+              `**${product.name}** | SL: ${product.quantity} | Mã: ${product.code || product.serialNumber || ''}`
+            ).join('\n')
             : case_.description;
 
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
@@ -411,12 +411,12 @@ function AdminAllCasesTable() {
       if (receivingData.receivingCases) {
         receivingData.receivingCases.forEach((case_: any) => {
           // Format products for receiving cases
-          let productsInfo = case_.products && case_.products.length > 0 
-            ? case_.products.map((product: any) => 
-                `**${product.name}** | SL: ${product.quantity} | Mã: ${product.code || product.serialNumber || ''}`
-              ).join('\n')
+          let productsInfo = case_.products && case_.products.length > 0
+            ? case_.products.map((product: any) =>
+              `**${product.name}** | SL: ${product.quantity} | Mã: ${product.code || product.serialNumber || ''}`
+            ).join('\n')
             : case_.description;
-          
+
           // Add notes if available
           if (case_.notes) {
             productsInfo += `\n*Ghi chú: ${case_.notes}*`;
@@ -448,7 +448,7 @@ function AdminAllCasesTable() {
       if (maintenanceData.success && maintenanceData.data) {
         maintenanceData.data.forEach((case_: any) => {
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
-          
+
           unifiedCases.push({
             id: case_.id,
             title: titleWithForm,
@@ -473,7 +473,7 @@ function AdminAllCasesTable() {
       if (incidentData.data) {
         incidentData.data.forEach((case_: any) => {
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
-          
+
           unifiedCases.push({
             id: case_.id,
             title: titleWithForm,
@@ -498,7 +498,7 @@ function AdminAllCasesTable() {
       if (warrantyData.data) {
         warrantyData.data.forEach((case_: any) => {
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
-          
+
           unifiedCases.push({
             id: case_.id,
             title: titleWithForm,
@@ -523,7 +523,7 @@ function AdminAllCasesTable() {
       if (deploymentData.data) {
         deploymentData.data.forEach((case_: any) => {
           const titleWithForm = case_.form ? `Hình thức: ${case_.form}\n${case_.title}` : case_.title;
-          
+
           unifiedCases.push({
             id: case_.id,
             title: titleWithForm,
@@ -551,14 +551,14 @@ function AdminAllCasesTable() {
       // Filter cases for today tab: only show incomplete cases and cases from today
       const today = new Date();
       const todayString = today.toDateString();
-      
+
       const todayFilteredCases = unifiedCases.filter(case_ => {
         const caseDate = new Date(case_.startDate).toDateString();
         const isIncomplete = !['COMPLETED', 'RESOLVED', 'CANCELLED', 'HỦY', 'HOÀN THÀNH'].includes(case_.status.toUpperCase());
         const isToday = caseDate === todayString;
-        
+
         return isIncomplete || isToday;
-      });
+      }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
       setTodayCases(todayFilteredCases);
     } catch (err) {
@@ -579,7 +579,7 @@ function AdminAllCasesTable() {
     }
 
     if (filters.handler) {
-      filtered = filtered.filter(case_ => 
+      filtered = filtered.filter(case_ =>
         case_.handlerName.toLowerCase().includes(filters.handler.toLowerCase())
       );
     }
@@ -593,14 +593,14 @@ function AdminAllCasesTable() {
           'COMPLETED': ['COMPLETED', 'RESOLVED', 'HOÀN THÀNH'],
           'CANCELLED': ['CANCELLED', 'HỦY']
         };
-        
+
         const equivalentStatuses = statusMap[filters.status] || [filters.status];
         return equivalentStatuses.includes(case_.status.toUpperCase());
       });
     }
 
     if (filters.customer) {
-      filtered = filtered.filter(case_ => 
+      filtered = filtered.filter(case_ =>
         case_.customerName.toLowerCase().includes(filters.customer.toLowerCase())
       );
     }
@@ -630,28 +630,28 @@ function AdminAllCasesTable() {
   useEffect(() => {
     setCurrentPage(1);
   }, [filters, activeTab]);
-  
+
   // Memoized pagination calculations
   const paginationData = useMemo(() => {
     const totalPages = Math.ceil(filteredCases.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentCases = filteredCases.slice(startIndex, endIndex);
-    
+
     return { totalPages, startIndex, endIndex, currentCases };
   }, [filteredCases, currentPage, itemsPerPage]);
-  
+
   const { totalPages, startIndex, endIndex, currentCases } = paginationData;
-  
+
   // Memoized pagination handlers
   const goToPage = useCallback((page: number) => {
     setCurrentPage(page);
   }, []);
-  
+
   const goToPreviousPage = useCallback(() => {
     setCurrentPage(prev => Math.max(prev - 1, 1));
   }, []);
-  
+
   const goToNextPage = useCallback(() => {
     setCurrentPage(prev => Math.min(prev + 1, totalPages));
   }, [totalPages]);
@@ -750,14 +750,14 @@ function AdminAllCasesTable() {
             </div>
           </div>
           <div className="mt-4 flex space-x-3">
-            <button 
+            <button
               onClick={fetchAllCases}
               className="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Thử lại
             </button>
-            <button 
+            <button
               onClick={() => setError(null)}
               className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
             >
@@ -772,7 +772,8 @@ function AdminAllCasesTable() {
   return (
     <div className="space-y-4 md:space-y-6">
       {/* iOS Safari text color fix */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         input, select, textarea {
           -webkit-text-fill-color: #111827 !important;
           opacity: 1 !important;
@@ -791,11 +792,10 @@ function AdminAllCasesTable() {
           <nav className="flex gap-4 md:gap-8 px-3 md:px-6" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('today')}
-              className={`py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${
-                activeTab === 'today'
+              className={`py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${activeTab === 'today'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-1.5 md:gap-2">
                 <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -808,11 +808,10 @@ function AdminAllCasesTable() {
             </button>
             <button
               onClick={() => setActiveTab('all')}
-              className={`py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${
-                activeTab === 'all'
+              className={`py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${activeTab === 'all'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-1.5 md:gap-2">
                 <FileText className="h-3.5 w-3.5 md:h-4 md:w-4" />
@@ -916,111 +915,111 @@ function AdminAllCasesTable() {
 
         {/* Filter Content */}
         <div className={`p-3 md:p-6 ${showFilters ? 'block' : 'hidden md:block'}`}>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 md:gap-4">
-          {/* Case Type Filter */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">
-              Loại Case
-            </label>
-            <select
-              value={filters.caseType}
-              onChange={(e) => handleFilterChange('caseType', e.target.value)}
-              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 md:gap-4">
+            {/* Case Type Filter */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">
+                Loại Case
+              </label>
+              <select
+                value={filters.caseType}
+                onChange={(e) => handleFilterChange('caseType', e.target.value)}
+                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
+              >
+                <option value="">Tất cả loại case</option>
+                <option value="internal">Case nội bộ</option>
+                <option value="delivery">Case giao hàng</option>
+                <option value="receiving">Case nhận hàng</option>
+                <option value="maintenance">Case bảo trì</option>
+                <option value="incident">Case sự cố</option>
+                <option value="warranty">Case bảo hành</option>
+                <option value="deployment">Case triển khai</option>
+              </select>
+            </div>
+
+            {/* Handler Filter */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">
+                Người xử lý
+              </label>
+              <input
+                type="text"
+                placeholder="Tìm người xử lý..."
+                value={filters.handler}
+                onChange={(e) => handleFilterChange('handler', e.target.value)}
+                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm placeholder-gray-400"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">
+                Trạng thái
+              </label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="RECEIVED">Tiếp nhận</option>
+                <option value="IN_PROGRESS">Đang xử lý</option>
+                <option value="COMPLETED">Hoàn thành</option>
+                <option value="CANCELLED">Hủy</option>
+              </select>
+            </div>
+
+            {/* Customer Filter */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">
+                Khách hàng
+              </label>
+              <input
+                type="text"
+                placeholder="Tìm khách hàng..."
+                value={filters.customer}
+                onChange={(e) => handleFilterChange('customer', e.target.value)}
+                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm placeholder-gray-400"
+              />
+            </div>
+
+            {/* Date From Filter */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={filters.dateFrom}
+                onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
+              />
+            </div>
+
+            {/* Date To Filter */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-700">
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={filters.dateTo}
+                onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Mobile: Clear Filters Button */}
+          <div className="md:hidden mt-3 pt-3 border-t border-gray-200">
+            <button
+              onClick={clearFilters}
+              className="w-full inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
             >
-              <option value="">Tất cả loại case</option>
-              <option value="internal">Case nội bộ</option>
-              <option value="delivery">Case giao hàng</option>
-              <option value="receiving">Case nhận hàng</option>
-              <option value="maintenance">Case bảo trì</option>
-              <option value="incident">Case sự cố</option>
-              <option value="warranty">Case bảo hành</option>
-              <option value="deployment">Case triển khai</option>
-            </select>
+              <span>Xóa tất cả bộ lọc</span>
+            </button>
           </div>
-
-          {/* Handler Filter */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">
-              Người xử lý
-            </label>
-            <input
-              type="text"
-              placeholder="Tìm người xử lý..."
-              value={filters.handler}
-              onChange={(e) => handleFilterChange('handler', e.target.value)}
-              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm placeholder-gray-400"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">
-              Trạng thái
-            </label>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="RECEIVED">Tiếp nhận</option>
-              <option value="IN_PROGRESS">Đang xử lý</option>
-              <option value="COMPLETED">Hoàn thành</option>
-              <option value="CANCELLED">Hủy</option>
-            </select>
-          </div>
-
-          {/* Customer Filter */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">
-              Khách hàng
-            </label>
-            <input
-              type="text"
-              placeholder="Tìm khách hàng..."
-              value={filters.customer}
-              onChange={(e) => handleFilterChange('customer', e.target.value)}
-              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm placeholder-gray-400"
-            />
-          </div>
-
-          {/* Date From Filter */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">
-              Từ ngày
-            </label>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
-            />
-          </div>
-
-          {/* Date To Filter */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">
-              Đến ngày
-            </label>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-              className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
-            />
-          </div>
-        </div>
-
-        {/* Mobile: Clear Filters Button */}
-        <div className="md:hidden mt-3 pt-3 border-t border-gray-200">
-          <button
-            onClick={clearFilters}
-            className="w-full inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-          >
-            <span>Xóa tất cả bộ lọc</span>
-          </button>
-        </div>
         </div>
 
         {/* Active Filters Display */}
@@ -1105,17 +1104,17 @@ function AdminAllCasesTable() {
       <div className="bg-white rounded-md shadow-sm border border-gray-100 overflow-hidden">
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 md:px-6 py-3 md:py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
-             <div>
-               <h2 className="text-base md:text-xl font-bold text-gray-900">
-                 {activeTab === 'today' ? 'Cases hôm nay' : 'Tất cả cases'}
-               </h2>
-               <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1">
-                 <span className="md:hidden">{filteredCases.length} cases</span>
-                 <span className="hidden md:inline">
-                   Hiển thị: <span className="font-semibold text-blue-600">{startIndex + 1}-{Math.min(endIndex, filteredCases.length)}</span> / <span className="font-semibold text-gray-600">{filteredCases.length}</span> cases (trang {currentPage}/{totalPages})
-                 </span>
-               </p>
-             </div>
+            <div>
+              <h2 className="text-base md:text-xl font-bold text-gray-900">
+                {activeTab === 'today' ? 'Cases hôm nay' : 'Tất cả cases'}
+              </h2>
+              <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1">
+                <span className="md:hidden">{filteredCases.length} cases</span>
+                <span className="hidden md:inline">
+                  Hiển thị: <span className="font-semibold text-blue-600">{startIndex + 1}-{Math.min(endIndex, filteredCases.length)}</span> / <span className="font-semibold text-gray-600">{filteredCases.length}</span> cases (trang {currentPage}/{totalPages})
+                </span>
+              </p>
+            </div>
             <button
               onClick={() => {
                 setLoading(true);
@@ -1130,7 +1129,7 @@ function AdminAllCasesTable() {
             </button>
           </div>
         </div>
-        
+
         {/* Mobile Card View */}
         <div className="md:hidden space-y-3">
           {currentCases.length > 0 ? (
@@ -1192,13 +1191,13 @@ function AdminAllCasesTable() {
                       <Clock className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
                       <span className="text-xs text-gray-500">Bắt đầu:</span>
                       <span className="text-xs font-medium text-gray-900">
-                        {new Date(case_.startDate).toLocaleString('vi-VN', { 
+                        {new Date(case_.startDate).toLocaleString('vi-VN', {
                           day: '2-digit',
                           month: '2-digit',
                           year: 'numeric',
                           hour: '2-digit',
                           minute: '2-digit',
-                          timeZone: 'Asia/Ho_Chi_Minh' 
+                          timeZone: 'Asia/Ho_Chi_Minh'
                         })}
                       </span>
                     </div>
@@ -1207,13 +1206,13 @@ function AdminAllCasesTable() {
                         <CheckCircle className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
                         <span className="text-xs text-gray-500">Kết thúc:</span>
                         <span className="text-xs font-medium text-gray-900">
-                          {new Date(case_.endDate).toLocaleString('vi-VN', { 
+                          {new Date(case_.endDate).toLocaleString('vi-VN', {
                             day: '2-digit',
                             month: '2-digit',
                             year: 'numeric',
                             hour: '2-digit',
                             minute: '2-digit',
-                            timeZone: 'Asia/Ho_Chi_Minh' 
+                            timeZone: 'Asia/Ho_Chi_Minh'
                           })}
                         </span>
                       </div>
@@ -1221,7 +1220,7 @@ function AdminAllCasesTable() {
                   </div>
 
                   {/* Action Button */}
-                  <Link 
+                  <Link
                     href={getActionLink(case_.type, case_.id)}
                     className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
                   >
@@ -1330,7 +1329,7 @@ function AdminAllCasesTable() {
                       <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
-                  
+
                   {/* Page numbers */}
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
@@ -1343,22 +1342,21 @@ function AdminAllCasesTable() {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
                         onClick={() => goToPage(pageNum)}
-                        className={`relative inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 border text-xs md:text-sm font-medium ${
-                          pageNum === currentPage
+                        className={`relative inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 border text-xs md:text-sm font-medium ${pageNum === currentPage
                             ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
                             : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </button>
                     );
                   })}
-                  
+
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
@@ -1382,7 +1380,7 @@ function AdminAllCasesTable() {
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Không có case nào</h3>
             <p className="text-gray-500">
-              {activeTab === 'today' 
+              {activeTab === 'today'
                 ? 'Không có case chưa hoàn thành hoặc case trong ngày hôm nay'
                 : 'Chưa có case nào được tạo trong hệ thống'
               }

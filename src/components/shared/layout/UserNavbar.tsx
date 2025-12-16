@@ -290,7 +290,7 @@ export default function UserNavbar() {
                 <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-gray-100 group-hover:ring-blue-100 transition-all">
                   {userAvatar ? (
                     <Image
-                      src={userAvatar.startsWith('/avatars/') ? userAvatar : `/avatars/${userAvatar}`}
+                      src={userAvatar.includes('/') ? userAvatar : `/api/avatars/${userAvatar}`}
                       alt="Avatar"
                       width={36}
                       height={36}

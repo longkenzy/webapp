@@ -6,12 +6,12 @@ import { db } from "@/lib/db";
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       console.log('No session found for user profile request');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     console.log('Session found for user:', session.user.id);
     const user = await db.user.findUnique({
       where: { id: session.user.id },
@@ -68,10 +68,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Add avatar URL if exists
     const userWithAvatar = {
       ...user,
-      avatarUrl: user.employee?.avatar ? `/avatars/${user.employee.avatar}` : null
+      avatarUrl: user.employee?.avatar ? `/api/avatars/${user.employee.avatar}` : null
     };
 
     return NextResponse.json(userWithAvatar);
@@ -85,7 +84,7 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

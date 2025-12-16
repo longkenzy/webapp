@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '@/providers/SocketProvider';
 import { useRouter } from 'next/navigation';
+import { Clock, User, Briefcase } from 'lucide-react';
 
 interface ITStaff {
     id: string;
@@ -13,14 +14,40 @@ interface ITStaff {
     currentCase?: {
         id: string;
         title: string;
+        type: string;
+        client: string;
+        startTime: Date | string | null;
     } | null;
 }
 
 export default function ITStatusOverview() {
     const [staff, setStaff] = useState<ITStaff[]>([]);
     const [loading, setLoading] = useState(true);
+    const [hoveredMember, setHoveredMember] = useState<ITStaff | null>(null);
+    const [tooltipPosition, setTooltipPosition] = useState<{ top: number, left: number } | null>(null);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     const { socket } = useSocket();
     const router = useRouter();
+
+    const handleMouseEnter = (member: ITStaff, e: React.MouseEvent<HTMLDivElement>) => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        // Position below the element
+        setTooltipPosition({
+            top: rect.bottom + 10,
+            left: rect.left + rect.width / 2
+        });
+        setHoveredMember(member);
+    };
+
+    const handleMouseLeave = () => {
+        timeoutRef.current = setTimeout(() => {
+            setHoveredMember(null);
+            setTooltipPosition(null);
+        }, 100);
+    };
 
     const fetchStatus = async () => {
         try {
@@ -68,7 +95,7 @@ export default function ITStatusOverview() {
                 <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4"></div>
                 <div className="flex gap-4 overflow-x-auto pb-2">
                     {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="flex-shrink-0 w-40 h-16 bg-gray-100 rounded-lg animate-pulse"></div>
+                        <div key={i} className="flex-shrink-0 w-32 h-16 bg-gray-100 rounded-lg animate-pulse"></div>
                     ))}
                 </div>
             </div>
@@ -95,7 +122,9 @@ export default function ITStatusOverview() {
                 {staff.map((member) => (
                     <div
                         key={member.id}
-                        className={`group relative flex-shrink-0 w-24 p-2 rounded-lg border flex flex-col items-center transition-all cursor-pointer ${member.isOnline
+                        onMouseEnter={(e) => handleMouseEnter(member, e)}
+                        onMouseLeave={handleMouseLeave}
+                        className={`relative flex-shrink-0 w-32 p-2 rounded-lg border flex flex-col items-center transition-all cursor-pointer ${member.isOnline
                             ? 'bg-green-50/50 border-green-200 hover:shadow-md'
                             : 'bg-white border-gray-200 opacity-75 hover:opacity-100'
                             }`}
@@ -114,26 +143,55 @@ export default function ITStatusOverview() {
                                 }`}></span>
                         </div>
 
-                        <p className="text-xs font-medium text-gray-900 truncate w-full text-center" title={member.name}>
+                        <p className="text-xs font-medium text-gray-900 text-center w-full break-words" title={member.name}>
                             {member.name}
                         </p>
 
                         {/* Hover Tooltip / Detail View */}
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-100 p-3 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 text-left pointer-events-none">
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-100 p-4 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 text-left pointer-events-none">
                             <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-t border-l border-gray-100"></div>
                             <div className="relative z-10">
-                                <p className="text-sm font-bold text-gray-900 mb-1">{member.name}</p>
-                                <p className="text-xs text-gray-500 mb-2">{member.position}</p>
+                                <div className="flex items-start justify-between mb-2">
+                                    <div>
+                                        <p className="text-sm font-bold text-gray-900">{member.name}</p>
+                                        <p className="text-xs text-gray-500">{member.position}</p>
+                                    </div>
+                                    <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${member.isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                        }`}>
+                                        {member.isOnline ? 'Online' : 'Offline'}
+                                    </span>
+                                </div>
 
                                 {member.isOnline && member.currentCase ? (
-                                    <div className="bg-green-50 p-2 rounded border border-green-100">
-                                        <p className="text-[10px] font-semibold text-green-700 uppercase mb-1">Đang xử lý</p>
-                                        <p className="text-xs text-gray-800 font-medium line-clamp-2">{member.currentCase.title}</p>
+                                    <div className="space-y-3">
+                                        <div className="bg-blue-50 p-2.5 rounded-md border border-blue-100">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <Briefcase className="h-3 w-3 text-blue-600" />
+                                                <span className="text-[10px] font-semibold text-blue-700 uppercase">{member.currentCase.type}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-900 font-medium line-clamp-2 mb-1">{member.currentCase.title}</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-2 text-xs">
+                                            <div className="flex items-center gap-2 text-gray-600">
+                                                <User className="h-3 w-3" />
+                                                <span className="truncate">KH: {member.currentCase.client}</span>
+                                            </div>
+                                            {member.currentCase.startTime && (
+                                                <div className="flex items-center gap-2 text-gray-600">
+                                                    <Clock className="h-3 w-3" />
+                                                    <span>
+                                                        Bắt đầu: {new Date(member.currentCase.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                        <span className="text-gray-400 mx-1">•</span>
+                                                        {new Date(member.currentCase.startTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="bg-gray-50 p-2 rounded border border-gray-100">
-                                        <p className="text-[10px] font-semibold text-gray-500 uppercase mb-1">Trạng thái</p>
-                                        <p className="text-xs text-gray-600">Hiện đang rảnh</p>
+                                    <div className="bg-gray-50 p-3 rounded-md border border-gray-100 text-center">
+                                        <p className="text-xs text-gray-500 italic">Hiện không xử lý case nào</p>
                                     </div>
                                 )}
                             </div>
@@ -147,6 +205,65 @@ export default function ITStatusOverview() {
                     </div>
                 )}
             </div>
+
+            {/* Fixed Overlay Tooltip */}
+            {hoveredMember && tooltipPosition && (
+                <div
+                    className="fixed z-[9999] w-72 bg-white rounded-lg shadow-xl border border-gray-100 p-4 text-left pointer-events-none"
+                    style={{
+                        top: tooltipPosition.top,
+                        left: tooltipPosition.left,
+                        transform: 'translateX(-50%)'
+                    }}
+                >
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-t border-l border-gray-100"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-start justify-between mb-2">
+                            <div>
+                                <p className="text-sm font-bold text-gray-900">{hoveredMember.name}</p>
+                                <p className="text-xs text-gray-500">{hoveredMember.position}</p>
+                            </div>
+                            <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${hoveredMember.isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                {hoveredMember.isOnline ? 'Online' : 'Offline'}
+                            </span>
+                        </div>
+
+                        {hoveredMember.isOnline && hoveredMember.currentCase ? (
+                            <div className="space-y-3">
+                                <div className="bg-blue-50 p-2.5 rounded-md border border-blue-100">
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <Briefcase className="h-3 w-3 text-blue-600" />
+                                        <span className="text-[10px] font-semibold text-blue-700 uppercase">{hoveredMember.currentCase.type}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-900 font-medium line-clamp-2 mb-1">{hoveredMember.currentCase.title}</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-2 text-xs">
+                                    <div className="flex items-center gap-2 text-gray-600">
+                                        <User className="h-3 w-3" />
+                                        <span className="truncate">KH: {hoveredMember.currentCase.client}</span>
+                                    </div>
+                                    {hoveredMember.currentCase.startTime && (
+                                        <div className="flex items-center gap-2 text-gray-600">
+                                            <Clock className="h-3 w-3" />
+                                            <span>
+                                                Bắt đầu: {new Date(hoveredMember.currentCase.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                <span className="text-gray-400 mx-1">•</span>
+                                                {new Date(hoveredMember.currentCase.startTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-gray-50 p-3 rounded-md border border-gray-100 text-center">
+                                <p className="text-xs text-gray-500 italic">Hiện không xử lý case nào</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

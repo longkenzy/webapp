@@ -62,31 +62,31 @@ export async function GET(request: NextRequest) {
         ] = await Promise.all([
             db.internalCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.internal as any } },
-                select: { id: true, title: true, handlerId: true }
+                select: { id: true, title: true, handlerId: true, startDate: true, requester: { select: { fullName: true } } }
             }),
             db.receivingCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.receiving as any } },
-                select: { id: true, title: true, handlerId: true }
+                select: { id: true, title: true, handlerId: true, startDate: true, supplier: { select: { shortName: true } } }
             }),
             db.deliveryCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.delivery as any } },
-                select: { id: true, title: true, handlerId: true }
+                select: { id: true, title: true, handlerId: true, startDate: true, customer: { select: { shortName: true } } }
             }),
             db.incident.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.incident as any } },
-                select: { id: true, title: true, handlerId: true }
+                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } } }
             }),
             db.maintenanceCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.maintenance as any } },
-                select: { id: true, title: true, handlerId: true }
+                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } } }
             }),
             db.warranty.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.warranty as any } },
-                select: { id: true, title: true, handlerId: true }
+                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } } }
             }),
             db.deploymentCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.deployment as any } },
-                select: { id: true, title: true, handlerId: true }
+                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } } }
             }),
         ]);
 
@@ -95,14 +95,66 @@ export async function GET(request: NextRequest) {
             const empId = user.employee?.id;
             if (!empId) return null;
 
-            const activeCase =
-                internalCases.find(c => c.handlerId === empId) ||
-                receivingCases.find(c => c.handlerId === empId) ||
-                deliveryCases.find(c => c.handlerId === empId) ||
-                incidents.find(c => c.handlerId === empId) ||
-                maintenanceCases.find(c => c.handlerId === empId) ||
-                warranties.find(c => c.handlerId === empId) ||
-                deploymentCases.find(c => c.handlerId === empId);
+            let activeCase = null;
+            let caseType = '';
+            let clientName = '';
+            let startTime = null;
+
+            const internal = internalCases.find(c => c.handlerId === empId);
+            if (internal) {
+                activeCase = internal;
+                caseType = 'Nội bộ';
+                clientName = internal.requester?.fullName || 'N/A';
+                startTime = internal.startDate;
+            }
+
+            const receiving = receivingCases.find(c => c.handlerId === empId);
+            if (!activeCase && receiving) {
+                activeCase = receiving;
+                caseType = 'Nhận hàng';
+                clientName = receiving.supplier?.shortName || 'N/A';
+                startTime = receiving.startDate;
+            }
+
+            const delivery = deliveryCases.find(c => c.handlerId === empId);
+            if (!activeCase && delivery) {
+                activeCase = delivery;
+                caseType = 'Giao hàng';
+                clientName = delivery.customer?.shortName || 'N/A';
+                startTime = delivery.startDate;
+            }
+
+            const incident = incidents.find(c => c.handlerId === empId);
+            if (!activeCase && incident) {
+                activeCase = incident;
+                caseType = 'Sự cố';
+                clientName = incident.customer?.shortName || incident.customerName || 'N/A';
+                startTime = incident.startDate;
+            }
+
+            const maintenance = maintenanceCases.find(c => c.handlerId === empId);
+            if (!activeCase && maintenance) {
+                activeCase = maintenance;
+                caseType = 'Bảo trì';
+                clientName = maintenance.customer?.shortName || maintenance.customerName || 'N/A';
+                startTime = maintenance.startDate;
+            }
+
+            const warranty = warranties.find(c => c.handlerId === empId);
+            if (!activeCase && warranty) {
+                activeCase = warranty;
+                caseType = 'Bảo hành';
+                clientName = warranty.customer?.shortName || warranty.customerName || 'N/A';
+                startTime = warranty.startDate;
+            }
+
+            const deployment = deploymentCases.find(c => c.handlerId === empId);
+            if (!activeCase && deployment) {
+                activeCase = deployment;
+                caseType = 'Triển khai';
+                clientName = deployment.customer?.shortName || deployment.customerName || 'N/A';
+                startTime = deployment.startDate;
+            }
 
             return {
                 id: user.id,
@@ -113,7 +165,10 @@ export async function GET(request: NextRequest) {
                 isOnline: !!activeCase,
                 currentCase: activeCase ? {
                     id: activeCase.id,
-                    title: activeCase.title
+                    title: activeCase.title,
+                    type: caseType,
+                    client: clientName,
+                    startTime: startTime
                 } : null
             };
         }).filter(Boolean);

@@ -2,6 +2,9 @@
   "name": "it-web",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "tsx server.ts",
     "build": "prisma generate --schema src/prisma/schema.prisma && next build",

@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Next.js 15 + Prisma on Dokploy
 
-FROM node:18-bullseye-slim AS deps
+FROM node:20-bullseye-slim AS deps
 WORKDIR /app
 
 # Install dependencies (use npm install to avoid strict lockfile errors on CI)
@@ -15,7 +15,7 @@ RUN npx prisma generate --schema src/prisma/schema.prisma
 RUN npm run build
 
 
-FROM node:18-bullseye-slim AS runner
+FROM node:20-bullseye-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080

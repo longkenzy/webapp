@@ -55,5 +55,6 @@ app.prepare().then(() => {
         console.log(
             `> Ready on http://${hostname}:${port}`
         );
+        console.log(">>> Custom Server with Socket.io started");
     });
 });

@@ -1728,6 +1728,15 @@ export default function AdminDeploymentWorkPage() {
                                           )}
                                         </div>
                                       </div>
+
+                                      {/* Ghi chú */}
+                                      <div className="md:col-span-2">
+                                        <h4 className="text-xs font-medium text-gray-900 mb-2 flex items-center">
+                                          <FileText className="h-3 w-3 mr-2 text-gray-600" />
+                                          Ghi chú
+                                        </h4>
+                                        <p className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">{deployment.notes || 'Không có ghi chú'}</p>
+                                      </div>
                                     </div>
                                   </td>
                                 </tr>

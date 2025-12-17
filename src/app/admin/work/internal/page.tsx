@@ -1730,6 +1730,10 @@ export default function AdminInternalWorkPage() {
                                         )}
                                       </div>
                                     </div>
+                                    <div>
+                                      <h4 className="text-xs font-medium text-gray-900 mb-2">Ghi chú</h4>
+                                      <p className="text-xs text-gray-600 whitespace-pre-wrap">{case_.notes || 'Không có ghi chú'}</p>
+                                    </div>
                                   </div>
                                 </td>
                               </tr>

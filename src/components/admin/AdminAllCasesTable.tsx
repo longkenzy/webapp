@@ -28,6 +28,14 @@ import {
   ChevronRight
 } from "lucide-react";
 import Link from "next/link";
+import toast from 'react-hot-toast';
+import EditInternalCaseModal from '@/app/admin/work/internal/EditInternalCaseModal';
+import EditIncidentModal from '@/app/admin/work/incident/EditIncidentModal';
+import CreateDeploymentModal from '@/app/admin/work/deployment/CreateDeploymentModal';
+import CreateMaintenanceModal from '@/app/admin/work/maintenance/CreateMaintenanceModal';
+import CreateWarrantyModal from '@/app/admin/work/warranty/CreateWarrantyModal';
+import CreateDeliveryCaseModal from '@/app/admin/delivery-cases/CreateDeliveryCaseModal';
+import CreateReceivingCaseModal from '@/app/admin/receiving-cases/CreateReceivingCaseModal';
 
 interface CaseData {
   id: string;
@@ -74,7 +82,7 @@ interface UnifiedCase {
 }
 
 // Memoized Case Row Component
-const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatusColor, getStatusLabel, getCaseTypeLabel, getCaseTypeColor, getActionLink }: {
+const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatusColor, getStatusLabel, getCaseTypeLabel, getCaseTypeColor, onViewClick }: {
   case_: UnifiedCase;
   index: number;
   startIndex: number;
@@ -83,7 +91,7 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
   getStatusLabel: (status: string) => string;
   getCaseTypeLabel: (type: string) => string;
   getCaseTypeColor: (type: string) => string;
-  getActionLink: (type: string, id: string) => string;
+  onViewClick: (type: string, id: string) => void;
 }) => (
   <tr className="group hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100 last:border-0">
     <td className="px-4 py-3 whitespace-nowrap">
@@ -185,13 +193,13 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
       </span>
     </td>
     <td className="px-4 py-3 whitespace-nowrap text-right">
-      <Link
-        href={getActionLink(case_.type, case_.id)}
+      <button
+        onClick={() => onViewClick(case_.type, case_.id)}
         className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 rounded-lg transition-all duration-200 group-hover:shadow-sm"
       >
         <Eye className="h-3.5 w-3.5 mr-1.5" />
         Chi tiết
-      </Link>
+      </button>
     </td>
   </tr>
 ));
@@ -219,6 +227,80 @@ function AdminAllCasesTable() {
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(15);
+
+  // Modal states
+  const [selectedCaseData, setSelectedCaseData] = useState<any>(null);
+  const [openedModal, setOpenedModal] = useState<string | null>(null);
+
+  const handleViewCase = useCallback(async (type: string, id: string) => {
+    const toastId = toast.loading('Đang tải thông tin case...');
+    try {
+      let endpoint = '';
+      let modalType = '';
+
+      switch (type) {
+        case 'internal':
+          endpoint = `/api/internal-cases/${id}`;
+          modalType = 'internal';
+          break;
+        case 'incident':
+          endpoint = `/api/incidents/${id}`;
+          modalType = 'incident';
+          break;
+        case 'deployment':
+          endpoint = `/api/deployment-cases/${id}`;
+          modalType = 'deployment';
+          break;
+        case 'maintenance':
+          endpoint = `/api/maintenance-cases/${id}`;
+          modalType = 'maintenance';
+          break;
+        case 'warranty':
+          endpoint = `/api/warranties/${id}`;
+          modalType = 'warranty';
+          break;
+        case 'delivery':
+          endpoint = `/api/delivery-cases/${id}`; // Need to confirm if ID route exists or use GET params
+          // Fallback: If no direct ID route, might need to filter list or find better way.
+          // Assuming [id]/route.ts exists as verified.
+          modalType = 'delivery';
+          break;
+        case 'receiving':
+          endpoint = `/api/receiving-cases/${id}`; // Need to confirm if ID route exists
+          // Assuming [id]/route.ts exists.
+          modalType = 'receiving';
+          break;
+        default:
+          throw new Error('Unknown case type');
+      }
+
+      console.log(`Fetching case data from: ${endpoint}`);
+      const response = await fetch(endpoint);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch case: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const data = result.data || result; // Handle different API response structures
+
+      console.log('Case data loaded:', data);
+      setSelectedCaseData(data);
+      setOpenedModal(modalType);
+      toast.dismiss(toastId);
+
+    } catch (error) {
+      console.error('Error viewing case:', error);
+      toast.error('Không thể tải thông tin case', { id: toastId });
+    }
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setOpenedModal(null);
+    setSelectedCaseData(null);
+  }, []);
+
+
 
   // Memoized utility functions
   const getStatusColor = useCallback((status: string) => {
@@ -600,6 +682,12 @@ function AdminAllCasesTable() {
       setLoading(false);
     }
   }, []);
+
+  const handleModalSuccess = useCallback(() => {
+    handleCloseModal();
+    fetchAllCases(); // Refresh list after edit
+    toast.success('Cập nhật thành công');
+  }, [fetchAllCases, handleCloseModal]);
 
   // Memoized filtered cases
   const filteredCases = useMemo(() => {
@@ -1213,7 +1301,8 @@ function AdminAllCasesTable() {
                   getStatusLabel={getStatusLabel}
                   getCaseTypeLabel={getCaseTypeLabel}
                   getCaseTypeColor={getCaseTypeColor}
-                  getActionLink={getActionLink}
+
+                  onViewClick={handleViewCase}
                 />
               ))}
             </tbody>
@@ -1322,6 +1411,70 @@ function AdminAllCasesTable() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      {openedModal === 'internal' && (
+        <EditInternalCaseModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          caseData={selectedCaseData}
+        />
+      )}
+
+      {openedModal === 'incident' && (
+        <EditIncidentModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          incidentData={selectedCaseData}
+        />
+      )}
+
+      {openedModal === 'deployment' && (
+        <CreateDeploymentModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          editData={selectedCaseData}
+        />
+      )}
+
+      {openedModal === 'maintenance' && (
+        <CreateMaintenanceModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          editingMaintenance={selectedCaseData}
+        />
+      )}
+
+      {openedModal === 'warranty' && (
+        <CreateWarrantyModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          editingWarranty={selectedCaseData}
+        />
+      )}
+
+      {openedModal === 'delivery' && (
+        <CreateDeliveryCaseModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          editData={selectedCaseData}
+        />
+      )}
+
+      {openedModal === 'receiving' && (
+        <CreateReceivingCaseModal
+          isOpen={true}
+          onClose={handleCloseModal}
+          onSuccess={handleModalSuccess}
+          editData={selectedCaseData}
+        />
+      )}
     </div>
   );
 }

@@ -106,12 +106,12 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
   const [loading, setLoading] = useState(false);
   const [loadingPartners, setLoadingPartners] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   // Search and dropdown states
   const [searchTerm, setSearchTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
-  
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -138,14 +138,14 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
     if (editData && isOpen) {
       const deliveryDateTime = editData.startDate ? new Date(editData.startDate) : null;
       const completionDateTime = editData.endDate ? new Date(editData.endDate) : null;
-      
+
       const formOptions = getFieldOptions(EvaluationCategory.FORM);
       const defaultFormOption = formOptions.find(option => option.points === 2) || formOptions[0];
-      const selectedFormOption = formOptions.find(option => 
-        option.label === editData.form || 
+      const selectedFormOption = formOptions.find(option =>
+        option.label === editData.form ||
         (editData.userFormScore && option.points === editData.userFormScore)
       );
-      
+
       setFormData({
         customerId: editData.customer?.id || '',
         handler: editData.handler?.id || '',
@@ -174,15 +174,17 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         setSearchTerm(editData.customer.shortName);
       }
 
-      if (editData.products && editData.products.length > 0) {
-        const productItems: ProductItem[] = editData.products.map(product => ({
-          id: product.id,
-          name: product.name,
-          code: product.code || '',
-          quantity: product.quantity.toString(),
-          serialNumber: product.serialNumber || ''
-        }));
-        setProducts(productItems);
+      if (editData.products) {
+        console.log('Setting delivery products:', editData.products);
+        setProducts(editData.products.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          code: p.code || '',
+          quantity: String(p.quantity || ''),
+          serialNumber: p.serialNumber || ''
+        })));
+      } else {
+        setProducts([]);
       }
     }
   }, [editData, isOpen]);
@@ -204,7 +206,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-      
+
       return () => {
         document.body.style.position = '';
         document.body.style.top = '';
@@ -257,13 +259,13 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
 
   const fetchCurrentEmployee = async () => {
     if (!session?.user?.email) return;
-    
+
     try {
       const response = await fetch('/api/employees/list');
       if (response.ok) {
         const employeesResult = await response.json();
         const employeesData = employeesResult.data || employeesResult;
-        const employee = employeesData.find((emp: Employee) => 
+        const employee = employeesData.find((emp: Employee) =>
           emp.id === session.user.id
         );
         if (employee) {
@@ -364,7 +366,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast.error('Vui lòng kiểm tra lại các trường bắt buộc', {
         duration: 3000,
@@ -391,10 +393,10 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
 
       if (formData.deliveryDateTime) {
         try {
-          const deliveryDate = formData.deliveryDateTime instanceof Date 
-            ? formData.deliveryDateTime 
+          const deliveryDate = formData.deliveryDateTime instanceof Date
+            ? formData.deliveryDateTime
             : new Date(formData.deliveryDateTime);
-          
+
           if (isNaN(deliveryDate.getTime())) {
             throw new Error('Invalid date');
           }
@@ -418,10 +420,10 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
 
       if (formData.completionDateTime) {
         try {
-          const completionDate = formData.completionDateTime instanceof Date 
-            ? formData.completionDateTime 
+          const completionDate = formData.completionDateTime instanceof Date
+            ? formData.completionDateTime
             : new Date(formData.completionDateTime);
-          
+
           if (isNaN(completionDate.getTime())) {
             throw new Error('Invalid date');
           }
@@ -483,7 +485,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
 
       if (response.ok) {
         const result = await response.json();
-        
+
         toast.success(editData ? 'Cập nhật case giao hàng thành công!' : 'Tạo case giao hàng thành công!', {
           duration: 4000,
           position: 'top-right',
@@ -492,15 +494,15 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
             color: '#fff',
           },
         });
-        
+
         window.dispatchEvent(new CustomEvent('case-created'));
-        
+
         onSuccess(result);
         handleClose();
       } else {
         let errorMessage = 'Unknown error';
         let errorDetails = '';
-        
+
         try {
           const errorData = await response.json();
           console.error('API Error Response:', errorData);
@@ -510,9 +512,9 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
           console.error('Failed to parse error response:', parseError);
           errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
-        
+
         const fullErrorMessage = errorDetails ? `${errorMessage} (${errorDetails})` : errorMessage;
-        
+
         toast.error(`Lỗi tạo case: ${fullErrorMessage}`, {
           duration: 4000,
           position: 'top-right',
@@ -524,7 +526,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       }
     } catch (error) {
       console.error('Error creating delivery case:', error);
-      
+
       toast.error('Có lỗi xảy ra khi tạo case. Vui lòng thử lại.', {
         duration: 4000,
         position: 'top-right',
@@ -586,7 +588,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
   };
 
   const updateProduct = (id: string, field: keyof ProductItem, value: string) => {
-    setProducts(prev => prev.map(product => 
+    setProducts(prev => prev.map(product =>
       product.id === id ? { ...product, [field]: value } : product
     ));
   };
@@ -595,7 +597,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .ios-input-fix input,
         .ios-input-fix select,
         .ios-input-fix textarea {
@@ -648,14 +651,13 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                     </div>
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">Admin</span>
                   </div>
-                  
+
                   <div className="p-3">
                     <select
                       value={formData.handler}
                       onChange={(e) => handleInputChange('handler', e.target.value)}
-                      className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        errors.handler ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                      }`}
+                      className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.handler ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                        }`}
                     >
                       <option value="">-- Chọn người giao hàng --</option>
                       {employees.map(employee => (
@@ -680,7 +682,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                     <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Khách hàng</h3>
                     <span className="text-red-500 text-sm ml-1">*</span>
                   </div>
-                  
+
                   <div className="p-3">
                     <div className="relative" ref={dropdownRef}>
                       <div className="relative">
@@ -693,9 +695,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                           value={searchTerm}
                           onChange={(e) => handleSearchChange(e.target.value)}
                           onFocus={() => setIsDropdownOpen(true)}
-                          className={`w-full pl-10 pr-10 py-2.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
-                            errors.customerId ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                          }`}
+                          className={`w-full pl-10 pr-10 py-2.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${errors.customerId ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}
                           placeholder={loadingPartners ? 'Đang tải...' : 'Tìm kiếm khách hàng...'}
                           disabled={loadingPartners}
                         />
@@ -708,7 +709,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                           <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
                       </div>
-                      
+
                       {isDropdownOpen && !loadingPartners && (
                         <div className="absolute z-[9999] w-full mt-1.5 bg-white border border-gray-200 rounded shadow-lg max-h-56 overflow-auto">
                           {filteredPartners.length > 0 ? (
@@ -762,7 +763,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                     <span>Thêm sản phẩm</span>
                   </button>
                 </div>
-                
+
                 <div className="p-3">
                   {products.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
@@ -802,9 +803,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                                     type="text"
                                     value={product.name}
                                     onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                                    className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                                      errors[`product_${index}_name`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors[`product_${index}_name`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                      }`}
                                     placeholder="Nhập tên sản phẩm"
                                   />
                                   {errors[`product_${index}_name`] && (
@@ -825,9 +825,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                                     type="number"
                                     value={product.quantity}
                                     onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
-                                    className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                                      errors[`product_${index}_quantity`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors[`product_${index}_quantity`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                      }`}
                                     placeholder="SL"
                                     min="1"
                                   />
@@ -874,7 +873,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                                 <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
-                            
+
                             <div className="space-y-2">
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -884,9 +883,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                                   type="text"
                                   value={product.name}
                                   onChange={(e) => updateProduct(product.id, 'name', e.target.value)}
-                                  className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                                    errors[`product_${index}_name`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                  }`}
+                                  className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors[`product_${index}_name`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                    }`}
                                   placeholder="Nhập tên sản phẩm"
                                 />
                                 {errors[`product_${index}_name`] && (
@@ -913,9 +911,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                                     type="number"
                                     value={product.quantity}
                                     onChange={(e) => updateProduct(product.id, 'quantity', e.target.value)}
-                                    className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                                      errors[`product_${index}_quantity`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors[`product_${index}_quantity`] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                                      }`}
                                     placeholder="SL"
                                     min="1"
                                   />
@@ -939,7 +936,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                           </div>
                         ))}
                       </div>
-                      
+
                       {errors.products && (
                         <p className="text-xs text-red-600 flex items-center gap-1.5">
                           <AlertCircle className="h-3.5 w-3.5" />
@@ -957,7 +954,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
                 </div>
-                
+
                 <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -1030,7 +1027,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                   <FileText className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Mã CRM</h3>
                 </div>
-                
+
                 <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">Trạng thái case</label>
@@ -1066,7 +1063,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                   <FileText className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Ghi chú</h3>
                 </div>
-                
+
                 <div className="p-3">
                   <textarea
                     value={formData.notes}
@@ -1095,7 +1092,7 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                     <span className="hidden sm:inline">Làm mới</span>
                   </button>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* Mức độ khó */}
@@ -1106,9 +1103,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                       <select
                         value={formData.difficultyLevel}
                         onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
-                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
-                          errors.difficultyLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${errors.difficultyLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
                         required
                       >
                         <option value="">Chọn mức độ khó</option>
@@ -1134,9 +1130,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                       <select
                         value={formData.estimatedTime}
                         onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
-                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
-                          errors.estimatedTime ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${errors.estimatedTime ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
                         required
                       >
                         <option value="">Chọn thời gian ước tính</option>
@@ -1162,9 +1157,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                       <select
                         value={formData.impactLevel}
                         onChange={(e) => handleInputChange('impactLevel', e.target.value)}
-                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
-                          errors.impactLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${errors.impactLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
                         required
                       >
                         <option value="">Chọn mức độ ảnh hưởng</option>
@@ -1190,9 +1184,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                       <select
                         value={formData.urgencyLevel}
                         onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
-                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
-                          errors.urgencyLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${errors.urgencyLevel ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
                         required
                       >
                         <option value="">Chọn mức độ khẩn cấp</option>
@@ -1227,9 +1220,8 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
                             handleInputChange('formScore', selectedOption.points.toString());
                           }
                         }}
-                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${
-                          errors.form ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                        }`}
+                        className={`w-full px-2.5 py-1.5 text-sm border rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors ${errors.form ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                          }`}
                         required
                       >
                         <option value="">Chọn hình thức làm việc</option>
@@ -1251,35 +1243,35 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
               </div>
             </div>
 
-          {/* Actions */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-300 px-5 py-3 flex items-center justify-end gap-3 flex-shrink-0">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer"
-              style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
-            >
-              Hủy bỏ
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
-              style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>{editData ? 'Đang cập nhật...' : 'Đang tạo...'}</span>
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  <span>{editData ? 'Cập nhật Case' : 'Tạo Case Giao Hàng'}</span>
-                </>
-              )}
-            </button>
-          </div>
+            {/* Actions */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-300 px-5 py-3 flex items-center justify-end gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer"
+                style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
+                style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>{editData ? 'Đang cập nhật...' : 'Đang tạo...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>{editData ? 'Cập nhật Case' : 'Tạo Case Giao Hàng'}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </div>
       </div>

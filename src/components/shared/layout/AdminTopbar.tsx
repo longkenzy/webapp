@@ -9,9 +9,10 @@ import NotificationCenter from "@/components/shared/common/NotificationCenter";
 
 interface AdminTopbarProps {
   onMenuClick?: () => void;
+  isCollapsed?: boolean;
 }
 
-export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
+export default function AdminTopbar({ onMenuClick, isCollapsed = false }: AdminTopbarProps) {
   const { data } = useSession();
   const router = useRouter();
   const { registerRefreshCallback } = useAvatarRefresh();
@@ -57,7 +58,7 @@ export default function AdminTopbar({ onMenuClick }: AdminTopbarProps) {
   }, [data?.user?.id, fetchUserAvatar]);
 
   return (
-    <header className="fixed top-0 left-0 md:left-64 right-0 h-16 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-3 md:px-6 z-40 shadow-sm">
+    <header className={`fixed top-0 left-0 right-0 h-16 border-b bg-white/80 backdrop-blur-md flex items-center justify-between px-3 md:px-6 z-40 shadow-sm transition-all duration-300 ${isCollapsed ? 'md:left-20' : 'md:left-64'}`}>
       {/* Left Section */}
       <div className="flex items-center gap-2 md:gap-4">
         {/* Mobile: Hamburger Menu */}

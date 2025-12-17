@@ -3,17 +3,17 @@ import { db } from '@/lib/db';
 import { MaintenanceCaseStatus } from '@prisma/client';
 import { createCaseCreatedNotification, getAdminUsers } from '@/lib/notifications';
 import { convertToVietnamTime } from "@/lib/date-utils";
-import { 
-  withAuth, 
-  withErrorHandling, 
-  successResponse, 
-  errorResponse, 
+import {
+  withAuth,
+  withErrorHandling,
+  successResponse,
+  errorResponse,
   validateRequiredFields,
   setNoCacheHeaders
 } from '@/lib/api-middleware';
-import { 
-  validateCaseDates, 
-  processUserAssessment, 
+import {
+  validateCaseDates,
+  processUserAssessment,
   sendCaseNotifications
 } from '@/lib/case-helpers';
 
@@ -66,18 +66,18 @@ export const GET = withErrorHandling(
 );
 
 export const POST = withErrorHandling(
-  withAuth(async (request: NextRequest) => {
+  withAuth(async (request: NextRequest, session: any) => {
     const body = await request.json();
-    const { 
-      title, 
-      description, 
+    const {
+      title,
+      description,
       maintenanceTypeId,
-      handlerId, 
-      customerName, 
-      customerId, 
-      startDate, 
-      endDate, 
-      status, 
+      handlerId,
+      customerName,
+      customerId,
+      startDate,
+      endDate,
+      status,
       notes,
       crmReferenceCode
     } = body;
@@ -97,10 +97,21 @@ export const POST = withErrorHandling(
       return errorResponse(dateError);
     }
 
-    // Get default employee as reporter
-    const defaultEmployee = await db.employee.findFirst();
-    if (!defaultEmployee) {
-      return errorResponse('No employees found');
+    // Get reporter from session or fallback to default employee
+    let reporterId: string;
+    let reporterName: string;
+
+    if (session?.user?.employee) {
+      reporterId = session.user.employee.id;
+      reporterName = session.user.employee.fullName;
+    } else {
+      const defaultEmployee = await db.employee.findFirst();
+      if (!defaultEmployee) {
+        return errorResponse('No employees found');
+      }
+      reporterId = defaultEmployee.id;
+      // If user has a name in session, use it for notification even if we attach to default employee
+      reporterName = session?.user?.name || defaultEmployee.fullName;
     }
 
     // Process user assessment data
@@ -110,7 +121,7 @@ export const POST = withErrorHandling(
       data: {
         title,
         description,
-        reporterId: defaultEmployee.id,
+        reporterId,
         handlerId,
         customerName,
         customerId: customerId || null,
@@ -152,7 +163,7 @@ export const POST = withErrorHandling(
     });
 
     // Send notifications asynchronously
-    sendCaseNotifications('maintenance', newMaintenanceCase.id, newMaintenanceCase.title, defaultEmployee.fullName);
+    sendCaseNotifications('maintenance', newMaintenanceCase.id, newMaintenanceCase.title, reporterName);
 
     return successResponse(newMaintenanceCase, 'Maintenance case created successfully');
   })

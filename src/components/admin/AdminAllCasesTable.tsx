@@ -22,7 +22,10 @@ import {
   RefreshCw,
   Rocket,
   ChevronDown,
-  Search
+  Search,
+  Building2,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import Link from "next/link";
 
@@ -71,7 +74,7 @@ interface UnifiedCase {
 }
 
 // Memoized Case Row Component
-const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatusColor, getStatusLabel, getCaseTypeLabel, getActionLink }: {
+const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatusColor, getStatusLabel, getCaseTypeLabel, getCaseTypeColor, getActionLink }: {
   case_: UnifiedCase;
   index: number;
   startIndex: number;
@@ -79,22 +82,23 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
   getStatusColor: (status: string) => string;
   getStatusLabel: (status: string) => string;
   getCaseTypeLabel: (type: string) => string;
+  getCaseTypeColor: (type: string) => string;
   getActionLink: (type: string, id: string) => string;
 }) => (
-  <tr className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 border-b border-gray-100">
-    <td className="px-2 py-2 whitespace-nowrap">
-      <div className="flex items-center justify-center w-6 h-6 bg-gray-100 rounded-full">
-        <span className="text-xs font-bold text-gray-700">{filteredCasesLength - (startIndex + index)}</span>
+  <tr className="group hover:bg-blue-50/50 transition-colors duration-200 border-b border-gray-100 last:border-0">
+    <td className="px-4 py-3 whitespace-nowrap">
+      <div className="flex items-center justify-center w-8 h-8 bg-gray-50 text-gray-500 rounded-lg font-medium text-xs border border-gray-100 group-hover:bg-white group-hover:border-blue-100 group-hover:text-blue-600 transition-colors">
+        {filteredCasesLength - (startIndex + index)}
       </div>
     </td>
-    <td className="px-2 py-2 whitespace-nowrap">
-      <span className="text-xs font-medium text-gray-900">
+    <td className="px-4 py-3 whitespace-nowrap">
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${getCaseTypeColor(case_.type)}`}>
         {getCaseTypeLabel(case_.type)}
       </span>
     </td>
-    <td className="px-2 py-2 whitespace-nowrap">
-      <div className="flex items-center space-x-1">
-        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center overflow-hidden">
+    <td className="px-4 py-3 whitespace-nowrap">
+      <div className="flex items-center space-x-3">
+        <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-200 bg-gray-50 flex-shrink-0 group-hover:border-blue-200 transition-colors">
           {case_.handler?.avatar ? (
             <img
               src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`}
@@ -102,84 +106,91 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
               className="w-full h-full object-cover"
             />
           ) : (
-            <User className="h-2.5 w-2.5 text-green-600" />
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <User className="h-4 w-4 text-gray-400" />
+            </div>
           )}
         </div>
-        <span className="text-xs text-gray-900 font-medium">{case_.handlerName}</span>
+        <div className="flex flex-col">
+          <span className="text-sm font-medium text-gray-900 group-hover:text-blue-700 transition-colors">{case_.handlerName}</span>
+        </div>
       </div>
     </td>
-    <td className="px-2 py-2 whitespace-nowrap">
-      <div className="text-xs">
+    <td className="px-4 py-3">
+      <div className="flex flex-col">
         {case_.type === 'internal' ? (
-          <div className="whitespace-pre-line">
-            <div className="font-semibold text-blue-700">Smart Services</div>
-            <div className="text-gray-600 text-xs">{case_.customerName.split('\n')[1]}</div>
-          </div>
+          <>
+            <span className="text-sm font-semibold text-gray-900">Smart Services</span>
+            <span className="text-xs text-gray-500">{case_.customerName.split('\n')[1] || 'Nội bộ'}</span>
+          </>
         ) : (
-          <span className="text-green-700 font-medium">{case_.customerName}</span>
+          <span className="text-sm font-medium text-gray-900" title={case_.customerName}>
+            {case_.customerName}
+          </span>
         )}
       </div>
     </td>
-    <td className="px-2 py-2 max-w-xs">
-      <div className="text-xs text-gray-900 whitespace-pre-line" title={case_.title}>
+    <td className="px-4 py-3 max-w-[200px]">
+      <div className="text-sm font-medium text-gray-900 whitespace-pre-wrap" title={case_.title}>
         {case_.title}
       </div>
     </td>
-    <td className="px-2 py-2 max-w-xs">
-      <div className="text-xs text-gray-600 whitespace-pre-line" title={case_.description}>
+    <td className="px-4 py-3 max-w-[250px]">
+      <div className="text-xs text-gray-500 whitespace-pre-wrap leading-relaxed" title={case_.description}>
         {case_.type === 'delivery' || case_.type === 'receiving' ? (
           <div dangerouslySetInnerHTML={{
-            __html: case_.description.replace(/\*\*(.*?)\*\*/g, '<strong><em>$1</em></strong>')
+            __html: case_.description.replace(/\*\*(.*?)\*\*/g, '<span class="font-semibold text-gray-700">$1</span>')
           }} />
         ) : (
           case_.description
         )}
       </div>
     </td>
-    <td className="px-2 py-2 w-28">
-      <div className="text-xs">
-        <div className="flex items-center space-x-1 mb-1">
-          <Clock className="h-2.5 w-2.5 text-blue-500" />
-          <span className="text-blue-700 font-medium text-xs">Bắt đầu</span>
-        </div>
-        <div className="text-gray-600 text-xs">
-          {new Date(case_.startDate).toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-            timeZone: 'Asia/Ho_Chi_Minh'
-          }).replace(':', 'H')} {new Date(case_.startDate).toLocaleDateString('vi-VN')}
+    <td className="px-4 py-3 whitespace-nowrap">
+      <div className="flex flex-col space-y-1">
+        <div className="flex items-center space-x-1.5 text-xs text-gray-500">
+          <Clock className="h-3.5 w-3.5 text-blue-500" />
+          <span>
+            {new Date(case_.startDate).toLocaleDateString('vi-VN')}
+            <span className="mx-1 text-gray-300">|</span>
+            {new Date(case_.startDate).toLocaleTimeString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+              timeZone: 'Asia/Ho_Chi_Minh'
+            })}
+          </span>
         </div>
         {case_.endDate && (
-          <>
-            <div className="flex items-center space-x-1 mt-1">
-              <CheckCircle className="h-2.5 w-2.5 text-green-500" />
-              <span className="text-green-700 font-medium text-xs">Kết thúc</span>
-            </div>
-            <div className="text-gray-600 text-xs">
+          <div className="flex items-center space-x-1.5 text-xs text-gray-500">
+            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+            <span>
+              {new Date(case_.endDate).toLocaleDateString('vi-VN')}
+              <span className="mx-1 text-gray-300">|</span>
               {new Date(case_.endDate).toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false,
                 timeZone: 'Asia/Ho_Chi_Minh'
-              }).replace(':', 'H')} {new Date(case_.endDate).toLocaleDateString('vi-VN')}
-            </div>
-          </>
+              })}
+            </span>
+          </div>
         )}
       </div>
     </td>
-    <td className="px-2 py-2 whitespace-nowrap">
-      <span className={`inline-flex px-3 py-1 text-xs font-bold rounded ${getStatusColor(case_.status)} shadow-sm`}>
+    <td className="px-4 py-3 whitespace-nowrap">
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(case_.status)} border border-current/10 shadow-sm`}>
+        <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-60"></span>
         {getStatusLabel(case_.status)}
       </span>
     </td>
-    <td className="px-2 py-2 whitespace-nowrap text-center">
+    <td className="px-4 py-3 whitespace-nowrap text-right">
       <Link
         href={getActionLink(case_.type, case_.id)}
-        className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors duration-200 shadow-sm hover:shadow-md"
+        className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 rounded-lg transition-all duration-200 group-hover:shadow-sm"
       >
-        <Eye className="h-2.5 w-2.5" />
-        <span>Xem</span>
+        <Eye className="h-3.5 w-3.5 mr-1.5" />
+        Chi tiết
       </Link>
     </td>
   </tr>
@@ -291,6 +302,27 @@ function AdminAllCasesTable() {
         return 'Case triển khai';
       default:
         return 'Case';
+    }
+  }, []);
+
+  const getCaseTypeColor = useCallback((type: string) => {
+    switch (type) {
+      case 'internal':
+        return 'bg-slate-100 text-slate-800 border-slate-200';
+      case 'delivery':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'receiving':
+        return 'bg-amber-100 text-amber-800 border-amber-200';
+      case 'maintenance':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+      case 'incident':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'warranty':
+        return 'bg-cyan-100 text-cyan-800 border-cyan-200';
+      case 'deployment':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   }, []);
 
@@ -770,7 +802,7 @@ function AdminAllCasesTable() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-6 max-w-[1920px] mx-auto pb-10">
       {/* iOS Safari text color fix */}
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -786,435 +818,332 @@ function AdminAllCasesTable() {
         }
       `}} />
 
-      {/* Tab Navigation - Responsive */}
-      <div className="bg-white rounded-md shadow-sm border border-gray-100">
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-4 md:gap-8 px-3 md:px-6" aria-label="Tabs">
+      {/* Main Header & Tabs */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-1 bg-gray-50/50 border-b border-gray-200">
+          <nav className="flex space-x-1" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('today')}
-              className={`py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${activeTab === 'today'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === 'today'
+                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-gray-200'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
                 }`}
             >
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                <span className="hidden sm:inline">Hôm nay</span>
-                <span className="sm:hidden">Nay</span>
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-1.5 md:px-2 py-0.5 rounded-full">
-                  {todayCases.length}
-                </span>
-              </div>
+              <Calendar className={`h-4 w-4 ${activeTab === 'today' ? 'text-blue-500' : 'text-gray-400'}`} />
+              <span>Hôm nay</span>
+              <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs ${activeTab === 'today' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                {todayCases.length}
+              </span>
             </button>
             <button
               onClick={() => setActiveTab('all')}
-              className={`py-3 md:py-4 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors duration-200 ${activeTab === 'all'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === 'all'
+                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-gray-200'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
                 }`}
             >
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <FileText className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                <span>Tất cả</span>
-                <span className="bg-gray-100 text-gray-800 text-xs font-medium px-1.5 md:px-2 py-0.5 rounded-full">
-                  {allCases.length}
-                </span>
-              </div>
+              <Ticket className={`h-4 w-4 ${activeTab === 'all' ? 'text-blue-500' : 'text-gray-400'}`} />
+              <span>Tất cả</span>
+              <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs ${activeTab === 'all' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                {allCases.length}
+              </span>
             </button>
           </nav>
         </div>
       </div>
 
-      {/* Statistics - Mobile: Horizontal Scroll, Desktop: Grid */}
-      <div className="md:hidden overflow-x-auto scrollbar-hide">
-        <div className="flex gap-2 pb-2">
+      {/* Statistics - Desktop: Grid */}
+      <div className="hidden md:grid grid-cols-4 lg:grid-cols-7 gap-4">
+        {[
+          { type: 'internal', label: 'Nội bộ', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+          { type: 'delivery', label: 'Giao hàng', icon: Truck, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
+          { type: 'receiving', label: 'Nhận hàng', icon: Package, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+          { type: 'maintenance', label: 'Bảo trì', icon: Wrench, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
+          { type: 'incident', label: 'Sự cố', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
+          { type: 'warranty', label: 'Bảo hành', icon: Shield, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+          { type: 'deployment', label: 'Triển khai', icon: Rocket, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100' }
+        ].map(({ type, label, icon: Icon, color, bg, border }) => {
+          const count = filteredCases.filter(c => c.type === type).length;
+          return (
+            <div key={type} className={`rounded-xl border ${border} bg-white p-4 shadow-sm hover:shadow-md transition-shadow group`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className={`p-2 rounded-lg ${bg}`}>
+                  <Icon className={`h-4 w-4 ${color}`} />
+                </div>
+                <span className={`text-2xl font-bold ${color}`}>{count}</span>
+              </div>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Mobile Stats Carousel */}
+      <div className="md:hidden overflow-x-auto pb-4 scrollbar-hide -mx-4 px-4">
+        <div className="flex gap-3 w-max">
           {[
-            { type: 'internal', label: 'Nội bộ', icon: FileText, color: 'bg-blue-500' },
-            { type: 'delivery', label: 'Giao hàng', icon: Truck, color: 'bg-green-500' },
-            { type: 'receiving', label: 'Nhận hàng', icon: Package, color: 'bg-yellow-500' },
-            { type: 'maintenance', label: 'Bảo trì', icon: Wrench, color: 'bg-purple-500' },
-            { type: 'incident', label: 'Sự cố', icon: AlertTriangle, color: 'bg-red-500' },
-            { type: 'warranty', label: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' },
-            { type: 'deployment', label: 'Triển khai', icon: Rocket, color: 'bg-cyan-500' }
-          ].map(({ type, label, icon: Icon, color }) => {
+            { type: 'internal', label: 'Nội bộ', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+            { type: 'delivery', label: 'Giao hàng', icon: Truck, color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100' },
+            { type: 'receiving', label: 'Nhận hàng', icon: Package, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+            { type: 'maintenance', label: 'Bảo trì', icon: Wrench, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100' },
+            { type: 'incident', label: 'Sự cố', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100' },
+            { type: 'warranty', label: 'Bảo hành', icon: Shield, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+            { type: 'deployment', label: 'Triển khai', icon: Rocket, color: 'text-cyan-600', bg: 'bg-cyan-50', border: 'border-cyan-100' }
+          ].map(({ type, label, icon: Icon, color, bg, border }) => {
             const count = filteredCases.filter(c => c.type === type).length;
             return (
-              <div key={type} className="flex-shrink-0 bg-white rounded-md border border-gray-200 px-2.5 py-1.5 shadow-sm">
-                <div className="flex items-center gap-1.5">
-                  <div className={`p-1 rounded ${color} text-white`}>
-                    <Icon className="h-3 w-3" />
+              <div key={type} className={`flex-shrink-0 w-32 rounded-xl border ${border} bg-white p-3 shadow-sm`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`p-1.5 rounded-md ${bg}`}>
+                    <Icon className={`h-3.5 w-3.5 ${color}`} />
                   </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 leading-tight">{label}</p>
-                    <p className="text-sm font-bold text-gray-900">{count}</p>
-                  </div>
+                  <span className={`text-xl font-bold ${color}`}>{count}</span>
                 </div>
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Statistics - Desktop: Grid */}
-      <div className="hidden md:grid grid-cols-4 lg:grid-cols-7 gap-2">
-        {[
-          { type: 'internal', label: 'Nội bộ', icon: FileText, color: 'bg-blue-500' },
-          { type: 'delivery', label: 'Giao hàng', icon: Truck, color: 'bg-green-500' },
-          { type: 'receiving', label: 'Nhận hàng', icon: Package, color: 'bg-yellow-500' },
-          { type: 'maintenance', label: 'Bảo trì', icon: Wrench, color: 'bg-purple-500' },
-          { type: 'incident', label: 'Sự cố', icon: AlertTriangle, color: 'bg-red-500' },
-          { type: 'warranty', label: 'Bảo hành', icon: Shield, color: 'bg-indigo-500' },
-          { type: 'deployment', label: 'Triển khai', icon: Rocket, color: 'bg-cyan-500' }
-        ].map(({ type, label, icon: Icon, color }) => {
-          const count = filteredCases.filter(c => c.type === type).length;
-          return (
-            <div key={type} className="bg-white rounded-md shadow-sm border border-gray-200 p-2.5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-600">{label}</p>
-                  <p className="text-lg font-bold text-gray-900">{count}</p>
-                </div>
-                <div className={`p-1.5 rounded-md ${color} text-white`}>
-                  <Icon className="h-3.5 w-3.5" />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Filters - Collapsible on Mobile */}
-      <div className="bg-white rounded-md shadow-sm border border-gray-100">
-        {/* Mobile: Collapsible Header */}
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="md:hidden w-full flex items-center justify-between px-3 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 transition-colors rounded-t-md"
-        >
+      {/* Filters - Modern & Collapsible */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/30 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-semibold text-gray-800">Bộ lọc</span>
-          </div>
-          <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-        </button>
-
-        {/* Desktop: Static Header */}
-        <div className="hidden md:flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Settings className="h-5 w-5 text-blue-600" />
+            <div className="bg-blue-600 text-white p-1.5 rounded-lg shadow-sm">
+              <Settings className="h-4 w-4" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Bộ lọc tìm kiếm</h3>
+            <div>
+              <h3 className="text-sm font-bold text-gray-900">Bộ lọc tìm kiếm</h3>
+              <p className="text-xs text-gray-500">Tìm kiếm và lọc dữ liệu case</p>
+            </div>
           </div>
-          <button
-            onClick={clearFilters}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-          >
-            <span>Xóa tất cả</span>
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-gray-500 hover:text-blue-600 p-2 hover:bg-gray-100 rounded-lg transition-colors md:hidden"
+            >
+              <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Only show Clear Filters if filters are active */}
+            {(filters.caseType || filters.handler || filters.status || filters.customer || filters.dateFrom || filters.dateTo) && (
+              <button
+                onClick={clearFilters}
+                className="text-xs font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Xóa bộ lọc
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter Content */}
-        <div className={`p-3 md:p-6 ${showFilters ? 'block' : 'hidden md:block'}`}>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2 md:gap-4">
+        <div className={`p-4 md:p-6 transition-all duration-300 ${showFilters ? 'block' : 'hidden md:block'}`}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Case Type Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 ml-1">
                 Loại Case
               </label>
-              <select
-                value={filters.caseType}
-                onChange={(e) => handleFilterChange('caseType', e.target.value)}
-                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
-              >
-                <option value="">Tất cả loại case</option>
-                <option value="internal">Case nội bộ</option>
-                <option value="delivery">Case giao hàng</option>
-                <option value="receiving">Case nhận hàng</option>
-                <option value="maintenance">Case bảo trì</option>
-                <option value="incident">Case sự cố</option>
-                <option value="warranty">Case bảo hành</option>
-                <option value="deployment">Case triển khai</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={filters.caseType}
+                  onChange={(e) => handleFilterChange('caseType', e.target.value)}
+                  className="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50/50 hover:bg-white transition-all text-sm appearance-none cursor-pointer"
+                >
+                  <option value="">Tất cả loại</option>
+                  <option value="internal">Nội bộ</option>
+                  <option value="delivery">Giao hàng</option>
+                  <option value="receiving">Nhận hàng</option>
+                  <option value="maintenance">Bảo trì</option>
+                  <option value="incident">Sự cố</option>
+                  <option value="warranty">Bảo hành</option>
+                  <option value="deployment">Triển khai</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
 
             {/* Handler Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 ml-1">
                 Người xử lý
               </label>
-              <input
-                type="text"
-                placeholder="Tìm người xử lý..."
-                value={filters.handler}
-                onChange={(e) => handleFilterChange('handler', e.target.value)}
-                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm placeholder-gray-400"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tên nhân viên..."
+                  value={filters.handler}
+                  onChange={(e) => handleFilterChange('handler', e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50/50 hover:bg-white transition-all text-sm"
+                />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
             </div>
 
             {/* Status Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 ml-1">
                 Trạng thái
               </label>
-              <select
-                value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
-              >
-                <option value="">Tất cả trạng thái</option>
-                <option value="RECEIVED">Tiếp nhận</option>
-                <option value="IN_PROGRESS">Đang xử lý</option>
-                <option value="COMPLETED">Hoàn thành</option>
-                <option value="CANCELLED">Hủy</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  className="w-full pl-3 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50/50 hover:bg-white transition-all text-sm appearance-none cursor-pointer"
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="RECEIVED">Tiếp nhận</option>
+                  <option value="IN_PROGRESS">Đang xử lý</option>
+                  <option value="COMPLETED">Hoàn thành</option>
+                  <option value="CANCELLED">Hủy</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+              </div>
             </div>
 
             {/* Customer Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 ml-1">
                 Khách hàng
               </label>
-              <input
-                type="text"
-                placeholder="Tìm khách hàng..."
-                value={filters.customer}
-                onChange={(e) => handleFilterChange('customer', e.target.value)}
-                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm placeholder-gray-400"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Tên khách hàng..."
+                  value={filters.customer}
+                  onChange={(e) => handleFilterChange('customer', e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50/50 hover:bg-white transition-all text-sm"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
             </div>
 
-            {/* Date From Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+            {/* Date Filters */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 ml-1">
                 Từ ngày
               </label>
               <input
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50/50 hover:bg-white transition-all text-sm"
               />
             </div>
 
-            {/* Date To Filter */}
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-gray-700 ml-1">
                 Đến ngày
               </label>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                className="w-full px-2.5 md:px-3 py-1.5 md:py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 hover:bg-white transition-colors duration-200 text-xs md:text-sm"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50/50 hover:bg-white transition-all text-sm"
               />
             </div>
           </div>
-
-          {/* Mobile: Clear Filters Button */}
-          <div className="md:hidden mt-3 pt-3 border-t border-gray-200">
-            <button
-              onClick={clearFilters}
-              className="w-full inline-flex items-center justify-center px-4 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-            >
-              <span>Xóa tất cả bộ lọc</span>
-            </button>
-          </div>
         </div>
-
-        {/* Active Filters Display */}
-        {(filters.caseType || filters.handler || filters.status || filters.customer || filters.dateFrom || filters.dateTo) && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex items-center space-x-2 mb-3">
-              <span className="text-sm font-medium text-gray-700">Bộ lọc đang áp dụng:</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {filters.caseType && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  Loại: {getCaseTypeLabel(filters.caseType)}
-                  <button
-                    onClick={() => handleFilterChange('caseType', '')}
-                    className="ml-2 text-blue-600 hover:text-blue-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.handler && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  Xử lý: {filters.handler}
-                  <button
-                    onClick={() => handleFilterChange('handler', '')}
-                    className="ml-2 text-green-600 hover:text-green-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.status && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  Trạng thái: {getStatusLabel(filters.status)}
-                  <button
-                    onClick={() => handleFilterChange('status', '')}
-                    className="ml-2 text-purple-600 hover:text-purple-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.customer && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Khách hàng: {filters.customer}
-                  <button
-                    onClick={() => handleFilterChange('customer', '')}
-                    className="ml-2 text-orange-600 hover:text-orange-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.dateFrom && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  Từ: {new Date(filters.dateFrom + 'T00:00:00').toLocaleDateString('vi-VN')}
-                  <button
-                    onClick={() => handleFilterChange('dateFrom', '')}
-                    className="ml-2 text-purple-600 hover:text-purple-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {filters.dateTo && (
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  Đến: {new Date(filters.dateTo + 'T00:00:00').toLocaleDateString('vi-VN')}
-                  <button
-                    onClick={() => handleFilterChange('dateTo', '')}
-                    className="ml-2 text-purple-600 hover:text-purple-800"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Cases Table */}
-      <div className="bg-white rounded-md shadow-sm border border-gray-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 md:px-6 py-3 md:py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-100 p-2 rounded-lg">
+              <FileText className="h-5 w-5 text-blue-600" />
+            </div>
             <div>
-              <h2 className="text-base md:text-xl font-bold text-gray-900">
-                {activeTab === 'today' ? 'Cases hôm nay' : 'Tất cả cases'}
+              <h2 className="text-lg font-bold text-gray-900">
+                {activeTab === 'today' ? 'Danh Sách Case Hôm Nay' : 'Tất Cả Danh Sách Case'}
               </h2>
-              <p className="text-xs md:text-sm text-gray-600 mt-0.5 md:mt-1">
-                <span className="md:hidden">{filteredCases.length} cases</span>
-                <span className="hidden md:inline">
-                  Hiển thị: <span className="font-semibold text-blue-600">{startIndex + 1}-{Math.min(endIndex, filteredCases.length)}</span> / <span className="font-semibold text-gray-600">{filteredCases.length}</span> cases (trang {currentPage}/{totalPages})
-                </span>
+              <p className="text-sm text-gray-500">
+                Tổng số: <span className="font-semibold text-gray-900">{filteredCases.length}</span> case
               </p>
             </div>
-            <button
-              onClick={() => {
-                setLoading(true);
-                fetchAllCases();
-              }}
-              className="flex items-center gap-1.5 md:gap-2 text-xs text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 md:px-3 py-1.5 md:py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-              title="Làm mới dữ liệu"
-            >
-              <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{loading ? 'Đang tải...' : 'Làm mới'}</span>
-            </button>
           </div>
+
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchAllCases();
+            }}
+            className="flex items-center justify-center gap-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-50 shadow-sm"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>{loading ? 'Đang cập nhật...' : 'Làm mới dữ liệu'}</span>
+          </button>
         </div>
 
         {/* Mobile Card View */}
-        <div className="md:hidden space-y-3">
+        <div className="md:hidden space-y-4">
           {currentCases.length > 0 ? (
             currentCases.map((case_, index) => {
               const stt = filteredCases.length - (startIndex + index);
               return (
-                <div key={case_.id} className="bg-white rounded-md border border-gray-200 p-3 hover:shadow-md transition-all">
-                  {/* Header: STT & Status */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-bold text-gray-500">#{stt}</span>
-                    <span className={`inline-flex px-2 py-0.5 text-[10px] font-medium rounded border ${getStatusColor(case_.status)}`}>
+                <div key={case_.id} className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:shadow-md transition-shadow">
+                  {/* Header: Status & Type */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(case_.status)} border border-current/10`}>
                       {getStatusLabel(case_.status)}
                     </span>
-                  </div>
-
-                  {/* Case Type */}
-                  <div className="mb-2 pb-2 border-b border-gray-100">
-                    <span className="text-xs font-medium text-blue-600">
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-md border ${getCaseTypeColor(case_.type)}`}>
                       {getCaseTypeLabel(case_.type)}
                     </span>
                   </div>
 
-                  {/* Form (if exists) */}
-                  {case_.title.includes('Hình thức:') && (
-                    <div className="mb-2">
-                      <span className="text-xs font-medium text-gray-700">
-                        {case_.title.split('\n')[0]}
-                      </span>
-                    </div>
-                  )}
-
                   {/* Title */}
-                  <h4 className="text-sm font-semibold text-gray-900 mb-2 line-clamp-2 leading-relaxed">
-                    {case_.title.includes('Hình thức:') ? case_.title.split('\n')[1] : case_.title}
-                  </h4>
+                  <div className="mb-3">
+                    {case_.title.includes('Hình thức:') && (
+                      <p className="text-xs font-medium text-gray-500 mb-0.5">
+                        {case_.title.split('\n')[0]}
+                      </p>
+                    )}
+                    <h4 className="text-sm font-bold text-gray-900 line-clamp-2 leading-relaxed">
+                      {case_.title.includes('Hình thức:') ? case_.title.split('\n')[1] : case_.title}
+                    </h4>
+                  </div>
 
-                  {/* Description */}
-                  <p className="text-xs text-gray-600 mb-3 pb-3 border-b border-gray-100 line-clamp-2 leading-relaxed">
-                    {case_.description}
-                  </p>
-
-                  {/* Info Grid */}
-                  <div className="space-y-2 mb-3 pb-3 border-b border-gray-100">
+                  {/* Customer & Handler */}
+                  <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-gray-100">
                     <div className="flex items-center gap-2">
-                      <User className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                      <span className="text-xs text-gray-500">Người xử lý:</span>
-                      <span className="text-xs font-medium text-gray-900">{case_.handlerName}</span>
+                      {case_.handler?.avatar ? (
+                        <img
+                          src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`}
+                          alt={case_.handlerName}
+                          className="w-6 h-6 rounded-full object-cover border border-gray-200"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
+                          <User className="h-3 w-3 text-gray-400" />
+                        </div>
+                      )}
+                      <span className="text-xs font-medium text-gray-700 truncate">{case_.handlerName}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                      <span className="text-xs text-gray-500">Khách hàng:</span>
-                      <span className="text-xs font-medium text-gray-900">{case_.customerName || 'Nội bộ'}</span>
+                    <div className="flex items-center gap-2 justify-end">
+                      <span className="text-xs text-gray-500 truncate max-w-[120px]" title={case_.customerName}>
+                        {case_.customerName || 'Nội bộ'}
+                      </span>
+                      <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
                     </div>
                   </div>
 
                   {/* Time Info */}
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5 text-green-600 flex-shrink-0" />
-                      <span className="text-xs text-gray-500">Bắt đầu:</span>
-                      <span className="text-xs font-medium text-gray-900">
-                        {new Date(case_.startDate).toLocaleString('vi-VN', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          timeZone: 'Asia/Ho_Chi_Minh'
-                        })}
-                      </span>
+                  <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-blue-500" />
+                      <span>{new Date(case_.startDate).toLocaleDateString('vi-VN')}</span>
                     </div>
                     {case_.endDate && (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="h-3.5 w-3.5 text-blue-600 flex-shrink-0" />
-                        <span className="text-xs text-gray-500">Kết thúc:</span>
-                        <span className="text-xs font-medium text-gray-900">
-                          {new Date(case_.endDate).toLocaleString('vi-VN', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            timeZone: 'Asia/Ho_Chi_Minh'
-                          })}
-                        </span>
+                      <div className="flex items-center gap-1.5">
+                        <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+                        <span>{new Date(case_.endDate).toLocaleDateString('vi-VN')}</span>
                       </div>
                     )}
                   </div>
@@ -1222,17 +1151,17 @@ function AdminAllCasesTable() {
                   {/* Action Button */}
                   <Link
                     href={getActionLink(case_.type, case_.id)}
-                    className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-colors border border-blue-100"
                   >
-                    <Eye className="h-3.5 w-3.5" />
-                    Xem chi tiết
+                    <span>Xem chi tiết</span>
+                    <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
               );
             })
           ) : (
-            <div className="text-center py-12 bg-gray-50">
-              <FileText className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+              <FileText className="h-10 w-10 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500">Không có case nào</p>
             </div>
           )}
@@ -1240,34 +1169,34 @@ function AdminAllCasesTable() {
 
         {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto">
-          <table className="min-w-full text-xs">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-16">
                   #
                 </th>
-                <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">
                   Loại Case
                 </th>
-                <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-48">
                   Người xử lý
                 </th>
-                <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-40">
                   Khách hàng
                 </th>
-                <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider max-w-[200px]">
                   Tiêu đề
                 </th>
-                <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider max-w-[250px]">
                   Chi tiết
                 </th>
-                <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200 w-28">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-40">
                   Thời gian
                 </th>
-                <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider border-r border-gray-200">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-32">
                   Trạng thái
                 </th>
-                <th className="px-2 py-2 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th scope="col" className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider w-24">
                   Hành động
                 </th>
               </tr>
@@ -1283,6 +1212,7 @@ function AdminAllCasesTable() {
                   getStatusColor={getStatusColor}
                   getStatusLabel={getStatusLabel}
                   getCaseTypeLabel={getCaseTypeLabel}
+                  getCaseTypeColor={getCaseTypeColor}
                   getActionLink={getActionLink}
                 />
               ))}
@@ -1300,34 +1230,40 @@ function AdminAllCasesTable() {
           </div>
         )}
 
-        {/* Pagination - Desktop style on both mobile and desktop */}
+        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="bg-white px-2 md:px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <div className="flex-1 flex items-center justify-between md:justify-between">
-              <div className="hidden md:block">
+          <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sau
+              </button>
+            </div>
+            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
                 <p className="text-sm text-gray-700">
-                  Hiển thị{' '}
-                  <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
-                  {' '}đến{' '}
-                  <span className="font-medium">
-                    {Math.min(currentPage * itemsPerPage, filteredCases.length)}
-                  </span>
-                  {' '}của{' '}
-                  <span className="font-medium">{filteredCases.length}</span>
-                  {' '}kết quả
+                  Hiển thị <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> đến <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredCases.length)}</span> của <span className="font-medium">{filteredCases.length}</span> kết quả
                 </p>
               </div>
               <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <nav className="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px" aria-label="Pagination">
                   <button
                     onClick={goToPreviousPage}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   >
-                    <span className="sr-only">Trước</span>
-                    <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
+                    <span className="sr-only">Previous</span>
+                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                   </button>
 
                   {/* Page numbers */}
@@ -1347,9 +1283,9 @@ function AdminAllCasesTable() {
                       <button
                         key={pageNum}
                         onClick={() => goToPage(pageNum)}
-                        className={`relative inline-flex items-center px-2.5 md:px-4 py-1.5 md:py-2 border text-xs md:text-sm font-medium ${pageNum === currentPage
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${pageNum === currentPage
+                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700'
                           }`}
                       >
                         {pageNum}
@@ -1360,12 +1296,10 @@ function AdminAllCasesTable() {
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-1.5 md:px-2 py-1.5 md:py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:z-10 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   >
-                    <span className="sr-only">Sau</span>
-                    <svg className="h-4 w-4 md:h-5 md:w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
+                    <span className="sr-only">Next</span>
+                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
                   </button>
                 </nav>
               </div>

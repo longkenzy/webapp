@@ -60,13 +60,13 @@ interface EditIncidentModalProps {
   // Pre-loaded data to avoid re-fetching
   employees?: Employee[];
   customers?: any[];
-  incidentTypes?: Array<{id: string, name: string}>;
+  incidentTypes?: Array<{ id: string, name: string }>;
 }
 
-export default function EditIncidentModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
+export default function EditIncidentModal({
+  isOpen,
+  onClose,
+  onSuccess,
   incidentData,
   employees: preloadedEmployees = [],
   customers: preloadedCustomers = [],
@@ -88,7 +88,7 @@ export default function EditIncidentModal({
 
   const [employees, setEmployees] = useState<Employee[]>(preloadedEmployees);
   const [customers, setCustomers] = useState<any[]>(preloadedCustomers);
-  const [incidentTypes, setIncidentTypes] = useState<Array<{id: string, name: string}>>(preloadedIncidentTypes);
+  const [incidentTypes, setIncidentTypes] = useState<Array<{ id: string, name: string }>>(preloadedIncidentTypes);
   const [saving, setSaving] = useState(false);
 
   // Sync preloaded data when it changes
@@ -119,7 +119,7 @@ export default function EditIncidentModal({
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-      
+
       return () => {
         document.body.style.position = '';
         document.body.style.top = '';
@@ -136,7 +136,7 @@ export default function EditIncidentModal({
       console.log('=== Initializing Incident Form Data ===');
       console.log('Incident Handler ID:', incidentData.handler?.id);
       console.log('Incident Handler Name:', incidentData.handler?.fullName);
-      
+
       // Convert ISO string to Date object for DateTimePicker
       const startDate = incidentData.startDate ? new Date(incidentData.startDate) : null;
       const endDate = incidentData.endDate ? new Date(incidentData.endDate) : null;
@@ -154,7 +154,7 @@ export default function EditIncidentModal({
         notes: incidentData.notes || '',
         crmReferenceCode: incidentData.crmReferenceCode || ''
       });
-      
+
       console.log('✅ Form Data Set - Handler:', incidentData.handler?.id);
       console.log('Converted startDate:', startDate);
       console.log('Converted endDate:', endDate);
@@ -166,12 +166,12 @@ export default function EditIncidentModal({
     try {
       // Only fetch if not already provided via props
       const promises = [];
-      
+
       if (employees.length === 0) {
         promises.push(
           fetch('/api/employees/list', { headers: { 'Cache-Control': 'max-age=600' } })
             .then(res => res.ok ? res.json() : [])
-            .then(data => setEmployees(data || []))
+            .then(data => setEmployees(data.data || data || []))
         );
       }
 
@@ -179,7 +179,7 @@ export default function EditIncidentModal({
         promises.push(
           fetch('/api/partners/list', { headers: { 'Cache-Control': 'max-age=600' } })
             .then(res => res.ok ? res.json() : [])
-            .then(data => setCustomers(data || []))
+            .then(data => setCustomers(data.data || data || []))
         );
       }
 
@@ -187,7 +187,7 @@ export default function EditIncidentModal({
         promises.push(
           fetch('/api/incident-types', { headers: { 'Cache-Control': 'max-age=600' } })
             .then(res => res.ok ? res.json() : { data: [] })
-            .then(data => setIncidentTypes(data.data || []))
+            .then(data => setIncidentTypes(data.data || data || []))
         );
       }
 
@@ -203,21 +203,21 @@ export default function EditIncidentModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!incidentData) return;
 
     // Validate end date (only if both dates exist) - allow any past/future dates
     if (formData.startDate && formData.endDate) {
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
-      
+
       console.log('=== Date Validation (Admin Edit Incident) ===');
       console.log('Start Date Input:', formData.startDate);
       console.log('End Date Input:', formData.endDate);
       console.log('Start Date Object:', startDate);
       console.log('End Date Object:', endDate);
       console.log('End <= Start?', endDate <= startDate);
-      
+
       if (endDate <= startDate) {
         toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!', {
           duration: 3000,
@@ -316,221 +316,221 @@ export default function EditIncidentModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
-              {/* Basic Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tiêu đề sự cố *
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Nhập tiêu đề sự cố"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Loại sự cố *
-                  </label>
-                  <select
-                    name="incidentType"
-                    value={formData.incidentType}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  >
-                    <option value="">Chọn loại sự cố</option>
-                    {incidentTypes.map((type) => (
-                      <option key={type.id} value={type.name}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Description */}
+            {/* Basic Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mô tả chi tiết *
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  required
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Mô tả chi tiết về sự cố"
-                />
-              </div>
-
-              {/* Customer Information */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tên khách hàng
-                  </label>
-                  <input
-                    type="text"
-                    name="customerName"
-                    value={formData.customerName}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    placeholder="Nhập tên khách hàng"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Khách hàng (từ danh sách)
-                  </label>
-                  <select
-                    name="customerId"
-                    value={formData.customerId}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  >
-                    <option value="">Chọn khách hàng</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.shortName} - {customer.fullCompanyName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Handler and Status */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Người xử lý *
-                  </label>
-                  <select
-                    name="handlerId"
-                    value={formData.handlerId}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  >
-                    <option value="">Chọn người xử lý</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {employee.fullName} - {employee.position}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Trạng thái *
-                  </label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  >
-                    <option value="">Chọn trạng thái</option>
-                    {getStatusOptions().map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Thời gian bắt đầu *
-                  </label>
-                  <DateTimePicker
-                    value={formData.startDate}
-                    onChange={(value) => handleDateTimeChange('startDate', value)}
-                    placeholder="Chọn thời gian bắt đầu"
-                    locale="vi"
-                    valueFormat="DD/MM/YYYY HH:mm"
-                    clearable
-                    withSeconds={false}
-                    styles={{
-                      input: {
-                        fontSize: '0.875rem',
-                        padding: '0.5rem 0.75rem',
-                        borderColor: '#d1d5db',
-                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                        borderRadius: '0.375rem',
-                      }
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Thời gian kết thúc
-                  </label>
-                  <DateTimePicker
-                    value={formData.endDate}
-                    onChange={(value) => handleDateTimeChange('endDate', value)}
-                    placeholder="Chọn thời gian kết thúc"
-                    locale="vi"
-                    valueFormat="DD/MM/YYYY HH:mm"
-                    clearable
-                    minDate={formData.startDate || undefined}
-                    withSeconds={false}
-                    styles={{
-                      input: {
-                        fontSize: '0.875rem',
-                        padding: '0.5rem 0.75rem',
-                        borderColor: '#d1d5db',
-                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                        borderRadius: '0.375rem',
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* CRM Reference Code */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mã CRM
+                  Tiêu đề sự cố *
                 </label>
                 <input
                   type="text"
-                  name="crmReferenceCode"
-                  value={formData.crmReferenceCode}
+                  name="title"
+                  value={formData.title}
                   onChange={handleInputChange}
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Nhập mã CRM (nếu có)"
+                  placeholder="Nhập tiêu đề sự cố"
                 />
               </div>
 
-              {/* Notes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ghi chú
+                  Loại sự cố *
                 </label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
+                <select
+                  name="incidentType"
+                  value={formData.incidentType}
                   onChange={handleInputChange}
-                  rows={3}
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Ghi chú thêm về sự cố"
+                >
+                  <option value="">Chọn loại sự cố</option>
+                  {incidentTypes.map((type) => (
+                    <option key={type.id} value={type.name}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mô tả chi tiết *
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                required
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Mô tả chi tiết về sự cố"
+              />
+            </div>
+
+            {/* Customer Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tên khách hàng
+                </label>
+                <input
+                  type="text"
+                  name="customerName"
+                  value={formData.customerName}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Nhập tên khách hàng"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Khách hàng (từ danh sách)
+                </label>
+                <select
+                  name="customerId"
+                  value={formData.customerId}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="">Chọn khách hàng</option>
+                  {customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.shortName} - {customer.fullCompanyName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Handler and Status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Người xử lý *
+                </label>
+                <select
+                  name="handlerId"
+                  value={formData.handlerId}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="">Chọn người xử lý</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.fullName} - {employee.position}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Trạng thái *
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="">Chọn trạng thái</option>
+                  {getStatusOptions().map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thời gian bắt đầu *
+                </label>
+                <DateTimePicker
+                  value={formData.startDate}
+                  onChange={(value) => handleDateTimeChange('startDate', value)}
+                  placeholder="Chọn thời gian bắt đầu"
+                  locale="vi"
+                  valueFormat="DD/MM/YYYY HH:mm"
+                  clearable
+                  withSeconds={false}
+                  styles={{
+                    input: {
+                      fontSize: '0.875rem',
+                      padding: '0.5rem 0.75rem',
+                      borderColor: '#d1d5db',
+                      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                      borderRadius: '0.375rem',
+                    }
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thời gian kết thúc
+                </label>
+                <DateTimePicker
+                  value={formData.endDate}
+                  onChange={(value) => handleDateTimeChange('endDate', value)}
+                  placeholder="Chọn thời gian kết thúc"
+                  locale="vi"
+                  valueFormat="DD/MM/YYYY HH:mm"
+                  clearable
+                  minDate={formData.startDate || undefined}
+                  withSeconds={false}
+                  styles={{
+                    input: {
+                      fontSize: '0.875rem',
+                      padding: '0.5rem 0.75rem',
+                      borderColor: '#d1d5db',
+                      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+                      borderRadius: '0.375rem',
+                    }
+                  }}
                 />
               </div>
             </div>
+
+            {/* CRM Reference Code */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Mã CRM
+              </label>
+              <input
+                type="text"
+                name="crmReferenceCode"
+                value={formData.crmReferenceCode}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Nhập mã CRM (nếu có)"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ghi chú
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Ghi chú thêm về sự cố"
+              />
+            </div>
+          </div>
         </form>
 
         {/* Footer */}

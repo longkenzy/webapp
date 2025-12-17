@@ -101,7 +101,7 @@ const CaseRow = memo(({ case_, index, startIndex, filteredCasesLength, getStatus
         <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-200 bg-gray-50 flex-shrink-0 group-hover:border-blue-200 transition-colors">
           {case_.handler?.avatar ? (
             <img
-              src={case_.handler.avatar.startsWith('/avatars/') ? case_.handler.avatar : `/avatars/${case_.handler.avatar}`}
+              src={case_.handler.avatar.includes('/') ? case_.handler.avatar : `/api/avatars/${case_.handler.avatar}`}
               alt={case_.handlerName}
               className="w-full h-full object-cover"
             />

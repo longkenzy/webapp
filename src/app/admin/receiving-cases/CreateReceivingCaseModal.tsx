@@ -146,9 +146,21 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
     { value: 'CANCELLED', label: 'Hủy' }
   ];
 
+  // Debug logging
+  useEffect(() => {
+    console.log('CreateReceivingCaseModal isOpen:', isOpen);
+    console.log('CreateReceivingCaseModal editData:', editData);
+    if (editData) {
+      console.log('CreateReceivingCaseModal editData.products:', editData.products);
+      console.log('CreateReceivingCaseModal editData keys:', Object.keys(editData));
+    }
+  }, [isOpen, editData]);
+
   // Populate form data when in edit mode
   useEffect(() => {
     if (editData && isOpen) {
+      console.log('Populating form with data:', editData);
+      // ... existing logic ...
       // Convert ISO string to Date object for DateTimePicker
       const deliveryDateTime = editData.startDate ? new Date(editData.startDate) : null;
       const completionDateTime = editData.endDate ? new Date(editData.endDate) : null;

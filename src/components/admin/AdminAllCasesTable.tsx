@@ -284,7 +284,9 @@ function AdminAllCasesTable() {
       const result = await response.json();
       const data = result.data || result; // Handle different API response structures
 
-      console.log('Case data loaded:', data);
+      console.log('Case data loaded in AdminAllCasesTable:', data);
+      console.log('Products in data:', data.products);
+
       setSelectedCaseData(data);
       setOpenedModal(modalType);
       toast.dismiss(toastId);

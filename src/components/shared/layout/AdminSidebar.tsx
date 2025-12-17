@@ -257,7 +257,7 @@ export default function AdminSidebar({ userName, userEmail, isOpen = false, onCl
       </div>
 
       {/* Navigation - Scrollable Area */}
-      <div className="flex-1 overflow-y-auto py-4 px-3 scrollbar-none hover:scrollbar-thin scrollbar-thumb-gray-200">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 scrollbar-none hover:scrollbar-thin scrollbar-thumb-gray-200">
         {/* Menu Section */}
         <div className="mb-6">
           {!isCollapsed && (

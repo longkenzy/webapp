@@ -79,6 +79,15 @@ export async function GET(
             }
           },
           orderBy: { createdAt: 'desc' }
+        },
+        products: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            quantity: true,
+            serialNumber: true
+          }
         }
       }
     });
@@ -108,7 +117,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    
+
     const {
       title,
       description,
@@ -178,7 +187,7 @@ export async function PUT(
 
     // Prepare update data
     const updateData: any = {};
-    
+
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (requesterId !== undefined) updateData.requesterId = requesterId;
@@ -187,15 +196,15 @@ export async function PUT(
     if (form !== undefined) updateData.form = form;
     if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
-    
+
     // Auto-set status to COMPLETED if endDate is provided but status is not COMPLETED
     let finalStatus = status;
     if (endDate && status !== 'COMPLETED' && status !== undefined) {
       finalStatus = 'COMPLETED';
     }
-    
+
     if (finalStatus !== undefined) updateData.status = finalStatus;
-    
+
     // Handle inProgressAt field
     if (body.inProgressAt !== undefined && body.inProgressAt !== null) {
       try {
@@ -225,20 +234,20 @@ export async function PUT(
     if (adminAssessmentNotes !== undefined) updateData.adminAssessmentNotes = adminAssessmentNotes;
 
     // Set user assessment date if any user field is updated
-    if (userDifficultyLevel !== undefined || userEstimatedTime !== undefined || 
-        userImpactLevel !== undefined || userUrgencyLevel !== undefined || userFormScore !== undefined) {
+    if (userDifficultyLevel !== undefined || userEstimatedTime !== undefined ||
+      userImpactLevel !== undefined || userUrgencyLevel !== undefined || userFormScore !== undefined) {
       updateData.userAssessmentDate = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
     }
 
     // Set admin assessment date if any admin field is updated
-    if (adminDifficultyLevel !== undefined || adminEstimatedTime !== undefined || 
-        adminImpactLevel !== undefined || adminUrgencyLevel !== undefined) {
+    if (adminDifficultyLevel !== undefined || adminEstimatedTime !== undefined ||
+      adminImpactLevel !== undefined || adminUrgencyLevel !== undefined) {
       updateData.adminAssessmentDate = dayjs().tz('Asia/Ho_Chi_Minh').toDate();
     }
 
     // Handle products update
     if (products !== undefined) {
-      
+
       // Delete existing products
       await db.receivingCaseProduct.deleteMany({
         where: { receivingCaseId: id }
@@ -268,20 +277,20 @@ export async function PUT(
             select: {
               id: true,
               fullName: true,
-            position: true,
-            department: true,
-            avatar: true
-          }
-        },
+              position: true,
+              department: true,
+              avatar: true
+            }
+          },
           handler: {
             select: {
               id: true,
               fullName: true,
-            position: true,
-            department: true,
-            avatar: true
-          }
-        },
+              position: true,
+              department: true,
+              avatar: true
+            }
+          },
           supplier: {
             select: {
               id: true,
@@ -305,15 +314,15 @@ export async function PUT(
       return NextResponse.json(updatedCase);
     } catch (dbError) {
       console.error('Database update error:', dbError);
-      return NextResponse.json({ 
-        error: "Database update failed", 
-        details: dbError instanceof Error ? dbError.message : 'Unknown database error' 
+      return NextResponse.json({
+        error: "Database update failed",
+        details: dbError instanceof Error ? dbError.message : 'Unknown database error'
       }, { status: 500 });
     }
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(
-      { 
+      {
         error: "Internal server error",
         details: error instanceof Error ? error.message : 'Unknown error'
       },

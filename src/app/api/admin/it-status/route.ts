@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
                 status: "active",
                 employeeId: { not: null },
                 employee: {
-                    department: "IT Dept."
+                    department: "IT DEPARTMENT"
                 }
             },
             select: {

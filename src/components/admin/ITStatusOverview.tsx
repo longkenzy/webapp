@@ -93,7 +93,7 @@ export default function ITStatusOverview() {
         return (
             <div className="bg-white rounded-md shadow-sm border border-gray-100 p-4 mb-6">
                 <div className="h-6 w-48 bg-gray-200 rounded animate-pulse mb-4"></div>
-                <div className="flex gap-4 overflow-x-auto pb-2">
+                <div className="flex flex-wrap gap-4 pb-2">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className="flex-shrink-0 w-32 h-16 bg-gray-100 rounded-lg animate-pulse"></div>
                     ))}
@@ -118,7 +118,7 @@ export default function ITStatusOverview() {
                 </div>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="flex flex-wrap gap-4 pb-2">
                 {staff.map((member) => (
                     <div
                         key={member.id}

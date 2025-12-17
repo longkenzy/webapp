@@ -14,7 +14,10 @@ export async function GET(request: NextRequest) {
             where: {
                 // Show all active users who have an employee profile
                 status: "active",
-                employeeId: { not: null }
+                employeeId: { not: null },
+                employee: {
+                    department: "IT Dept."
+                }
             },
             select: {
                 id: true,

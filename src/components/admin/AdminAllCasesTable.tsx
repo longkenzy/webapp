@@ -666,23 +666,25 @@ function AdminAllCasesTable() {
       setAllCases(sortedCases);
 
       // Filter cases for today tab: only show incomplete cases and cases from today
-      const today = new Date();
-      const todayString = today.toDateString();
+      const now = new Date();
+      const todayString = now.toDateString();
+      const longTermThreshold = 18 * 60 * 60 * 1000; // 18 hours in ms
 
       const todayFilteredCases = unifiedCases.filter(case_ => {
-        const caseDate = new Date(case_.startDate).toDateString();
+        const startDate = new Date(case_.startDate);
+        const timeDiff = now.getTime() - startDate.getTime();
+        const caseDate = startDate.toDateString();
         const isIncomplete = !['COMPLETED', 'RESOLVED', 'CANCELLED', 'HỦY', 'HOÀN THÀNH'].includes(case_.status.toUpperCase());
         const isToday = caseDate === todayString;
+        const isLongTerm = isIncomplete && timeDiff > longTermThreshold;
 
-        return isIncomplete || isToday;
+        // Condition for today: (Incomplete OR Today) AND NOT LongTerm
+        return (isIncomplete || isToday) && !isLongTerm;
       }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
       setTodayCases(todayFilteredCases);
 
       // Long-term cases: Time since start > 18 hours AND not completed/cancelled
-      const now = new Date();
-      const longTermThreshold = 18 * 60 * 60 * 1000; // 18 hours in ms
-
       const longTermFilteredCases = unifiedCases.filter(case_ => {
         const startDate = new Date(case_.startDate);
         const timeDiff = now.getTime() - startDate.getTime();

@@ -190,8 +190,8 @@ export async function PUT(
         };
       }
     }
-    if (body.startDate !== undefined) updateData.startDate = convertToVietnamTime(body.startDate);
-    if (body.endDate !== undefined) updateData.endDate = body.endDate ? convertToVietnamTime(body.endDate) : null;
+    if (body.startDate !== undefined) updateData.startDate = body.startDate ? new Date(body.startDate) : undefined;
+    if (body.endDate !== undefined) updateData.endDate = body.endDate ? new Date(body.endDate) : null;
     if (body.status !== undefined) updateData.status = body.status;
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.crmReferenceCode !== undefined) updateData.crmReferenceCode = body.crmReferenceCode;

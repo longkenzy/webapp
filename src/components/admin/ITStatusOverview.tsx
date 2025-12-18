@@ -278,13 +278,13 @@ export default function ITStatusOverview() {
                                                     </div>
                                                     <span className={`text-[10px] font-bold ${config.textClass} uppercase tracking-tight`}>{caseItem.type}</span>
                                                 </div>
-                                                <p className="text-xs text-gray-900 font-bold leading-snug mb-2 line-clamp-2" title={caseItem.title}>{caseItem.title}</p>
+                                                <p className="text-xs text-gray-900 font-bold leading-snug mb-2" title={caseItem.title}>{caseItem.title}</p>
 
                                                 {/* Description */}
                                                 {caseItem.description && (
                                                     <div className="mb-2">
                                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Mô tả chi tiết:</p>
-                                                        <p className="text-[11px] text-gray-600 leading-relaxed italic whitespace-pre-wrap line-clamp-3">
+                                                        <p className="text-[11px] text-gray-600 leading-relaxed italic whitespace-pre-wrap">
                                                             "{caseItem.description}"
                                                         </p>
                                                     </div>
@@ -294,7 +294,7 @@ export default function ITStatusOverview() {
                                                 {caseItem.notes && (
                                                     <div className={`pt-2 border-t ${config.borderClass}`}>
                                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Ghi chú:</p>
-                                                        <p className={`text-[11px] ${config.textClass} font-medium whitespace-pre-wrap line-clamp-2`}>
+                                                        <p className={`text-[11px] ${config.textClass} font-medium whitespace-pre-wrap`}>
                                                             {caseItem.notes}
                                                         </p>
                                                     </div>
@@ -304,7 +304,7 @@ export default function ITStatusOverview() {
                                             <div className="space-y-1.5 px-1 pb-1">
                                                 <div className="flex items-center gap-2 text-gray-600">
                                                     <User className="h-3 w-3 text-gray-400" />
-                                                    <span className="text-[11px] font-medium truncate"><span className="text-gray-400">Khách hàng:</span> {caseItem.client}</span>
+                                                    <span className="text-[11px] font-medium"><span className="text-gray-400">Khách hàng:</span> {caseItem.client}</span>
                                                 </div>
                                                 {caseItem.startTime && (
                                                     <div className="flex items-center gap-2 text-gray-600">

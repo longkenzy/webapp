@@ -976,7 +976,7 @@ function AdminAllCasesTable() {
                 }`}
             >
               <Clock className={`h-4 w-4 ${activeTab === 'longterm' ? 'text-orange-500' : 'text-gray-400'}`} />
-              <span>Case dài hạn (&gt;18h)</span>
+              <span>Case dài hạn ({'>'}18h)</span>
               <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs ${activeTab === 'longterm' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'
                 }`}>
                 {longTermCases.length}

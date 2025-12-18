@@ -3,7 +3,87 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSocket } from '@/providers/SocketProvider';
 import { useRouter } from 'next/navigation';
-import { Clock, User, Briefcase } from 'lucide-react';
+import {
+    Clock,
+    User,
+    Briefcase,
+    AlertCircle,
+    Settings,
+    Truck,
+    Download,
+    ShieldCheck,
+    Rocket,
+    Home
+} from 'lucide-react';
+
+const CASE_TYPE_CONFIG: { [key: string]: { icon: any, colorClass: string, bgClass: string, textClass: string, borderClass: string } } = {
+    'Nội bộ': {
+        icon: Home,
+        colorClass: 'text-indigo-600',
+        bgClass: 'bg-indigo-50/50',
+        borderClass: 'border-indigo-100/50',
+        textClass: 'text-indigo-700'
+    },
+    'Nhận hàng': {
+        icon: Download,
+        colorClass: 'text-blue-600',
+        bgClass: 'bg-blue-50/50',
+        borderClass: 'border-blue-100/50',
+        textClass: 'text-blue-700'
+    },
+    'Giao hàng': {
+        icon: Truck,
+        colorClass: 'text-emerald-600',
+        bgClass: 'bg-emerald-50/50',
+        borderClass: 'border-emerald-100/50',
+        textClass: 'text-emerald-700'
+    },
+    'Sự cố': {
+        icon: AlertCircle,
+        colorClass: 'text-red-600',
+        bgClass: 'bg-red-50/50',
+        borderClass: 'border-red-100/50',
+        textClass: 'text-red-700'
+    },
+    'Bảo trì': {
+        icon: Settings,
+        colorClass: 'text-amber-600',
+        bgClass: 'bg-amber-50/50',
+        borderClass: 'border-amber-100/50',
+        textClass: 'text-amber-700'
+    },
+    'Bảo hành': {
+        icon: ShieldCheck,
+        colorClass: 'text-teal-600',
+        bgClass: 'bg-teal-50/50',
+        borderClass: 'border-teal-100/50',
+        textClass: 'text-teal-700'
+    },
+    'Triển khai': {
+        icon: Rocket,
+        colorClass: 'text-purple-600',
+        bgClass: 'bg-purple-50/50',
+        borderClass: 'border-purple-100/50',
+        textClass: 'text-purple-700'
+    },
+    'default': {
+        icon: Briefcase,
+        colorClass: 'text-gray-600',
+        bgClass: 'bg-gray-50/50',
+        borderClass: 'border-gray-100/50',
+        textClass: 'text-gray-700'
+    }
+};
+
+interface ITStatusCase {
+    id: string;
+    title: string;
+    type: string;
+    client: string;
+    startTime: Date | string | null;
+    description?: string;
+    notes?: string;
+}
 
 interface ITStaff {
     id: string;
@@ -11,15 +91,7 @@ interface ITStaff {
     avatar: string | null;
     position: string;
     isOnline: boolean;
-    currentCase?: {
-        id: string;
-        title: string;
-        type: string;
-        client: string;
-        startTime: Date | string | null;
-        description?: string;
-        notes?: string;
-    } | null;
+    activeCases?: ITStatusCase[];
 }
 
 export default function ITStatusOverview() {
@@ -48,7 +120,11 @@ export default function ITStatusOverview() {
         timeoutRef.current = setTimeout(() => {
             setHoveredMember(null);
             setTooltipPosition(null);
-        }, 100);
+        }, 200);
+    };
+
+    const handleMouseEnterTooltip = () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
 
     const fetchStatus = async () => {
@@ -154,7 +230,9 @@ export default function ITStatusOverview() {
             {/* Fixed Overlay Tooltip */}
             {hoveredMember && tooltipPosition && (
                 <div
-                    className="fixed z-[9999] w-[320px] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 text-left pointer-events-none animate-in fade-in zoom-in-95 duration-200"
+                    onMouseEnter={handleMouseEnterTooltip}
+                    onMouseLeave={handleMouseLeave}
+                    className="fixed z-[9999] w-max max-w-[calc(100vw-40px)] bg-white rounded-xl shadow-2xl border border-gray-200 p-4 text-left animate-in fade-in zoom-in-95 duration-200"
                     style={{
                         top: tooltipPosition.top,
                         left: tooltipPosition.left,
@@ -163,7 +241,7 @@ export default function ITStatusOverview() {
                 >
                     <div className="absolute -top-1.5 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-white rotate-45 border-t border-l border-gray-200"></div>
                     <div className="relative z-10">
-                        <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start justify-between mb-3 border-b border-gray-100 pb-3">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden border border-gray-200 flex-shrink-0">
                                     {hoveredMember.avatar ? (
@@ -185,54 +263,63 @@ export default function ITStatusOverview() {
                             </span>
                         </div>
 
-                        {hoveredMember.isOnline && hoveredMember.currentCase ? (
-                            <div className="space-y-3">
-                                <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100/50">
-                                    <div className="flex items-center gap-1.5 mb-1.5">
-                                        <div className="p-1 bg-blue-100 rounded text-blue-600">
-                                            <Briefcase className="h-3 w-3" />
-                                        </div>
-                                        <span className="text-[10px] font-bold text-blue-700 uppercase tracking-tight">{hoveredMember.currentCase.type}</span>
-                                    </div>
-                                    <p className="text-xs text-gray-900 font-bold leading-snug mb-2">{hoveredMember.currentCase.title}</p>
+                        {hoveredMember.isOnline && hoveredMember.activeCases && hoveredMember.activeCases.length > 0 ? (
+                            <div className="flex gap-4 overflow-x-auto pb-2 pt-1 custom-scrollbar max-h-[500px]">
+                                {hoveredMember.activeCases.map((caseItem, index) => {
+                                    const config = CASE_TYPE_CONFIG[caseItem.type] || CASE_TYPE_CONFIG['default'];
+                                    const Icon = config.icon;
 
-                                    {/* Description */}
-                                    {hoveredMember.currentCase.description && (
-                                        <div className="mb-2">
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Mô tả chi tiết:</p>
-                                            <p className="text-[11px] text-gray-600 leading-relaxed italic whitespace-pre-wrap">
-                                                "{hoveredMember.currentCase.description}"
-                                            </p>
-                                        </div>
-                                    )}
+                                    return (
+                                        <div key={caseItem.id} className={`flex-shrink-0 w-[300px] space-y-3 ${index !== 0 ? 'pl-4 border-l border-gray-100' : ''}`}>
+                                            <div className={`${config.bgClass} p-3 rounded-lg border ${config.borderClass}`}>
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <div className={`p-1 rounded ${config.colorClass} bg-white/80 shadow-sm`}>
+                                                        <Icon className="h-3.5 w-3.5" />
+                                                    </div>
+                                                    <span className={`text-[10px] font-bold ${config.textClass} uppercase tracking-tight`}>{caseItem.type}</span>
+                                                </div>
+                                                <p className="text-xs text-gray-900 font-bold leading-snug mb-2 line-clamp-2" title={caseItem.title}>{caseItem.title}</p>
 
-                                    {/* Notes */}
-                                    {hoveredMember.currentCase.notes && (
-                                        <div className="pt-2 border-t border-blue-100/50">
-                                            <p className="text-[10px] text-blue-400 font-bold uppercase mb-0.5">Ghi chú:</p>
-                                            <p className="text-[11px] text-blue-600 font-medium whitespace-pre-wrap">
-                                                {hoveredMember.currentCase.notes}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
+                                                {/* Description */}
+                                                {caseItem.description && (
+                                                    <div className="mb-2">
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Mô tả chi tiết:</p>
+                                                        <p className="text-[11px] text-gray-600 leading-relaxed italic whitespace-pre-wrap line-clamp-3">
+                                                            "{caseItem.description}"
+                                                        </p>
+                                                    </div>
+                                                )}
 
-                                <div className="space-y-1.5 px-1">
-                                    <div className="flex items-center gap-2 text-gray-600">
-                                        <User className="h-3 w-3 text-gray-400" />
-                                        <span className="text-[11px] font-medium"><span className="text-gray-400">Khách hàng:</span> {hoveredMember.currentCase.client}</span>
-                                    </div>
-                                    {hoveredMember.currentCase.startTime && (
-                                        <div className="flex items-center gap-2 text-gray-600">
-                                            <Clock className="h-3 w-3 text-gray-400" />
-                                            <span className="text-[11px] font-medium">
-                                                <span className="text-gray-400">Bắt đầu:</span> {new Date(hoveredMember.currentCase.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                                <span className="text-gray-300 mx-1.5">|</span>
-                                                {new Date(hoveredMember.currentCase.startTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
-                                            </span>
+                                                {/* Notes */}
+                                                {caseItem.notes && (
+                                                    <div className={`pt-2 border-t ${config.borderClass}`}>
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Ghi chú:</p>
+                                                        <p className={`text-[11px] ${config.textClass} font-medium whitespace-pre-wrap line-clamp-2`}>
+                                                            {caseItem.notes}
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-1.5 px-1 pb-1">
+                                                <div className="flex items-center gap-2 text-gray-600">
+                                                    <User className="h-3 w-3 text-gray-400" />
+                                                    <span className="text-[11px] font-medium truncate"><span className="text-gray-400">Khách hàng:</span> {caseItem.client}</span>
+                                                </div>
+                                                {caseItem.startTime && (
+                                                    <div className="flex items-center gap-2 text-gray-600">
+                                                        <Clock className="h-3 w-3 text-gray-400" />
+                                                        <span className="text-[11px] font-medium">
+                                                            <span className="text-gray-400">Bắt đầu:</span> {new Date(caseItem.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                            <span className="text-gray-300 mx-1.5">|</span>
+                                                            {new Date(caseItem.startTime).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 text-center">

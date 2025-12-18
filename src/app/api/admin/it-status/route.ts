@@ -98,66 +98,98 @@ export async function GET(request: NextRequest) {
             const empId = user.employee?.id;
             if (!empId) return null;
 
-            let activeCase = null;
-            let caseType = '';
-            let clientName = '';
-            let startTime = null;
+            const activeCases: any[] = [];
 
-            const internal = internalCases.find(c => c.handlerId === empId);
-            if (internal) {
-                activeCase = internal;
-                caseType = 'Nội bộ';
-                clientName = internal.requester?.fullName || 'N/A';
-                startTime = internal.startDate;
-            }
+            const userInternal = internalCases.filter(c => c.handlerId === empId);
+            userInternal.forEach(internal => {
+                activeCases.push({
+                    id: internal.id,
+                    title: internal.title,
+                    type: 'Nội bộ',
+                    client: internal.requester?.fullName || 'N/A',
+                    startTime: internal.startDate,
+                    description: internal.description,
+                    notes: internal.notes
+                });
+            });
 
-            const receiving = receivingCases.find(c => c.handlerId === empId);
-            if (!activeCase && receiving) {
-                activeCase = receiving;
-                caseType = 'Nhận hàng';
-                clientName = receiving.supplier?.shortName || 'N/A';
-                startTime = receiving.startDate;
-            }
+            const userReceiving = receivingCases.filter(c => c.handlerId === empId);
+            userReceiving.forEach(receiving => {
+                activeCases.push({
+                    id: receiving.id,
+                    title: receiving.title,
+                    type: 'Nhận hàng',
+                    client: receiving.supplier?.shortName || 'N/A',
+                    startTime: receiving.startDate,
+                    description: receiving.description,
+                    notes: receiving.notes
+                });
+            });
 
-            const delivery = deliveryCases.find(c => c.handlerId === empId);
-            if (!activeCase && delivery) {
-                activeCase = delivery;
-                caseType = 'Giao hàng';
-                clientName = delivery.customer?.shortName || 'N/A';
-                startTime = delivery.startDate;
-            }
+            const userDelivery = deliveryCases.filter(c => c.handlerId === empId);
+            userDelivery.forEach(delivery => {
+                activeCases.push({
+                    id: delivery.id,
+                    title: delivery.title,
+                    type: 'Giao hàng',
+                    client: delivery.customer?.shortName || 'N/A',
+                    startTime: delivery.startDate,
+                    description: delivery.description,
+                    notes: delivery.notes
+                });
+            });
 
-            const incident = incidents.find(c => c.handlerId === empId);
-            if (!activeCase && incident) {
-                activeCase = incident;
-                caseType = 'Sự cố';
-                clientName = incident.customer?.shortName || incident.customerName || 'N/A';
-                startTime = incident.startDate;
-            }
+            const userIncident = incidents.filter(c => c.handlerId === empId);
+            userIncident.forEach(incident => {
+                activeCases.push({
+                    id: incident.id,
+                    title: incident.title,
+                    type: 'Sự cố',
+                    client: incident.customer?.shortName || incident.customerName || 'N/A',
+                    startTime: incident.startDate,
+                    description: incident.description,
+                    notes: incident.notes
+                });
+            });
 
-            const maintenance = maintenanceCases.find(c => c.handlerId === empId);
-            if (!activeCase && maintenance) {
-                activeCase = maintenance;
-                caseType = 'Bảo trì';
-                clientName = maintenance.customer?.shortName || maintenance.customerName || 'N/A';
-                startTime = maintenance.startDate;
-            }
+            const userMaintenance = maintenanceCases.filter(c => c.handlerId === empId);
+            userMaintenance.forEach(maintenance => {
+                activeCases.push({
+                    id: maintenance.id,
+                    title: maintenance.title,
+                    type: 'Bảo trì',
+                    client: maintenance.customer?.shortName || maintenance.customerName || 'N/A',
+                    startTime: maintenance.startDate,
+                    description: maintenance.description,
+                    notes: maintenance.notes
+                });
+            });
 
-            const warranty = warranties.find(c => c.handlerId === empId);
-            if (!activeCase && warranty) {
-                activeCase = warranty;
-                caseType = 'Bảo hành';
-                clientName = warranty.customer?.shortName || warranty.customerName || 'N/A';
-                startTime = warranty.startDate;
-            }
+            const userWarranty = warranties.filter(c => c.handlerId === empId);
+            userWarranty.forEach(warranty => {
+                activeCases.push({
+                    id: warranty.id,
+                    title: warranty.title,
+                    type: 'Bảo hành',
+                    client: warranty.customer?.shortName || warranty.customerName || 'N/A',
+                    startTime: warranty.startDate,
+                    description: warranty.description,
+                    notes: warranty.notes
+                });
+            });
 
-            const deployment = deploymentCases.find(c => c.handlerId === empId);
-            if (!activeCase && deployment) {
-                activeCase = deployment;
-                caseType = 'Triển khai';
-                clientName = deployment.customer?.shortName || deployment.customerName || 'N/A';
-                startTime = deployment.startDate;
-            }
+            const userDeployment = deploymentCases.filter(c => c.handlerId === empId);
+            userDeployment.forEach(deployment => {
+                activeCases.push({
+                    id: deployment.id,
+                    title: deployment.title,
+                    type: 'Triển khai',
+                    client: deployment.customer?.shortName || deployment.customerName || 'N/A',
+                    startTime: deployment.startDate,
+                    description: deployment.description,
+                    notes: deployment.notes
+                });
+            });
 
             return {
                 id: user.id,
@@ -165,16 +197,8 @@ export async function GET(request: NextRequest) {
                 name: user.employee?.fullName || user.name,
                 avatar: user.employee?.avatar,
                 position: user.employee?.position || user.role,
-                isOnline: !!activeCase,
-                currentCase: activeCase ? {
-                    id: activeCase.id,
-                    title: activeCase.title,
-                    type: caseType,
-                    client: clientName,
-                    startTime: startTime,
-                    description: (activeCase as any).description,
-                    notes: (activeCase as any).notes
-                } : null
+                isOnline: activeCases.length > 0,
+                activeCases: activeCases
             };
         }).filter(Boolean);
 

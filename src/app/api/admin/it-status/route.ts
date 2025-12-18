@@ -65,31 +65,31 @@ export async function GET(request: NextRequest) {
         ] = await Promise.all([
             db.internalCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.internal as any } },
-                select: { id: true, title: true, handlerId: true, startDate: true, requester: { select: { fullName: true } } }
+                select: { id: true, title: true, handlerId: true, startDate: true, requester: { select: { fullName: true } }, description: true, notes: true }
             }),
             db.receivingCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.receiving as any } },
-                select: { id: true, title: true, handlerId: true, startDate: true, supplier: { select: { shortName: true } } }
+                select: { id: true, title: true, handlerId: true, startDate: true, supplier: { select: { shortName: true } }, description: true, notes: true }
             }),
             db.deliveryCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.delivery as any } },
-                select: { id: true, title: true, handlerId: true, startDate: true, customer: { select: { shortName: true } } }
+                select: { id: true, title: true, handlerId: true, startDate: true, customer: { select: { shortName: true } }, description: true, notes: true }
             }),
             db.incident.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.incident as any } },
-                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } } }
+                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } }, description: true, notes: true }
             }),
             db.maintenanceCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.maintenance as any } },
-                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } } }
+                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } }, description: true, notes: true }
             }),
             db.warranty.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.warranty as any } },
-                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } } }
+                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } }, description: true, notes: true }
             }),
             db.deploymentCase.findMany({
                 where: { handlerId: { in: employeeIds }, status: { in: activeStatuses.deployment as any } },
-                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } } }
+                select: { id: true, title: true, handlerId: true, startDate: true, customerName: true, customer: { select: { shortName: true } }, description: true, notes: true }
             }),
         ]);
 
@@ -171,7 +171,9 @@ export async function GET(request: NextRequest) {
                     title: activeCase.title,
                     type: caseType,
                     client: clientName,
-                    startTime: startTime
+                    startTime: startTime,
+                    description: (activeCase as any).description,
+                    notes: (activeCase as any).notes
                 } : null
             };
         }).filter(Boolean);

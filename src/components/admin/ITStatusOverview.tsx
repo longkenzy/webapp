@@ -200,7 +200,7 @@ export default function ITStatusOverview() {
                                     {hoveredMember.currentCase.description && (
                                         <div className="mb-2">
                                             <p className="text-[10px] text-gray-400 font-bold uppercase mb-0.5">Mô tả chi tiết:</p>
-                                            <p className="text-[11px] text-gray-600 leading-relaxed line-clamp-3 italic">
+                                            <p className="text-[11px] text-gray-600 leading-relaxed italic whitespace-pre-wrap">
                                                 "{hoveredMember.currentCase.description}"
                                             </p>
                                         </div>
@@ -210,7 +210,7 @@ export default function ITStatusOverview() {
                                     {hoveredMember.currentCase.notes && (
                                         <div className="pt-2 border-t border-blue-100/50">
                                             <p className="text-[10px] text-blue-400 font-bold uppercase mb-0.5">Ghi chú:</p>
-                                            <p className="text-[11px] text-blue-600 font-medium line-clamp-2">
+                                            <p className="text-[11px] text-blue-600 font-medium whitespace-pre-wrap">
                                                 {hoveredMember.currentCase.notes}
                                             </p>
                                         </div>

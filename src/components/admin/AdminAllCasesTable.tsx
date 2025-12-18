@@ -209,9 +209,10 @@ CaseRow.displayName = 'CaseRow';
 function AdminAllCasesTable() {
   const [allCases, setAllCases] = useState<UnifiedCase[]>([]);
   const [todayCases, setTodayCases] = useState<UnifiedCase[]>([]);
+  const [longTermCases, setLongTermCases] = useState<UnifiedCase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'today' | 'all'>('today');
+  const [activeTab, setActiveTab] = useState<'today' | 'all' | 'longterm'>('today');
   const [showFilters, setShowFilters] = useState(false);
 
   // Filter states
@@ -677,6 +678,24 @@ function AdminAllCasesTable() {
       }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
       setTodayCases(todayFilteredCases);
+
+      // Long-term cases: Time since start > 18 hours AND not completed/cancelled
+      const now = new Date();
+      const longTermThreshold = 18 * 60 * 60 * 1000; // 18 hours in ms
+
+      const longTermFilteredCases = unifiedCases.filter(case_ => {
+        const startDate = new Date(case_.startDate);
+        const timeDiff = now.getTime() - startDate.getTime();
+        const isIncomplete = !['COMPLETED', 'RESOLVED', 'CANCELLED', 'HỦY', 'HOÀN THÀNH'].includes(case_.status.toUpperCase());
+
+        return isIncomplete && timeDiff > longTermThreshold;
+      }).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+
+      setLongTermCases(longTermFilteredCases);
+
+      // Trigger server-side check for long-term notifications (don't wait for it)
+      fetch('/api/admin/check-longterm', { method: 'POST' }).catch(err => console.error('Failed to trigger long-term check:', err));
+
     } catch (err) {
       console.error('Error fetching cases:', err);
       setError('Không thể tải danh sách cases. Vui lòng thử lại sau.');
@@ -693,7 +712,14 @@ function AdminAllCasesTable() {
 
   // Memoized filtered cases
   const filteredCases = useMemo(() => {
-    const currentCases = activeTab === 'today' ? todayCases : allCases;
+    let currentCases: UnifiedCase[] = [];
+    if (activeTab === 'today') {
+      currentCases = todayCases;
+    } else if (activeTab === 'longterm') {
+      currentCases = longTermCases;
+    } else {
+      currentCases = allCases;
+    }
     let filtered = [...currentCases];
 
     if (filters.caseType) {
@@ -940,6 +966,20 @@ function AdminAllCasesTable() {
                 {allCases.length}
               </span>
             </button>
+            <button
+              onClick={() => setActiveTab('longterm')}
+              className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${activeTab === 'longterm'
+                ? 'bg-white text-orange-600 shadow-sm ring-1 ring-orange-100'
+                : 'text-gray-500 hover:text-orange-600 hover:bg-white/60'
+                }`}
+            >
+              <Clock className={`h-4 w-4 ${activeTab === 'longterm' ? 'text-orange-500' : 'text-gray-400'}`} />
+              <span>Case dài hạn (&gt;18h)</span>
+              <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs ${activeTab === 'longterm' ? 'bg-orange-50 text-orange-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                {longTermCases.length}
+              </span>
+            </button>
           </nav>
         </div>
       </div>
@@ -1150,7 +1190,7 @@ function AdminAllCasesTable() {
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">
-                {activeTab === 'today' ? 'Danh Sách Case Hôm Nay' : 'Tất Cả Danh Sách Case'}
+                {activeTab === 'today' ? 'Danh Sách Case Hôm Nay' : activeTab === 'longterm' ? 'Danh Sách Case Dài Hạn (&gt;18h)' : 'Tất Cả Danh Sách Case'}
               </h2>
               <p className="text-sm text-gray-500">
                 Tổng số: <span className="font-semibold text-gray-900">{filteredCases.length}</span> case
@@ -1407,7 +1447,9 @@ function AdminAllCasesTable() {
             <p className="text-gray-500">
               {activeTab === 'today'
                 ? 'Không có case chưa hoàn thành hoặc case trong ngày hôm nay'
-                : 'Chưa có case nào được tạo trong hệ thống'
+                : activeTab === 'longterm'
+                  ? 'Không có case nào đang xử lý quá 18 giờ'
+                  : 'Chưa có case nào được tạo trong hệ thống'
               }
             </p>
           </div>

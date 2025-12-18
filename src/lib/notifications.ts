@@ -58,6 +58,34 @@ export async function createCaseCreatedNotification(
   });
 }
 
+export async function createLongTermCaseNotification(
+  caseType: string,
+  caseId: string,
+  caseTitle: string,
+  userId: string
+) {
+  const caseTypeMap: Record<string, string> = {
+    'internal': 'Nội bộ',
+    'delivery': 'Giao hàng',
+    'receiving': 'Nhận hàng',
+    'maintenance': 'Bảo trì',
+    'warranty': 'Bảo hành',
+    'incident': 'Sự cố',
+    'deployment': 'Triển khai'
+  };
+
+  const displayCaseType = caseTypeMap[caseType] || caseType;
+
+  return createNotification({
+    title: `Case ${displayCaseType} quá hạn 18h`,
+    message: `Case "${caseTitle}" của bạn đã quá hạn 18h, vui lòng cập nhật ghi chú và cố gắng xử lý case này.`,
+    type: NotificationType.SYSTEM_ALERT,
+    userId: userId,
+    caseId,
+    caseType
+  });
+}
+
 export async function getAdminUsers() {
   try {
     const adminUsers = await db.user.findMany({

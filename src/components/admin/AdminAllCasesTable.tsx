@@ -1192,7 +1192,7 @@ function AdminAllCasesTable() {
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">
-                {activeTab === 'today' ? 'Danh Sách Case Hôm Nay' : activeTab === 'longterm' ? 'Danh Sách Case Dài Hạn (&gt;18h)' : 'Tất Cả Danh Sách Case'}
+                {activeTab === 'today' ? 'Danh Sách Case Hôm Nay' : activeTab === 'longterm' ? `Danh Sách Case Dài Hạn (>${'18h'})` : 'Tất Cả Danh Sách Case'}
               </h2>
               <p className="text-sm text-gray-500">
                 Tổng số: <span className="font-semibold text-gray-900">{filteredCases.length}</span> case

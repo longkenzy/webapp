@@ -28,10 +28,10 @@ interface CreateWarrantyModalProps {
   warrantyTypes?: Array<{ id: string; name: string; description?: string }>;
 }
 
-export default function CreateWarrantyModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
+export default function CreateWarrantyModal({
+  isOpen,
+  onClose,
+  onSuccess,
   editingWarranty,
   employees: preloadedEmployees = [],
   customers: preloadedCustomers = [],
@@ -82,16 +82,28 @@ export default function CreateWarrantyModal({
   // Populate form data when in edit mode
   useEffect(() => {
     if (editingWarranty && isOpen) {
-      const customerName = editingWarranty.customerName || '';
-      const title = customerName.split(' ').slice(1).join(' ');
-      const customerTitle = customerName.startsWith('Chị') ? 'Chị' : 'Anh';
-      
+      const rawCustomerName = editingWarranty.customerName || '';
+      let customerTitle = 'Anh';
+      let displayCustomerName = rawCustomerName;
+
+      if (rawCustomerName.startsWith('Anh ')) {
+        customerTitle = 'Anh';
+        displayCustomerName = rawCustomerName.substring(4);
+      } else if (rawCustomerName.startsWith('Chị ')) {
+        customerTitle = 'Chị';
+        displayCustomerName = rawCustomerName.substring(4);
+      }
+
       const startDate = editingWarranty.startDate ? new Date(editingWarranty.startDate) : null;
       const endDate = editingWarranty.endDate ? new Date(editingWarranty.endDate) : null;
 
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      const matchedForm = formOptions.find(opt => opt.points.toString() === editingWarranty.userFormScore?.toString());
+      const formLabel = matchedForm ? matchedForm.label : 'Onsite';
+
       setFormData({
         customerTitle,
-        customerName: title,
+        customerName: displayCustomerName,
         handler: editingWarranty.handler?.id || '',
         warrantyType: editingWarranty.warrantyType?.id || '',
         customer: editingWarranty.customer?.id || '',
@@ -106,10 +118,10 @@ export default function CreateWarrantyModal({
         estimatedTime: editingWarranty.userEstimatedTime?.toString() || '',
         impactLevel: editingWarranty.userImpactLevel?.toString() || '',
         urgencyLevel: editingWarranty.userUrgencyLevel?.toString() || '',
-        form: 'Onsite',
+        form: formLabel,
         formScore: editingWarranty.userFormScore?.toString() || '2'
       });
-      
+
       if (editingWarranty.customer) {
         setCustomerSearch(`${editingWarranty.customer.fullCompanyName} (${editingWarranty.customer.shortName})`);
       }
@@ -136,7 +148,23 @@ export default function CreateWarrantyModal({
       });
       setCustomerSearch('');
     }
-  }, [editingWarranty, isOpen]);
+  }, [editingWarranty, isOpen, getFieldOptions]);
+
+  // Re-sync form label once configs are loaded
+  useEffect(() => {
+    if (editingWarranty && isOpen) {
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      if (formOptions.length > 0) {
+        const matchedForm = formOptions.find(opt => opt.points.toString() === editingWarranty.userFormScore?.toString());
+        if (matchedForm) {
+          setFormData(prev => ({
+            ...prev,
+            form: matchedForm.label
+          }));
+        }
+      }
+    }
+  }, [isOpen, editingWarranty?.userFormScore, getFieldOptions]);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -161,7 +189,7 @@ export default function CreateWarrantyModal({
 
   const fetchCurrentEmployee = useCallback(async () => {
     if (!session?.user?.email) return;
-    
+
     try {
       const response = await fetch('/api/user/basic-info');
       if (response.ok) {
@@ -326,7 +354,7 @@ export default function CreateWarrantyModal({
     };
 
     window.addEventListener('warranty-types-updated', handleWarrantyTypesUpdate);
-    
+
     return () => {
       window.removeEventListener('warranty-types-updated', handleWarrantyTypesUpdate);
     };
@@ -340,7 +368,7 @@ export default function CreateWarrantyModal({
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-      
+
       return () => {
         document.body.style.position = '';
         document.body.style.top = '';
@@ -379,7 +407,7 @@ export default function CreateWarrantyModal({
   const handleCustomerSearchChange = (value: string) => {
     setCustomerSearch(value);
     setShowCustomerDropdown(true);
-    
+
     if (!value) {
       setFormData(prev => ({
         ...prev,
@@ -391,7 +419,7 @@ export default function CreateWarrantyModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!formData.customerName.trim()) {
       toast.error('Vui lòng nhập tên khách hàng!');
@@ -417,7 +445,7 @@ export default function CreateWarrantyModal({
       toast.error('Vui lòng nhập mô tả bảo hành!');
       return;
     }
-    
+
     // Validate end date
     if (formData.endDate && formData.startDate) {
       if (formData.endDate <= formData.startDate) {
@@ -428,13 +456,13 @@ export default function CreateWarrantyModal({
         return;
       }
     }
-    
+
     setLoading(true);
-    
+
     try {
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
       const isEditing = !!editingWarranty;
-      
+
       const warrantyData: any = {
         title: formData.title,
         description: formData.description,
@@ -461,7 +489,7 @@ export default function CreateWarrantyModal({
 
       const url = isEditing ? `/api/warranties/${editingWarranty.id}` : '/api/warranties';
       const method = isEditing ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -472,31 +500,31 @@ export default function CreateWarrantyModal({
 
       if (response.ok) {
         const result = await response.json();
-        
+
         toast.success(isEditing ? 'Cập nhật case bảo hành thành công!' : 'Tạo case bảo hành thành công!', {
           duration: 3000,
           position: 'top-right',
         });
-        
+
         window.dispatchEvent(new CustomEvent('case-created'));
-        
+
         resetForm();
-        
+
         if (onSuccess && result.data) {
           onSuccess(result.data);
         }
-        
+
         onClose();
       } else {
         const responseText = await response.text();
-        
+
         let error;
         try {
           error = JSON.parse(responseText);
         } catch (e) {
           error = { error: 'Invalid JSON response' };
         }
-         
+
         console.error('Failed to create warranty:', error);
         toast.error(`Lỗi: ${error.error || 'Không thể tạo case bảo hành'}`, {
           duration: 4000,
@@ -518,7 +546,8 @@ export default function CreateWarrantyModal({
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .ios-input-fix input,
         .ios-input-fix select,
         .ios-input-fix textarea {
@@ -571,7 +600,7 @@ export default function CreateWarrantyModal({
                     </div>
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">Admin</span>
                   </div>
-                  
+
                   <div className="p-3">
                     <select
                       value={formData.handler}
@@ -607,7 +636,7 @@ export default function CreateWarrantyModal({
                     </div>
                     <span className="text-red-500 text-sm">*</span>
                   </div>
-                  
+
                   <div className="p-3">
                     <select
                       value={formData.warrantyType}
@@ -637,7 +666,7 @@ export default function CreateWarrantyModal({
                   <Building2 className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thông tin khách hàng</h3>
                 </div>
-                
+
                 <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -705,7 +734,7 @@ export default function CreateWarrantyModal({
                   <FileText className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết bảo hành</h3>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
@@ -756,7 +785,7 @@ export default function CreateWarrantyModal({
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
                 </div>
-                
+
                 <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -815,7 +844,7 @@ export default function CreateWarrantyModal({
                   <FileText className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Ghi chú</h3>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
@@ -863,7 +892,7 @@ export default function CreateWarrantyModal({
                     <span className="hidden sm:inline">Làm mới</span>
                   </button>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* Mức độ khó */}

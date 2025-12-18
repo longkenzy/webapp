@@ -60,10 +60,10 @@ interface CreateDeploymentModalProps {
   deploymentTypes?: any[];
 }
 
-export default function CreateDeploymentModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
+export default function CreateDeploymentModal({
+  isOpen,
+  onClose,
+  onSuccess,
   editData,
   employees: preloadedEmployees,
   partners: preloadedPartners,
@@ -115,18 +115,28 @@ export default function CreateDeploymentModal({
   // Populate form data when in edit mode
   useEffect(() => {
     if (editData && isOpen) {
+      const rawCustomerName = editData.customerName || '';
+      let customerTitle = 'Anh';
+      let displayCustomerName = rawCustomerName;
+
+      if (rawCustomerName.startsWith('Anh ')) {
+        customerTitle = 'Anh';
+        displayCustomerName = rawCustomerName.substring(4);
+      } else if (rawCustomerName.startsWith('Chị ')) {
+        customerTitle = 'Chị';
+        displayCustomerName = rawCustomerName.substring(4);
+      }
+
       const startDate = editData.startDate ? new Date(editData.startDate) : null;
       const endDate = editData.endDate ? new Date(editData.endDate) : null;
-      
+
       const formOptions = getFieldOptions(EvaluationCategory.FORM);
-      const defaultFormOption = formOptions.find(option => option.points === 2) || formOptions[0];
-      const selectedFormOption = formOptions.find(option => 
-        (editData.userFormScore && option.points === editData.userFormScore)
-      );
+      const matchedForm = formOptions.find(opt => opt.points.toString() === editData.userFormScore?.toString());
+      const formLabel = matchedForm ? matchedForm.label : 'Onsite';
 
       setFormData({
-        customerTitle: editData.customerName?.includes('Anh') ? 'Anh' : 'Chị',
-        customerName: editData.customerName || '',
+        customerTitle,
+        customerName: displayCustomerName,
         handler: editData.handler?.id || '',
         deploymentType: editData.deploymentType?.id || '',
         customer: editData.customer?.id || '',
@@ -141,12 +151,12 @@ export default function CreateDeploymentModal({
         estimatedTime: editData.userEstimatedTime?.toString() || '',
         impactLevel: editData.userImpactLevel?.toString() || '',
         urgencyLevel: editData.userUrgencyLevel?.toString() || '',
-        form: selectedFormOption?.label || defaultFormOption?.label || 'Onsite',
+        form: formLabel,
         formScore: editData.userFormScore?.toString() || '2'
       });
 
       if (editData.customer) {
-        setCustomerSearch(editData.customer.shortName);
+        setCustomerSearch(`${editData.customer.fullCompanyName} (${editData.customer.shortName})`);
       }
     } else if (!editData && isOpen) {
       setFormData({
@@ -173,6 +183,22 @@ export default function CreateDeploymentModal({
     }
   }, [editData, isOpen, getFieldOptions]);
 
+  // Re-sync form label once configs are loaded
+  useEffect(() => {
+    if (editData && isOpen) {
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      if (formOptions.length > 0) {
+        const matchedForm = formOptions.find(opt => opt.points.toString() === editData.userFormScore?.toString());
+        if (matchedForm) {
+          setFormData(prev => ({
+            ...prev,
+            form: matchedForm.label
+          }));
+        }
+      }
+    }
+  }, [isOpen, editData?.userFormScore, getFieldOptions]);
+
   const fetchEmployees = useCallback(async () => {
     try {
       const response = await fetch('/api/employees/list', {
@@ -196,12 +222,12 @@ export default function CreateDeploymentModal({
 
   const fetchCurrentEmployee = useCallback(async () => {
     if (!session?.user?.email) return;
-    
+
     try {
       const response = await fetch('/api/user/basic-info');
       if (response.ok) {
         const data = await response.json();
-        
+
         if (data.employee) {
           setCurrentEmployee({
             id: data.employee.id,
@@ -256,7 +282,7 @@ export default function CreateDeploymentModal({
           'Cache-Control': 'no-cache',
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setDeploymentTypes(data.data || []);
@@ -365,7 +391,7 @@ export default function CreateDeploymentModal({
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-      
+
       return () => {
         document.body.style.position = '';
         document.body.style.top = '';
@@ -404,7 +430,7 @@ export default function CreateDeploymentModal({
   const handleCustomerSearchChange = (value: string) => {
     setCustomerSearch(value);
     setShowCustomerDropdown(true);
-    
+
     if (!value) {
       setFormData(prev => ({
         ...prev,
@@ -415,7 +441,7 @@ export default function CreateDeploymentModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate dates
     if (!formData.startDate) {
       toast.error('Vui lòng chọn ngày bắt đầu!', {
@@ -434,12 +460,12 @@ export default function CreateDeploymentModal({
         return;
       }
     }
-    
+
     setLoading(true);
-    
+
     try {
       const selectedDeploymentType = deploymentTypes.find(dt => dt.id === formData.deploymentType);
-      
+
       if (!selectedDeploymentType) {
         toast.error('Vui lòng chọn loại triển khai!', {
           duration: 3000,
@@ -488,7 +514,7 @@ export default function CreateDeploymentModal({
 
       const url = editData ? `/api/deployment-cases/${editData.id}` : '/api/deployment-cases';
       const method = editData ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method: method,
         headers: {
@@ -499,31 +525,31 @@ export default function CreateDeploymentModal({
 
       if (response.ok) {
         const result = await response.json();
-        
+
         toast.success(editData ? 'Cập nhật case triển khai thành công!' : 'Tạo case triển khai thành công!', {
           duration: 3000,
           position: 'top-right',
         });
-        
+
         window.dispatchEvent(new CustomEvent('case-created'));
-        
+
         resetForm();
-        
+
         if (onSuccess && result.data) {
           onSuccess(result.data);
         }
-        
+
         onClose();
       } else {
         const responseText = await response.text();
-        
+
         let error;
         try {
           error = JSON.parse(responseText);
         } catch (e) {
           error = { error: 'Invalid JSON response' };
         }
-         
+
         console.error('Failed to create deployment:', error);
         toast.error(`Lỗi: ${error.error || 'Không thể tạo case triển khai'}`, {
           duration: 4000,
@@ -545,7 +571,8 @@ export default function CreateDeploymentModal({
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .ios-input-fix input,
         .ios-input-fix select,
         .ios-input-fix textarea {
@@ -598,7 +625,7 @@ export default function CreateDeploymentModal({
                     </div>
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">Admin</span>
                   </div>
-                  
+
                   <div className="p-3">
                     <select
                       value={formData.handler}
@@ -634,7 +661,7 @@ export default function CreateDeploymentModal({
                     </div>
                     <span className="text-red-500 text-sm">*</span>
                   </div>
-                  
+
                   <div className="p-3">
                     <select
                       value={formData.deploymentType}
@@ -664,7 +691,7 @@ export default function CreateDeploymentModal({
                   <Building2 className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thông tin khách hàng</h3>
                 </div>
-                
+
                 <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -732,7 +759,7 @@ export default function CreateDeploymentModal({
                   <FileText className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết triển khai</h3>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
@@ -783,7 +810,7 @@ export default function CreateDeploymentModal({
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
                 </div>
-                
+
                 <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -842,7 +869,7 @@ export default function CreateDeploymentModal({
                   <FileText className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Ghi chú</h3>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
@@ -890,7 +917,7 @@ export default function CreateDeploymentModal({
                     <span className="hidden sm:inline">Làm mới</span>
                   </button>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* Mức độ khó */}
@@ -1005,35 +1032,35 @@ export default function CreateDeploymentModal({
               </div>
             </div>
 
-          {/* Actions */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-300 px-5 py-3 flex items-center justify-end gap-3 flex-shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer"
-              style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
-            >
-              Hủy bỏ
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
-              style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
-            >
-              {loading ? (
-                <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>{editData ? 'Đang cập nhật...' : 'Đang tạo...'}</span>
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  <span>{editData ? 'Cập nhật Case' : 'Tạo Case Triển Khai'}</span>
-                </>
-              )}
-            </button>
-          </div>
+            {/* Actions */}
+            <div className="sticky bottom-0 bg-white border-t border-gray-300 px-5 py-3 flex items-center justify-end gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-5 py-2 text-sm border border-gray-300 rounded text-gray-700 hover:bg-gray-50 transition-colors font-medium cursor-pointer"
+                style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2 text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-sm flex items-center gap-2 cursor-pointer"
+                style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>{editData ? 'Đang cập nhật...' : 'Đang tạo...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>{editData ? 'Cập nhật Case' : 'Tạo Case Triển Khai'}</span>
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </div>
       </div>

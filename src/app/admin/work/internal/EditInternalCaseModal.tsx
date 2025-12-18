@@ -1,8 +1,6 @@
-'use client';
-
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw } from 'lucide-react';
+import { X, User, Wrench, FileText, Calendar, Settings, CheckCircle, RefreshCw, AlertTriangle, Save, Star, Target, Building2, ChevronDown, Search } from 'lucide-react';
 import { useEvaluationForm } from '@/hooks/useEvaluation';
 import { useEvaluation } from '@/contexts/EvaluationContext';
 import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
@@ -72,11 +70,11 @@ interface EditInternalCaseModalProps {
   caseData: InternalCase | null;
 }
 
-export default function EditInternalCaseModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  caseData 
+export default function EditInternalCaseModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  caseData
 }: EditInternalCaseModalProps) {
   const { data: session } = useSession();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -109,7 +107,7 @@ export default function EditInternalCaseModal({
     position: '',
     handler: '',
     caseType: '',
-    form: '',
+    form: 'Onsite',
     title: '',
     description: '',
     startDate: null as Date | null,
@@ -121,7 +119,7 @@ export default function EditInternalCaseModal({
     estimatedTime: '',
     impactLevel: '',
     urgencyLevel: '',
-    formScore: '',
+    formScore: '2',
     // Admin assessment fields
     adminDifficultyLevel: '',
     adminEstimatedTime: '',
@@ -129,6 +127,9 @@ export default function EditInternalCaseModal({
     adminUrgencyLevel: '',
     adminAssessmentNotes: ''
   });
+
+  const [saving, setSaving] = useState(false);
+  const scrollPositionRef = useRef(0);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -162,7 +163,7 @@ export default function EditInternalCaseModal({
       });
       if (response.ok) {
         const result = await response.json();
-        
+
         if (result.success && Array.isArray(result.data)) {
           const activeCaseTypes = result.data.filter((caseType: CaseType) => caseType.isActive);
           setCaseTypes(activeCaseTypes);
@@ -193,45 +194,33 @@ export default function EditInternalCaseModal({
   useEffect(() => {
     if (isOpen && caseData && employees.length > 0) {
       console.log('=== Initializing Form Data ===');
-      console.log('Case Handler ID:', caseData.handler.id);
-      console.log('Case Handler Name:', caseData.handler.fullName);
-      console.log('Available Employees:', employees.map(e => ({ id: e.id, name: e.fullName })));
-      
-      // Verify handler exists in employees list
-      const handlerExists = employees.some(emp => emp.id === caseData.handler.id);
-      console.log('Handler exists in employees list?', handlerExists);
-      
-      if (!handlerExists) {
-        console.warn('⚠️ WARNING: Handler not found in employees list!');
-        console.warn('Handler ID:', caseData.handler.id);
-        console.warn('Handler Name:', caseData.handler.fullName);
-      }
-      
-      // Convert ISO string to Date object for DateTimePicker
-      const startDate = new Date(caseData.startDate);
+
+      const startDate = caseData.startDate ? new Date(caseData.startDate) : null;
       const endDate = caseData.endDate ? new Date(caseData.endDate) : null;
 
-      // CRITICAL: Set handler ID from caseData, NOT from current user
-      const handlerIdToSet = caseData.handler.id;
-      
+      // Form label sync
+      const formOptions = getUserFieldOptions(EvaluationCategory.FORM);
+      const matchedForm = formOptions.find(opt => opt.points.toString() === caseData.userFormScore?.toString());
+      const formLabel = matchedForm ? matchedForm.label : (caseData.userFormScore === 2 || !caseData.userFormScore ? 'Onsite' : '');
+
       setFormData({
         requester: caseData.requester.id,
         position: caseData.requester.position || '',
-        handler: handlerIdToSet, // Use the handler from case data
-        caseType: caseData.caseType,
-        form: caseData.form,
-        title: caseData.title,
-        description: caseData.description,
+        handler: caseData.handler.id,
+        caseType: caseData.caseType || '',
+        form: formLabel,
+        title: caseData.title || '',
+        description: caseData.description || '',
         startDate,
         endDate,
-        status: caseData.status,
+        status: caseData.status || '',
         notes: caseData.notes || '',
         // User self-assessment fields
         difficultyLevel: caseData.userDifficultyLevel?.toString() || '',
         estimatedTime: caseData.userEstimatedTime?.toString() || '',
         impactLevel: caseData.userImpactLevel?.toString() || '',
         urgencyLevel: caseData.userUrgencyLevel?.toString() || '',
-        formScore: caseData.userFormScore?.toString() || '',
+        formScore: caseData.userFormScore?.toString() || '2',
         // Admin assessment fields
         adminDifficultyLevel: caseData.adminDifficultyLevel?.toString() || '',
         adminEstimatedTime: caseData.adminEstimatedTime?.toString() || '',
@@ -239,38 +228,47 @@ export default function EditInternalCaseModal({
         adminUrgencyLevel: caseData.adminUrgencyLevel?.toString() || '',
         adminAssessmentNotes: caseData.adminAssessmentNotes || ''
       });
-      
-      console.log('✅ Form Data Set - Handler:', handlerIdToSet);
-      
-      // Verify after setting
-      setTimeout(() => {
-        console.log('⏱️ Verify formData.handler after 100ms:', handlerIdToSet);
-      }, 100);
     }
-  }, [isOpen, caseData, employees]);
+  }, [isOpen, caseData, employees, getUserFieldOptions]);
+
+  // Second effect to re-sync form label once config is loaded
+  useEffect(() => {
+    if (isOpen && caseData) {
+      const formOptions = getUserFieldOptions(EvaluationCategory.FORM);
+      if (formOptions.length > 0) {
+        const matchedForm = formOptions.find(opt => opt.points.toString() === caseData.userFormScore?.toString());
+        if (matchedForm) {
+          setFormData(prev => ({
+            ...prev,
+            form: matchedForm.label
+          }));
+        }
+      }
+    }
+  }, [isOpen, caseData?.userFormScore, getUserFieldOptions]);
 
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       const scrollY = window.scrollY;
-      
+
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-      
+
       return () => {
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
         document.body.style.overflow = '';
-        
+
         window.scrollTo(0, scrollY);
       };
     }
   }, [isOpen]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -287,12 +285,6 @@ export default function EditInternalCaseModal({
         }));
       }
     }
-  };
-
-  // Handler for DateTimePicker
-  const handleDateTimeChange = (field: string, value: Date | string | null) => {
-    const dateValue = value && typeof value === 'string' ? new Date(value) : value;
-    setFormData(prev => ({ ...prev, [field]: dateValue }));
   };
 
   const getStatusText = (status: string) => {
@@ -312,39 +304,24 @@ export default function EditInternalCaseModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!caseData) return;
 
     // Validate end date (only if both dates exist) - allow any past/future dates
-    if (formData.startDate && formData.endDate) {
-      const startDate = new Date(formData.startDate);
-      const endDate = new Date(formData.endDate);
-      
-      console.log('=== Date Validation (Admin Edit Modal) ===');
-      console.log('Start Date Input:', formData.startDate);
-      console.log('End Date Input:', formData.endDate);
-      console.log('Start Date Object:', startDate);
-      console.log('End Date Object:', endDate);
-      console.log('End <= Start?', endDate <= startDate);
-      
-      if (endDate <= startDate) {
-        toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!', {
-          duration: 3000,
-          position: 'top-right',
-        });
-        return;
-      }
+    if (formData.startDate && formData.endDate && formData.endDate <= formData.startDate) {
+      toast.error('Thời gian kết thúc phải lớn hơn thời gian bắt đầu!');
+      return;
     }
 
     try {
-      setLoading(true);
-      
+      setSaving(true);
+
       // Prepare data for API
       const updateData = {
         requesterId: formData.requester,
         handlerId: formData.handler,
         caseType: formData.caseType,
-        form: formData.form,
+        form: getUserFieldOptions(EvaluationCategory.FORM).find(o => o.label === formData.form)?.label || formData.form,
         title: formData.title,
         description: formData.description,
         startDate: formData.startDate ? formData.startDate.toISOString() : null,
@@ -380,12 +357,12 @@ export default function EditInternalCaseModal({
 
       if (response.ok) {
         const result = await response.json();
-        
+
         toast.success('Cập nhật case thành công!', {
           duration: 3000,
           position: 'top-right',
         });
-        
+
         // Close modal and pass updated data
         onClose();
         if (onSuccess && result.data) {
@@ -406,565 +383,454 @@ export default function EditInternalCaseModal({
         position: 'top-right',
       });
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   if (!isOpen || !caseData) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-y-auto my-4 sm:my-8">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 sm:px-6 py-3 sm:py-4 rounded-t-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-white/20 rounded-md">
-                <Wrench className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">Chỉnh sửa Case Nội Bộ</h2>
-                <p className="text-blue-100 text-sm">Hệ thống quản lý case</p>
-              </div>
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-4 flex items-center justify-between flex-shrink-0 text-white">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded">
+              <Wrench className="h-5 w-5 text-white" />
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/20 rounded-md transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div>
+              <h2 className="text-lg font-bold text-white" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
+                Chỉnh sửa Case nội bộ (Admin)
+              </h2>
+              <p className="text-blue-100 text-xs mt-0.5">Cập nhật thông tin xử lý vụ việc nội bộ</p>
+            </div>
           </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-3 sm:p-6">
-          <div className="space-y-4 sm:space-y-6">
-            {/* Section 1: Thông tin cơ bản */}
-            <div className="bg-gray-50 rounded-md p-3 sm:p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-3 sm:mb-4">
-                <div className="p-1.5 bg-blue-100 rounded-md">
-                  <User className="h-4 w-4 text-blue-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thông tin cơ bản</h3>
-              </div>
-              
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto bg-gray-50">
+            <div className="p-5 space-y-4">
+              {/* Row 1: Người xử lý + Loại case */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Người yêu cầu</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.requester}
-                    onChange={(e) => handleInputChange('requester', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
+                {/* Section 1: Người xử lý */}
+                <div className="bg-white rounded border border-gray-200 shadow-sm">
+                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Người xử lý</h3>
+                    </div>
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold uppercase rounded">IT Admin</span>
+                  </div>
+
+                  <div className="p-3">
+                    <select
+                      value={formData.handler}
+                      onChange={(e) => handleInputChange('handler', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                      disabled={saving}
+                    >
+                      <option value="">Chọn nhân viên</option>
+                      {employees.map((employee) => (
                         <option key={employee.id} value={employee.id}>
                           {employee.fullName}
                         </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
-                      </option>
-                    )}
-                  </select>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Chức danh</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.position}
-                    onChange={(e) => handleInputChange('position', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Tự động điền khi chọn nhân viên"
-                    readOnly
-                  />
+                {/* Section 2: Loại case */}
+                <div className="bg-white rounded border border-gray-200 shadow-sm">
+                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-blue-600" />
+                      <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Loại case</h3>
+                    </div>
+                    <span className="text-red-500 text-sm">*</span>
+                  </div>
+
+                  <div className="p-3">
+                    <select
+                      value={formData.caseType}
+                      onChange={(e) => handleInputChange('caseType', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                      disabled={saving}
+                    >
+                      <option value="">Chọn loại case</option>
+                      {caseTypes.map((type) => (
+                        <option key={type.id} value={type.name}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Thông tin người yêu cầu */}
+              <div className="bg-white rounded border border-gray-200 shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thông tin người yêu cầu</h3>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Người xử lý</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.handler}
-                    onChange={(e) => {
-                      console.log('🔄 Handler changed to:', e.target.value);
-                      const selectedEmp = employees.find(emp => emp.id === e.target.value);
-                      console.log('Selected employee:', selectedEmp?.fullName);
-                      handleInputChange('handler', e.target.value);
-                    }}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn nhân viên'}
-                    </option>
-                    {employees.length > 0 ? (
-                      employees.map((employee) => (
+                <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Người yêu cầu <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.requester}
+                      onChange={(e) => handleInputChange('requester', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                      disabled={saving}
+                    >
+                      <option value="">Chọn nhân viên</option>
+                      {employees.map((employee) => (
                         <option key={employee.id} value={employee.id}>
-                          {employee.fullName} {employee.id === caseData?.handler.id ? '✓ (Người xử lý hiện tại)' : ''}
+                          {employee.fullName}
                         </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Không có nhân viên nào'}
-                      </option>
-                    )}
-                  </select>
-                  {/* Debug info */}
-                  <p className="text-xs text-gray-500 mt-1">
-                    Selected: {formData.handler || 'None'} | Case Handler: {caseData?.handler.id}
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Loại case</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.caseType}
-                    onChange={(e) => handleInputChange('caseType', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      {loading ? 'Đang tải...' : 'Chọn loại case'}
-                    </option>
-                    {caseTypes.length > 0 ? (
-                      caseTypes.map((caseType) => (
-                        <option key={caseType.id} value={caseType.name}>
-                          {caseType.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        {loading ? 'Đang tải...' : 'Chưa có loại case nào'}
-                      </option>
-                    )}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 2: Chi tiết case */}
-            <div className="bg-gray-50 rounded-md p-3 sm:p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-3 sm:mb-4">
-                <div className="p-1.5 bg-purple-100 rounded-md">
-                  <FileText className="h-4 w-4 text-purple-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Chi tiết case</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Vụ việc</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => handleInputChange('title', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Nhập tiêu đề vụ việc"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Mô tả chi tiết</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                    placeholder="Mô tả chi tiết vấn đề..."
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 3: Thời gian */}
-            <div className="bg-gray-50 rounded-md p-3 sm:p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-3 sm:mb-4">
-                <div className="p-1.5 bg-orange-100 rounded-md">
-                  <Calendar className="h-4 w-4 text-orange-600" />
-                </div>
-                <h3 className="text-sm font-semibold text-gray-700">Thời gian</h3>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Bắt đầu</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <DateTimePicker
-                    value={formData.startDate}
-                    onChange={(value) => handleDateTimeChange('startDate', value)}
-                    placeholder="Chọn thời gian bắt đầu"
-                    locale="vi"
-                    valueFormat="DD/MM/YYYY HH:mm"
-                    clearable
-                    withSeconds={false}
-                    styles={{
-                      input: {
-                        fontSize: '0.875rem',
-                        padding: '0.5rem 0.75rem',
-                        borderColor: '#d1d5db',
-                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                        borderRadius: '0.25rem',
-                      }
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Kết thúc</span>
-                  </label>
-                  <DateTimePicker
-                    value={formData.endDate}
-                    onChange={(value) => handleDateTimeChange('endDate', value)}
-                    placeholder="Chọn thời gian kết thúc"
-                    locale="vi"
-                    valueFormat="DD/MM/YYYY HH:mm"
-                    clearable
-                    minDate={formData.startDate || undefined}
-                    withSeconds={false}
-                    styles={{
-                      input: {
-                        fontSize: '0.875rem',
-                        padding: '0.5rem 0.75rem',
-                        borderColor: '#d1d5db',
-                        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-                        borderRadius: '0.25rem',
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 4: Đánh giá của User */}
-            <div className="bg-yellow-50 rounded-md p-4 border border-yellow-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-yellow-100 rounded-md">
-                    <CheckCircle className="h-4 w-4 text-yellow-600" />
+                      ))}
+                    </select>
                   </div>
-                  <h3 className="text-sm font-semibold text-yellow-700">Đánh giá của User</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={fetchConfigs}
-                  className="flex items-center space-x-1 px-2 py-1 text-xs text-yellow-700 hover:text-yellow-800 hover:bg-yellow-100 rounded transition-colors"
-                  title="Làm mới options đánh giá"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  <span>Làm mới</span>
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Mức độ khó */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ khó</span>
-                  </label>
-                  <select
-                    value={formData.difficultyLevel}
-                    onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                  >
-                    <option value="">Chọn mức độ khó</option>
-                    {getUserFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
 
-                {/* Thời gian ước tính */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Thời gian ước tính</span>
-                  </label>
-                  <select
-                    value={formData.estimatedTime}
-                    onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                  >
-                    <option value="">Chọn thời gian ước tính</option>
-                    {getUserFieldOptions(EvaluationCategory.TIME).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Mức độ ảnh hưởng */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ ảnh hưởng</span>
-                  </label>
-                  <select
-                    value={formData.impactLevel}
-                    onChange={(e) => handleInputChange('impactLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                  >
-                    <option value="">Chọn mức độ ảnh hưởng</option>
-                    {getUserFieldOptions(EvaluationCategory.IMPACT).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Mức độ khẩn cấp */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Mức độ khẩn cấp</span>
-                  </label>
-                  <select
-                    value={formData.urgencyLevel}
-                    onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                  >
-                    <option value="">Chọn mức độ khẩn cấp</option>
-                    {getUserFieldOptions(EvaluationCategory.URGENCY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Hình thức làm việc */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-yellow-600 flex items-center">
-                    <span className="w-32">Hình thức làm việc</span>
-                  </label>
-                  <select
-                    value={formData.form}
-                    onChange={(e) => {
-                      handleInputChange('form', e.target.value);
-                      // Auto-set form score based on selection
-                      const selectedOption = getUserFieldOptions(EvaluationCategory.FORM).find(
-                        option => option.label === e.target.value
-                      );
-                      if (selectedOption) {
-                        handleInputChange('formScore', selectedOption.points.toString());
-                      }
-                    }}
-                    className="w-full px-3 py-2 text-sm border border-yellow-200 rounded focus:ring-1 focus:ring-yellow-500 focus:border-yellow-500 transition-colors"
-                  >
-                    <option value="">Chọn hình thức làm việc</option>
-                    {getUserFieldOptions(EvaluationCategory.FORM).map((option) => (
-                      <option key={option.id} value={option.label}>
-                        {option.label} ({option.points} điểm)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 5: Đánh giá của Admin */}
-            <div className="bg-green-50 rounded-md p-4 border border-green-200">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <div className="p-1.5 bg-green-100 rounded-md">
-                    <Settings className="h-4 w-4 text-green-600" />
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Chức danh</label>
+                    <input
+                      type="text"
+                      value={formData.position}
+                      readOnly
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-100 bg-gray-50 rounded text-gray-600 cursor-not-allowed"
+                      placeholder="Tự động điền..."
+                    />
                   </div>
-                  <h3 className="text-sm font-semibold text-green-700">Đánh giá của Admin</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={fetchConfigs}
-                  className="flex items-center space-x-1 px-2 py-1 text-xs text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors"
-                  title="Làm mới options đánh giá"
-                >
-                  <RefreshCw className="h-3 w-3" />
-                  <span>Làm mới</span>
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Mức độ khó Admin */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-green-600 flex items-center">
-                    <span className="w-32">Mức độ khó</span>
-                  </label>
-                  <select
-                    value={formData.adminDifficultyLevel}
-                    onChange={(e) => handleInputChange('adminDifficultyLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-green-200 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
-                  >
-                    <option value="">Chọn mức độ khó</option>
-                    {getAdminFieldOptions(EvaluationCategory.DIFFICULTY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Thời gian ước tính Admin */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-green-600 flex items-center">
-                    <span className="w-32">Thời gian ước tính</span>
-                  </label>
-                  <select
-                    value={formData.adminEstimatedTime}
-                    onChange={(e) => handleInputChange('adminEstimatedTime', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-green-200 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
-                  >
-                    <option value="">Chọn thời gian ước tính</option>
-                    {getAdminFieldOptions(EvaluationCategory.TIME).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Mức độ ảnh hưởng Admin */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-green-600 flex items-center">
-                    <span className="w-32">Mức độ ảnh hưởng</span>
-                  </label>
-                  <select
-                    value={formData.adminImpactLevel}
-                    onChange={(e) => handleInputChange('adminImpactLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-green-200 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
-                  >
-                    <option value="">Chọn mức độ ảnh hưởng</option>
-                    {getAdminFieldOptions(EvaluationCategory.IMPACT).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Mức độ khẩn cấp Admin */}
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-green-600 flex items-center">
-                    <span className="w-32">Mức độ khẩn cấp</span>
-                  </label>
-                  <select
-                    value={formData.adminUrgencyLevel}
-                    onChange={(e) => handleInputChange('adminUrgencyLevel', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-green-200 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors"
-                  >
-                    <option value="">Chọn mức độ khẩn cấp</option>
-                    {getAdminFieldOptions(EvaluationCategory.URGENCY).map((option) => (
-                      <option key={option.id} value={option.points}>
-                        {option.points} - {option.label}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
 
-              {/* Admin Assessment Notes */}
-              <div className="mt-4">
-                <label className="text-xs font-medium text-green-600 flex items-center">
-                  <span className="w-32">Ghi chú đánh giá</span>
-                </label>
-                <textarea
-                  value={formData.adminAssessmentNotes}
-                  onChange={(e) => handleInputChange('adminAssessmentNotes', e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-2 text-sm border border-green-200 rounded focus:ring-1 focus:ring-green-500 focus:border-green-500 transition-colors resize-none"
-                  placeholder="Ghi chú đánh giá của admin..."
-                />
-              </div>
-            </div>
-
-            {/* Section 6: Trạng thái & Ghi chú */}
-            <div className="bg-gray-50 rounded-md p-3 sm:p-4 border border-gray-200">
-              <div className="flex items-center space-x-2 mb-3 sm:mb-4">
-                <div className="p-1.5 bg-gray-100 rounded-md">
-                  <CheckCircle className="h-4 w-4 text-gray-600" />
+              {/* Section 4: Chi tiết vụ việc */}
+              <div className="bg-white rounded border border-gray-200 shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết vụ việc</h3>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-700">Trạng thái & Ghi chú</h3>
+
+                <div className="p-3 space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Tiêu đề <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange('title', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="Nhập tiêu đề vụ việc..."
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Mô tả chi tiết <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      rows={3}
+                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-colors"
+                      placeholder="Mô tả chi tiết..."
+                      required
+                    />
+                  </div>
+                </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Trạng thái</span>
-                    <span className="text-red-500 ml-1">*</span>
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required
+
+              {/* Section 5: Thời gian */}
+              <div className="bg-white rounded border border-gray-200 shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
+                </div>
+
+                <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Bắt đầu <span className="text-red-500">*</span></label>
+                    <DateTimePicker
+                      value={formData.startDate}
+                      onChange={(value) => handleInputChange('startDate', value)}
+                      placeholder="Chọn ngày bắt đầu"
+                      locale="vi"
+                      valueFormat="DD/MM/YYYY HH:mm"
+                      clearable
+                      withSeconds={false}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Kết thúc</label>
+                    <DateTimePicker
+                      value={formData.endDate}
+                      onChange={(value) => handleInputChange('endDate', value)}
+                      placeholder="Chọn ngày kết thúc"
+                      locale="vi"
+                      valueFormat="DD/MM/YYYY HH:mm"
+                      clearable
+                      minDate={formData.startDate || undefined}
+                      withSeconds={false}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 6: Trạng thái & Ghi chú */}
+              <div className="bg-white rounded border border-gray-200 shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Ghi chú</h3>
+                </div>
+
+                <div className="p-3 space-y-3">
+                  <div className="w-full md:w-1/2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Trạng thái <span className="text-red-500">*</span></label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => handleInputChange('status', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                    >
+                      <option value="RECEIVED">Tiếp nhận</option>
+                      <option value="IN_PROGRESS">Đang xử lý</option>
+                      <option value="COMPLETED">Hoàn thành</option>
+                      <option value="CANCELLED">Hủy</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ghi chú</label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => handleInputChange('notes', e.target.value)}
+                      rows={2}
+                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-colors"
+                      placeholder="Ghi chú thêm..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 7: Đánh giá (User Assessment) */}
+              <div className="bg-white rounded border border-amber-200 shadow-sm">
+                <div className="bg-amber-50 px-3 py-2 border-b border-amber-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-600" />
+                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Đánh giá của User</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fetchConfigs}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-amber-700 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors font-bold uppercase"
                   >
-                    <option value="RECEIVED">Tiếp nhận</option>
-                    <option value="IN_PROGRESS">Đang xử lý</option>
-                    <option value="COMPLETED">Hoàn thành</option>
-                    <option value="CANCELLED">Hủy</option>
-                  </select>
+                    <RefreshCw className="h-3 w-3" />
+                    <span>Làm mới</span>
+                  </button>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-600 flex items-center">
-                    <span className="w-28">Ghi chú</span>
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
-                    placeholder="Ghi chú thêm (nếu có)..."
-                  />
+                <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Mức độ khó</label>
+                    <select
+                      value={formData.difficultyLevel}
+                      onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn mức độ</option>
+                      {getUserFieldOptions(EvaluationCategory.DIFFICULTY).map((opt) => (
+                        <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Thời gian ước tính</label>
+                    <select
+                      value={formData.estimatedTime}
+                      onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn thời gian</option>
+                      {getUserFieldOptions(EvaluationCategory.TIME).map((opt) => (
+                        <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ảnh hưởng</label>
+                    <select
+                      value={formData.impactLevel}
+                      onChange={(e) => handleInputChange('impactLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn mức độ</option>
+                      {getUserFieldOptions(EvaluationCategory.IMPACT).map((opt) => (
+                        <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Khẩn cấp</label>
+                    <select
+                      value={formData.urgencyLevel}
+                      onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn mức độ</option>
+                      {getUserFieldOptions(EvaluationCategory.URGENCY).map((opt) => (
+                        <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Hình thức làm việc</label>
+                    <select
+                      value={formData.form}
+                      onChange={(e) => {
+                        handleInputChange('form', e.target.value);
+                        const matched = getUserFieldOptions(EvaluationCategory.FORM).find(o => o.label === e.target.value);
+                        if (matched) handleInputChange('formScore', matched.points.toString());
+                      }}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn hình thức</option>
+                      {getUserFieldOptions(EvaluationCategory.FORM).map((opt) => (
+                        <option key={opt.id} value={opt.label}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 8: Admin Assessment */}
+              <div className="bg-white rounded border border-green-200 shadow-sm">
+                <div className="bg-green-50 px-3 py-2 border-b border-green-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-green-600" />
+                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Đánh giá của Admin</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fetchConfigs}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-green-700 hover:text-green-800 hover:bg-green-100 rounded transition-colors font-bold uppercase"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    <span>Làm mới</span>
+                  </button>
+                </div>
+
+                <div className="p-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Mức độ khó</label>
+                      <select
+                        value={formData.adminDifficultyLevel}
+                        onChange={(e) => handleInputChange('adminDifficultyLevel', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      >
+                        <option value="">Chọn mức độ</option>
+                        {getAdminFieldOptions(EvaluationCategory.DIFFICULTY).map((opt) => (
+                          <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Thời gian nhận</label>
+                      <select
+                        value={formData.adminEstimatedTime}
+                        onChange={(e) => handleInputChange('adminEstimatedTime', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      >
+                        <option value="">Chọn thời gian</option>
+                        {getAdminFieldOptions(EvaluationCategory.TIME).map((opt) => (
+                          <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Ảnh hưởng</label>
+                      <select
+                        value={formData.adminImpactLevel}
+                        onChange={(e) => handleInputChange('adminImpactLevel', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      >
+                        <option value="">Chọn mức độ</option>
+                        {getAdminFieldOptions(EvaluationCategory.IMPACT).map((opt) => (
+                          <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Khẩn cấp</label>
+                      <select
+                        value={formData.adminUrgencyLevel}
+                        onChange={(e) => handleInputChange('adminUrgencyLevel', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      >
+                        <option value="">Chọn mức độ</option>
+                        {getAdminFieldOptions(EvaluationCategory.URGENCY).map((opt) => (
+                          <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ghi chú của Admin</label>
+                    <textarea
+                      value={formData.adminAssessmentNotes}
+                      onChange={(e) => handleInputChange('adminAssessmentNotes', e.target.value)}
+                      rows={2}
+                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none transition-colors"
+                      placeholder="Ghi chú đánh giá của admin..."
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Form Actions */}
-          <div className="flex items-center justify-end space-x-2 sm:space-x-3 pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-gray-200">
+          {/* Footer */}
+          <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-end gap-3 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 sm:px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors text-sm font-medium"
+              disabled={saving}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
               Hủy
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
-              <CheckCircle className="h-4 w-4 mr-1 sm:mr-2" />
-              {loading ? 'Đang cập nhật...' : 'Cập nhật Case'}
+              {saving ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Đang xử lý...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  <span>Cập nhật Case</span>
+                </>
+              )}
             </button>
           </div>
         </form>

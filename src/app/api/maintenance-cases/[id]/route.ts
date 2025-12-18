@@ -17,7 +17,7 @@ export async function GET(
   try {
     // Temporarily disable authentication for testing
     // const session = await getServerSession(authOptions);
-    
+
     // if (!session?.user?.id) {
     //   return NextResponse.json(
     //     { error: 'Unauthorized' },
@@ -62,6 +62,15 @@ export async function GET(
             serialNumber: true,
             location: true
           }
+        },
+        customer: {
+          select: {
+            id: true,
+            fullCompanyName: true,
+            shortName: true,
+            contactPerson: true,
+            contactPhone: true
+          }
         }
       }
     });
@@ -93,7 +102,7 @@ export async function PUT(
   try {
     // Temporarily disable authentication for testing
     // const session = await getServerSession(authOptions);
-    
+
     // if (!session?.user?.id) {
     //   return NextResponse.json(
     //     { error: 'Unauthorized' },
@@ -103,7 +112,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    
+
     console.log('=== API Update Maintenance ===');
     console.log('ID:', id);
     console.log('Body received:', body);
@@ -125,16 +134,16 @@ export async function PUT(
     if (body.endDate && (body.startDate || existingCase.startDate)) {
       const startDateToCheck = body.startDate ? dayjs(body.startDate).tz('Asia/Ho_Chi_Minh').toDate() : dayjs(existingCase.startDate).tz('Asia/Ho_Chi_Minh').toDate();
       const endDateObj = dayjs(body.endDate).tz('Asia/Ho_Chi_Minh').toDate();
-      
+
       console.log("=== API Maintenance Date Validation ===");
       console.log("Start Date to check:", startDateToCheck);
       console.log("End Date:", endDateObj);
       console.log("End <= Start?", endDateObj <= startDateToCheck);
-      
+
       if (endDateObj <= startDateToCheck) {
         console.log("Invalid end date:", { startDate: body.startDate ? convertToVietnamTime(body.startDate) : startDateToCheck, endDate: endDateObj });
-        return NextResponse.json({ 
-          error: "Ngày kết thúc phải lớn hơn ngày bắt đầu" 
+        return NextResponse.json({
+          error: "Ngày kết thúc phải lớn hơn ngày bắt đầu"
         }, { status: 400 });
       }
     }
@@ -266,9 +275,9 @@ export async function PUT(
       message: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined
     });
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to update maintenance case',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -284,7 +293,7 @@ export async function DELETE(
   try {
     // Temporarily disable authentication for testing
     // const session = await getServerSession(authOptions);
-    
+
     // if (!session?.user?.id) {
     //   return NextResponse.json(
     //     { error: 'Unauthorized' },

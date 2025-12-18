@@ -1,11 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, AlertTriangle, Save, RefreshCw } from 'lucide-react';
+import { X, AlertTriangle, Save, RefreshCw, User, FileText, Calendar, Settings, CheckCircle, Building2, Star, Target, Search, ChevronDown } from 'lucide-react';
+import { useEvaluationForm } from '@/hooks/useEvaluation';
+import { useEvaluation } from '@/contexts/EvaluationContext';
+import { EvaluationType, EvaluationCategory } from '@/contexts/EvaluationContext';
 import { convertISOToLocalInput, convertLocalInputToISO } from '@/lib/date-utils';
 import toast from 'react-hot-toast';
 import { DateTimePicker } from '@mantine/dates';
 import 'dayjs/locale/vi';
+import { useCallback, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface Employee {
   id: string;
@@ -72,10 +77,12 @@ export default function EditIncidentModal({
   customers: preloadedCustomers = [],
   incidentTypes: preloadedIncidentTypes = []
 }: EditIncidentModalProps) {
+  const { data: session } = useSession();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     incidentType: '',
+    customerTitle: 'Anh',
     customerName: '',
     customerId: '',
     handlerId: '',
@@ -83,13 +90,51 @@ export default function EditIncidentModal({
     startDate: null as Date | null,
     endDate: null as Date | null,
     notes: '',
-    crmReferenceCode: ''
+    crmReferenceCode: '',
+    // User assessment fields
+    difficultyLevel: '',
+    estimatedTime: '',
+    impactLevel: '',
+    urgencyLevel: '',
+    form: 'Onsite',
+    formScore: '2',
+    // Admin assessment fields
+    adminDifficultyLevel: '',
+    adminEstimatedTime: '',
+    adminImpactLevel: '',
+    adminUrgencyLevel: '',
+    adminAssessmentNotes: ''
   });
 
   const [employees, setEmployees] = useState<Employee[]>(preloadedEmployees);
-  const [customers, setCustomers] = useState<any[]>(preloadedCustomers);
+  const [partners, setPartners] = useState<any[]>(preloadedCustomers);
   const [incidentTypes, setIncidentTypes] = useState<Array<{ id: string, name: string }>>(preloadedIncidentTypes);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Evaluation categories
+  const userCategories = [
+    EvaluationCategory.DIFFICULTY,
+    EvaluationCategory.TIME,
+    EvaluationCategory.IMPACT,
+    EvaluationCategory.URGENCY,
+    EvaluationCategory.FORM,
+  ];
+
+  const adminCategories = [
+    EvaluationCategory.DIFFICULTY,
+    EvaluationCategory.TIME,
+    EvaluationCategory.IMPACT,
+    EvaluationCategory.URGENCY,
+  ];
+
+  const { getFieldOptions: getUserFieldOptions } = useEvaluationForm(EvaluationType.USER, userCategories);
+  const { getFieldOptions: getAdminFieldOptions } = useEvaluationForm(EvaluationType.ADMIN, adminCategories);
+  const { fetchConfigs } = useEvaluation();
 
   // Sync preloaded data when it changes
   useEffect(() => {
@@ -97,7 +142,7 @@ export default function EditIncidentModal({
   }, [preloadedEmployees]);
 
   useEffect(() => {
-    if (preloadedCustomers.length > 0) setCustomers(preloadedCustomers);
+    if (preloadedCustomers.length > 0) setPartners(preloadedCustomers);
   }, [preloadedCustomers]);
 
   useEffect(() => {
@@ -106,10 +151,28 @@ export default function EditIncidentModal({
 
   // Load form data only if preloaded data is not available (fallback)
   useEffect(() => {
-    if (isOpen && (employees.length === 0 || customers.length === 0 || incidentTypes.length === 0)) {
-      loadFormData();
+    if (isOpen) {
+      fetchConfigs();
+      if (employees.length === 0 || partners.length === 0 || incidentTypes.length === 0) {
+        loadFormData();
+      }
     }
   }, [isOpen]);
+
+  // Handle outside click for customer dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
+        setShowCustomerDropdown(false);
+      }
+    };
+
+    if (showCustomerDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCustomerDropdown]);
 
   // Body scroll lock when modal is open
   useEffect(() => {
@@ -134,32 +197,88 @@ export default function EditIncidentModal({
   useEffect(() => {
     if (isOpen && incidentData && employees.length > 0) {
       console.log('=== Initializing Incident Form Data ===');
-      console.log('Incident Handler ID:', incidentData.handler?.id);
-      console.log('Incident Handler Name:', incidentData.handler?.fullName);
 
-      // Convert ISO string to Date object for DateTimePicker
       const startDate = incidentData.startDate ? new Date(incidentData.startDate) : null;
       const endDate = incidentData.endDate ? new Date(incidentData.endDate) : null;
+
+      let incidentTypeName = '';
+      if (typeof incidentData.incidentType === 'string') {
+        const foundType = incidentTypes.find(t => t.name === incidentData.incidentType);
+        incidentTypeName = foundType ? foundType.id : incidentData.incidentType;
+      } else if (incidentData.incidentType && (incidentData.incidentType as any).id) {
+        incidentTypeName = (incidentData.incidentType as any).id;
+      }
+
+      // Customer name parsing
+      const rawCustomerName = incidentData.customerName || '';
+      let customerTitle = 'Anh';
+      let displayCustomerName = rawCustomerName;
+
+      if (rawCustomerName.startsWith('Anh ')) {
+        customerTitle = 'Anh';
+        displayCustomerName = rawCustomerName.substring(4);
+      } else if (rawCustomerName.startsWith('Chị ')) {
+        customerTitle = 'Chị';
+        displayCustomerName = rawCustomerName.substring(4);
+      }
+
+      // Sync customer search and partner select
+      if (incidentData.customer) {
+        setCustomerSearch(`${incidentData.customer.fullCompanyName} (${incidentData.customer.shortName})`);
+      } else {
+        setCustomerSearch('');
+      }
+
+      // Form label sync
+      const formOptions = getUserFieldOptions(EvaluationCategory.FORM);
+      const matchedForm = formOptions.find(opt => opt.points.toString() === incidentData.userFormScore?.toString());
+      const formLabel = matchedForm ? matchedForm.label : (incidentData.userFormScore === 2 || !incidentData.userFormScore ? 'Onsite' : '');
 
       setFormData({
         title: incidentData.title || '',
         description: incidentData.description || '',
-        incidentType: incidentData.incidentType || '',
-        customerName: incidentData.customerName || '',
+        incidentType: incidentTypeName,
+        customerTitle,
+        customerName: displayCustomerName,
         customerId: incidentData.customer?.id || '',
         handlerId: incidentData.handler?.id || '',
         status: incidentData.status || '',
         startDate,
         endDate,
         notes: incidentData.notes || '',
-        crmReferenceCode: incidentData.crmReferenceCode || ''
+        crmReferenceCode: incidentData.crmReferenceCode || '',
+        // User assessment
+        difficultyLevel: incidentData.userDifficultyLevel?.toString() || '',
+        estimatedTime: incidentData.userEstimatedTime?.toString() || '',
+        impactLevel: incidentData.userImpactLevel?.toString() || '',
+        urgencyLevel: incidentData.userUrgencyLevel?.toString() || '',
+        form: formLabel,
+        formScore: incidentData.userFormScore?.toString() || '2',
+        // Admin assessment
+        adminDifficultyLevel: incidentData.adminDifficultyLevel?.toString() || '',
+        adminEstimatedTime: incidentData.adminEstimatedTime?.toString() || '',
+        adminImpactLevel: incidentData.adminImpactLevel?.toString() || '',
+        adminUrgencyLevel: incidentData.adminUrgencyLevel?.toString() || '',
+        adminAssessmentNotes: incidentData.adminAssessmentNotes || ''
       });
-
-      console.log('✅ Form Data Set - Handler:', incidentData.handler?.id);
-      console.log('Converted startDate:', startDate);
-      console.log('Converted endDate:', endDate);
     }
-  }, [isOpen, incidentData, employees]);
+  }, [isOpen, incidentData, employees, incidentTypes]);
+
+  // Second effect to re-sync form label once config is loaded
+  useEffect(() => {
+    if (isOpen && incidentData) {
+      const formOptions = getUserFieldOptions(EvaluationCategory.FORM);
+      if (formOptions.length > 0) {
+        const matchedForm = formOptions.find(opt => opt.points.toString() === incidentData.userFormScore?.toString());
+        if (matchedForm) {
+          setFormData(prev => ({
+            ...prev,
+            form: matchedForm.label
+          }));
+        }
+      }
+    }
+  }, [isOpen, incidentData?.userFormScore, getUserFieldOptions]);
 
   // Load form data only as fallback (if preloaded data is not available)
   const loadFormData = async () => {
@@ -175,11 +294,11 @@ export default function EditIncidentModal({
         );
       }
 
-      if (customers.length === 0) {
+      if (partners.length === 0) {
         promises.push(
           fetch('/api/partners/list', { headers: { 'Cache-Control': 'max-age=600' } })
             .then(res => res.ok ? res.json() : [])
-            .then(data => setCustomers(data.data || data || []))
+            .then(data => setPartners(data.data || data || []))
         );
       }
 
@@ -237,15 +356,27 @@ export default function EditIncidentModal({
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
-          incidentType: formData.incidentType,
-          customerName: formData.customerName,
+          incidentType: incidentTypes.find(t => t.id === formData.incidentType)?.name || formData.incidentType,
+          customerName: `${formData.customerTitle} ${formData.customerName}`.trim(),
           customerId: formData.customerId || null,
           handlerId: formData.handlerId,
           status: formData.status,
           startDate: formData.startDate ? formData.startDate.toISOString() : null,
           endDate: formData.endDate ? formData.endDate.toISOString() : null,
           notes: formData.notes,
-          crmReferenceCode: formData.crmReferenceCode
+          crmReferenceCode: formData.crmReferenceCode,
+          // User assessment
+          userDifficultyLevel: formData.difficultyLevel ? parseInt(formData.difficultyLevel) : null,
+          userEstimatedTime: formData.estimatedTime ? parseInt(formData.estimatedTime) : null,
+          userImpactLevel: formData.impactLevel ? parseInt(formData.impactLevel) : null,
+          userUrgencyLevel: formData.urgencyLevel ? parseInt(formData.urgencyLevel) : null,
+          userFormScore: formData.formScore ? parseInt(formData.formScore) : null,
+          // Admin assessment
+          adminDifficultyLevel: formData.adminDifficultyLevel ? parseInt(formData.adminDifficultyLevel) : null,
+          adminEstimatedTime: formData.adminEstimatedTime ? parseInt(formData.adminEstimatedTime) : null,
+          adminImpactLevel: formData.adminImpactLevel ? parseInt(formData.adminImpactLevel) : null,
+          adminUrgencyLevel: formData.adminUrgencyLevel ? parseInt(formData.adminUrgencyLevel) : null,
+          adminAssessmentNotes: formData.adminAssessmentNotes || null
         }),
       });
 
@@ -266,19 +397,24 @@ export default function EditIncidentModal({
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+  const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [field]: value
     }));
   };
 
-  // Handler for DateTimePicker
-  const handleDateTimeChange = (field: string, value: Date | string | null) => {
-    const dateValue = value && typeof value === 'string' ? new Date(value) : value;
-    setFormData(prev => ({ ...prev, [field]: dateValue }));
+  const handleCustomerSelect = (partnerId: string) => {
+    const selectedPartner = partners.find(p => p.id === partnerId);
+    handleInputChange('customerId', partnerId);
+    setCustomerSearch(selectedPartner ? `${selectedPartner.fullCompanyName} (${selectedPartner.shortName})` : '');
+    setShowCustomerDropdown(false);
   };
+
+  const filteredPartners = partners.filter(partner =>
+    partner.fullCompanyName.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    partner.shortName.toLowerCase().includes(customerSearch.toLowerCase())
+  );
 
   const getStatusOptions = () => [
     { value: 'RECEIVED', label: 'Tiếp nhận' },
@@ -333,172 +469,201 @@ export default function EditIncidentModal({
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto bg-gray-50">
             <div className="p-5 space-y-4">
-              {/* Group 1: Thông tin chung */}
-              <div className="bg-white rounded border border-gray-200">
-                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thông tin sự cố</h3>
-                  <span className="text-red-500 text-sm ml-1">*</span>
-                </div>
-                <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                      Tiêu đề <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Nhập tiêu đề sự cố"
-                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
+              {/* Row 1: Người xử lý + Loại sự cố */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Section 1: Người xử lý */}
+                <div className="bg-white rounded border border-gray-200 shadow-sm">
+                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Người xử lý</h3>
+                    </div>
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold uppercase rounded">Admin</span>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                      Loại sự cố <span className="text-red-500">*</span>
-                    </label>
+
+                  <div className="p-3">
                     <select
-                      name="incidentType"
-                      value={formData.incidentType}
-                      onChange={handleInputChange}
+                      value={formData.handlerId}
+                      onChange={(e) => handleInputChange('handlerId', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                       required
-                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      disabled={saving}
                     >
-                      <option value="">-- Chọn loại sự cố --</option>
+                      <option value="">Chọn nhân viên</option>
+                      {employees.map((employee) => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Section 2: Loại sự cố */}
+                <div className="bg-white rounded border border-gray-200 shadow-sm">
+                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-blue-600" />
+                      <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Loại sự cố</h3>
+                    </div>
+                    <span className="text-red-500 text-sm">*</span>
+                  </div>
+
+                  <div className="p-3">
+                    <select
+                      value={formData.incidentType}
+                      onChange={(e) => handleInputChange('incidentType', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                    >
+                      <option value="">Chọn loại sự cố</option>
                       {incidentTypes.map((type) => (
-                        <option key={type.id} value={type.name}>
+                        <option key={type.id} value={type.id}>
                           {type.name}
                         </option>
                       ))}
                     </select>
                   </div>
-                  <div className="col-span-1 md:col-span-2">
+                </div>
+              </div>
+
+              {/* Section 3: Thông tin khách hàng */}
+              <div className="bg-white rounded border border-gray-200 shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thông tin khách hàng</h3>
+                </div>
+
+                <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Khách hàng <span className="text-red-500">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <select
+                        value={formData.customerTitle}
+                        onChange={(e) => handleInputChange('customerTitle', e.target.value)}
+                        className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      >
+                        <option value="Anh">Anh</option>
+                        <option value="Chị">Chị</option>
+                      </select>
+                      <input
+                        type="text"
+                        value={formData.customerName}
+                        onChange={(e) => handleInputChange('customerName', e.target.value)}
+                        className="flex-1 px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Nhập tên khách hàng..."
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Tên công ty</label>
+                    <div className="relative" ref={dropdownRef}>
+                      <input
+                        type="text"
+                        value={customerSearch}
+                        onChange={(e) => {
+                          setCustomerSearch(e.target.value);
+                          setShowCustomerDropdown(true);
+                          if (!e.target.value) handleInputChange('customerId', '');
+                        }}
+                        onFocus={() => setShowCustomerDropdown(true)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Tìm kiếm khách hàng..."
+                      />
+                      {showCustomerDropdown && (
+                        <div className="absolute z-[9999] w-full mt-1.5 bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-y-auto">
+                          {filteredPartners.length > 0 ? (
+                            filteredPartners.map((partner) => (
+                              <div
+                                key={partner.id}
+                                onClick={() => handleCustomerSelect(partner.id)}
+                                className="px-3 py-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
+                              >
+                                <div className="font-medium text-sm text-gray-900">{partner.shortName}</div>
+                                <div className="text-xs text-gray-600 mt-0.5">{partner.fullCompanyName}</div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="px-3 py-6 text-center text-sm text-gray-500">
+                              Không tìm thấy khách hàng
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Chi tiết sự cố */}
+              <div className="bg-white rounded border border-gray-200 shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết sự cố</h3>
+                </div>
+
+                <div className="p-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        Tiêu đề sự cố <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => handleInputChange('title', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Nhập tiêu đề sự cố..."
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Mã CRM</label>
+                      <input
+                        type="text"
+                        value={formData.crmReferenceCode}
+                        onChange={(e) => handleInputChange('crmReferenceCode', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                        placeholder="Nhập mã CRM (tùy chọn)"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
                       Mô tả chi tiết <span className="text-red-500">*</span>
                     </label>
                     <textarea
-                      name="description"
                       value={formData.description}
-                      onChange={handleInputChange}
-                      required
+                      onChange={(e) => handleInputChange('description', e.target.value)}
                       rows={3}
+                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-colors"
                       placeholder="Mô tả chi tiết về sự cố..."
-                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-y"
+                      required
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Group 2: Khách hàng & Người xử lý */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Khách hàng */}
-                <div className="bg-white rounded border border-gray-200">
-                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
-                    <Save className="h-4 w-4 text-blue-600" />
-                    {/* Using Save icon temporarily as generic 'Customer/User' icon if User icon is taken, but User icon is better. Reusing icons is fine. */}
-                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Khách hàng</h3>
-                  </div>
-                  <div className="p-3 space-y-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                        Chọn từ danh sách
-                      </label>
-                      <select
-                        name="customerId"
-                        value={formData.customerId}
-                        onChange={handleInputChange}
-                        className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      >
-                        <option value="">-- Khách hàng lẻ / Chưa có trong DS --</option>
-                        {customers.map((customer) => (
-                          <option key={customer.id} value={customer.id}>
-                            {customer.shortName} - {customer.fullCompanyName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                        Tên khách hàng (nhập tay)
-                      </label>
-                      <input
-                        type="text"
-                        name="customerName"
-                        value={formData.customerName}
-                        onChange={handleInputChange}
-                        placeholder="Nhập tên khách hàng nếu không có trong danh sách"
-                        className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Người xử lý & Trạng thái */}
-                <div className="bg-white rounded border border-gray-200">
-                  <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
-                    <RefreshCw className="h-4 w-4 text-blue-600" />
-                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Xử lý</h3>
-                    <span className="text-red-500 text-sm ml-1">*</span>
-                  </div>
-                  <div className="p-3 space-y-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                        Người xử lý <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="handlerId"
-                        value={formData.handlerId}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      >
-                        <option value="">-- Chọn người xử lý --</option>
-                        {employees.map((employee) => (
-                          <option key={employee.id} value={employee.id}>
-                            {employee.fullName} - {employee.position}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                        Trạng thái <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      >
-                        {getStatusOptions().map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Group 3: Thời gian & Khác */}
-              <div className="bg-white rounded border border-gray-200">
+              {/* Section 5: Thời gian */}
+              <div className="bg-white rounded border border-gray-200 shadow-sm">
                 <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-blue-600" />
-                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian & Thông tin thêm</h3>
+                  <Calendar className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
                 </div>
-                <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                      Thời gian bắt đầu <span className="text-red-500">*</span>
-                    </label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Thời gian bắt đầu</label>
                     <DateTimePicker
                       value={formData.startDate}
-                      onChange={(value) => handleDateTimeChange('startDate', value)}
-                      placeholder="DD/MM/YYYY HH:mm"
+                      onChange={(value) => handleInputChange('startDate', value)}
+                      placeholder="Chọn ngày bắt đầu"
                       locale="vi"
                       valueFormat="DD/MM/YYYY HH:mm"
                       clearable
@@ -506,14 +671,13 @@ export default function EditIncidentModal({
                       className="w-full"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                      Thời gian kết thúc
-                    </label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Thời gian kết thúc</label>
                     <DateTimePicker
                       value={formData.endDate}
-                      onChange={(value) => handleDateTimeChange('endDate', value)}
-                      placeholder="DD/MM/YYYY HH:mm"
+                      onChange={(value) => handleInputChange('endDate', value)}
+                      placeholder="Chọn ngày kết thúc"
                       locale="vi"
                       valueFormat="DD/MM/YYYY HH:mm"
                       clearable
@@ -522,36 +686,212 @@ export default function EditIncidentModal({
                       className="w-full"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                      Mã CRM Link
-                    </label>
-                    <input
-                      type="text"
-                      name="crmReferenceCode"
-                      value={formData.crmReferenceCode}
-                      onChange={handleInputChange}
-                      placeholder="Nhập mã CRM"
-                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
+                </div>
+              </div>
+
+              {/* Section 6: Trạng thái & Ghi chú */}
+              <div className="bg-white rounded border border-gray-200 shadow-sm">
+                <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Ghi chú</h3>
+                </div>
+
+                <div className="p-3 space-y-3">
+                  <div className="w-full md:w-1/2">
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Trạng thái</label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => handleInputChange('status', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="RECEIVED">Tiếp nhận</option>
+                      <option value="PROCESSING">Đang xử lý</option>
+                      <option value="COMPLETED">Hoàn thành</option>
+                      <option value="CANCELLED">Hủy</option>
+                    </select>
                   </div>
+
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                      Ghi chú
-                    </label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ghi chú</label>
                     <input
                       type="text"
-                      name="notes"
                       value={formData.notes}
-                      onChange={handleInputChange}
+                      onChange={(e) => handleInputChange('notes', e.target.value)}
                       placeholder="Ghi chú thêm..."
                       className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
               </div>
+
+              {/* Section 7: Đánh giá (User Assessment) */}
+              <div className="bg-white rounded border border-amber-200 shadow-sm">
+                <div className="bg-amber-50 px-3 py-2 border-b border-amber-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-600" />
+                    <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Đánh giá của User</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={fetchConfigs}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-amber-700 hover:text-amber-800 hover:bg-amber-100 rounded transition-colors font-bold uppercase"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    <span>Làm mới</span>
+                  </button>
+                </div>
+
+                <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Mức độ khó</label>
+                    <select
+                      value={formData.difficultyLevel}
+                      onChange={(e) => handleInputChange('difficultyLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn mức độ</option>
+                      {getUserFieldOptions(EvaluationCategory.DIFFICULTY).map((opt) => (
+                        <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Thời gian ước tính</label>
+                    <select
+                      value={formData.estimatedTime}
+                      onChange={(e) => handleInputChange('estimatedTime', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn thời gian</option>
+                      {getUserFieldOptions(EvaluationCategory.TIME).map((opt) => (
+                        <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ảnh hưởng</label>
+                    <select
+                      value={formData.impactLevel}
+                      onChange={(e) => handleInputChange('impactLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn mức độ</option>
+                      {getUserFieldOptions(EvaluationCategory.IMPACT).map((opt) => (
+                        <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Khẩn cấp</label>
+                    <select
+                      value={formData.urgencyLevel}
+                      onChange={(e) => handleInputChange('urgencyLevel', e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn mức độ</option>
+                      {getUserFieldOptions(EvaluationCategory.URGENCY).map((opt) => (
+                        <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Hình thức làm việc</label>
+                    <select
+                      value={formData.form}
+                      onChange={(e) => {
+                        handleInputChange('form', e.target.value);
+                        const matched = getUserFieldOptions(EvaluationCategory.FORM).find(o => o.label === e.target.value);
+                        if (matched) handleInputChange('formScore', matched.points.toString());
+                      }}
+                      className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors"
+                    >
+                      <option value="">Chọn hình thức</option>
+                      {getUserFieldOptions(EvaluationCategory.FORM).map((opt) => (
+                        <option key={opt.id} value={opt.label}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 8: Admin Assessment */}
+              <div className="bg-white rounded border border-green-200 shadow-sm">
+                <div className="bg-green-50 px-3 py-2 border-b border-green-200 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-green-600" />
+                  <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Đánh giá của Admin</h3>
+                </div>
+
+                <div className="p-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Mức độ khó</label>
+                      <select
+                        value={formData.adminDifficultyLevel}
+                        onChange={(e) => handleInputChange('adminDifficultyLevel', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      >
+                        <option value="">Chọn mức độ</option>
+                        {getAdminFieldOptions(EvaluationCategory.DIFFICULTY).map((opt) => (
+                          <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Thời gian nhận</label>
+                      <select
+                        value={formData.adminEstimatedTime}
+                        onChange={(e) => handleInputChange('adminEstimatedTime', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      >
+                        <option value="">Chọn thời gian</option>
+                        {getAdminFieldOptions(EvaluationCategory.TIME).map((opt) => (
+                          <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Ảnh hưởng</label>
+                      <select
+                        value={formData.adminImpactLevel}
+                        onChange={(e) => handleInputChange('adminImpactLevel', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      >
+                        <option value="">Chọn mức độ</option>
+                        {getAdminFieldOptions(EvaluationCategory.IMPACT).map((opt) => (
+                          <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Khẩn cấp</label>
+                      <select
+                        value={formData.adminUrgencyLevel}
+                        onChange={(e) => handleInputChange('adminUrgencyLevel', e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      >
+                        <option value="">Chọn mức độ</option>
+                        {getAdminFieldOptions(EvaluationCategory.URGENCY).map((opt) => (
+                          <option key={opt.id} value={opt.points}>{opt.points} - {opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Ghi chú của Admin</label>
+                    <textarea
+                      value={formData.adminAssessmentNotes}
+                      onChange={(e) => handleInputChange('adminAssessmentNotes', e.target.value)}
+                      rows={2}
+                      className="w-full px-2.5 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none transition-colors"
+                      placeholder="Ghi chú đánh giá của admin..."
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </form>
+
 
           {/* Footer */}
           <div className="px-5 py-4 border-t border-gray-200 bg-white flex justify-end gap-3 flex-shrink-0">

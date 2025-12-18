@@ -34,10 +34,10 @@ interface CreateMaintenanceModalProps {
   maintenanceTypes?: MaintenanceType[];
 }
 
-export default function CreateMaintenanceModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
+export default function CreateMaintenanceModal({
+  isOpen,
+  onClose,
+  onSuccess,
   editingMaintenance,
   employees: preloadedEmployees = [],
   customers: preloadedCustomers = [],
@@ -88,10 +88,18 @@ export default function CreateMaintenanceModal({
   // Populate form data when in edit mode
   useEffect(() => {
     if (editingMaintenance && isOpen) {
-      const customerName = editingMaintenance.customerName || '';
-      const title = customerName.split(' ').slice(1).join(' ');
-      const customerTitle = customerName.startsWith('Chị') ? 'Chị' : 'Anh';
-      
+      const rawCustomerName = editingMaintenance.customerName || '';
+      let customerTitle = 'Anh';
+      let displayCustomerName = rawCustomerName;
+
+      if (rawCustomerName.startsWith('Anh ')) {
+        customerTitle = 'Anh';
+        displayCustomerName = rawCustomerName.substring(4);
+      } else if (rawCustomerName.startsWith('Chị ')) {
+        customerTitle = 'Chị';
+        displayCustomerName = rawCustomerName.substring(4);
+      }
+
       let maintenanceTypeId = '';
       if (editingMaintenance.maintenanceCaseType) {
         if (typeof editingMaintenance.maintenanceCaseType === 'string') {
@@ -110,9 +118,14 @@ export default function CreateMaintenanceModal({
       const startDate = editingMaintenance.startDate ? new Date(editingMaintenance.startDate) : null;
       const endDate = editingMaintenance.endDate ? new Date(editingMaintenance.endDate) : null;
 
+      // Find form label from score
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      const matchedForm = formOptions.find(opt => opt.points.toString() === editingMaintenance.userFormScore?.toString());
+      const formLabel = matchedForm ? matchedForm.label : 'Onsite';
+
       setFormData({
         customerTitle,
-        customerName: title,
+        customerName: displayCustomerName,
         handler: editingMaintenance.handler?.id || '',
         maintenanceType: maintenanceTypeId,
         customer: editingMaintenance.customer?.id || '',
@@ -127,10 +140,10 @@ export default function CreateMaintenanceModal({
         estimatedTime: editingMaintenance.userEstimatedTime?.toString() || '',
         impactLevel: editingMaintenance.userImpactLevel?.toString() || '',
         urgencyLevel: editingMaintenance.userUrgencyLevel?.toString() || '',
-        form: 'Onsite',
+        form: formLabel,
         formScore: editingMaintenance.userFormScore?.toString() || '2'
       });
-      
+
       if (editingMaintenance.customer) {
         setCustomerSearch(`${editingMaintenance.customer.fullCompanyName} (${editingMaintenance.customer.shortName})`);
       }
@@ -157,7 +170,23 @@ export default function CreateMaintenanceModal({
       });
       setCustomerSearch('');
     }
-  }, [editingMaintenance, isOpen]);
+  }, [editingMaintenance, isOpen, getFieldOptions]);
+
+  // Re-sync form label once configs are loaded
+  useEffect(() => {
+    if (editingMaintenance && isOpen) {
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      if (formOptions.length > 0) {
+        const matchedForm = formOptions.find(opt => opt.points.toString() === editingMaintenance.userFormScore?.toString());
+        if (matchedForm) {
+          setFormData(prev => ({
+            ...prev,
+            form: matchedForm.label
+          }));
+        }
+      }
+    }
+  }, [isOpen, editingMaintenance?.userFormScore, getFieldOptions]);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -182,7 +211,7 @@ export default function CreateMaintenanceModal({
 
   const fetchCurrentEmployee = useCallback(async () => {
     if (!session?.user?.email) return;
-    
+
     try {
       const response = await fetch('/api/user/basic-info');
       if (response.ok) {
@@ -347,7 +376,7 @@ export default function CreateMaintenanceModal({
     };
 
     window.addEventListener('maintenance-types-updated', handleMaintenanceTypesUpdate);
-    
+
     return () => {
       window.removeEventListener('maintenance-types-updated', handleMaintenanceTypesUpdate);
     };
@@ -361,7 +390,7 @@ export default function CreateMaintenanceModal({
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
-      
+
       return () => {
         document.body.style.position = '';
         document.body.style.top = '';
@@ -400,7 +429,7 @@ export default function CreateMaintenanceModal({
   const handleCustomerSearchChange = (value: string) => {
     setCustomerSearch(value);
     setShowCustomerDropdown(true);
-    
+
     if (!value) {
       setFormData(prev => ({
         ...prev,
@@ -411,7 +440,7 @@ export default function CreateMaintenanceModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields
     if (!formData.customerName.trim()) {
       toast.error('Vui lòng nhập tên khách hàng!');
@@ -437,7 +466,7 @@ export default function CreateMaintenanceModal({
       toast.error('Vui lòng nhập mô tả bảo trì!');
       return;
     }
-    
+
     // Validate end date
     if (formData.endDate && formData.startDate) {
       // Helper function to safely convert to Date object
@@ -453,7 +482,7 @@ export default function CreateMaintenanceModal({
 
       const startDate = toDate(formData.startDate);
       const endDate = toDate(formData.endDate);
-      
+
       if (startDate && endDate && endDate <= startDate) {
         toast.error('Ngày kết thúc phải lớn hơn ngày bắt đầu!', {
           duration: 3000,
@@ -462,13 +491,13 @@ export default function CreateMaintenanceModal({
         return;
       }
     }
-    
+
     setLoading(true);
-    
+
     try {
       const fullCustomerName = `${formData.customerTitle} ${formData.customerName}`.trim();
       const isEditing = !!editingMaintenance;
-      
+
       // Helper function to safely convert to ISO string
       const toISOString = (value: Date | string | null | undefined): string | null => {
         if (!value) return null;
@@ -507,7 +536,7 @@ export default function CreateMaintenanceModal({
 
       const url = isEditing ? `/api/maintenance-cases/${editingMaintenance.id}` : '/api/maintenance-cases';
       const method = isEditing ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -518,31 +547,31 @@ export default function CreateMaintenanceModal({
 
       if (response.ok) {
         const result = await response.json();
-        
+
         toast.success(isEditing ? 'Cập nhật case bảo trì thành công!' : 'Tạo case bảo trì thành công!', {
           duration: 4000,
           position: 'top-right',
         });
-        
+
         window.dispatchEvent(new CustomEvent('case-created'));
-        
+
         resetForm();
-        
+
         if (onSuccess && result.data) {
           onSuccess(result.data);
         }
-        
+
         onClose();
       } else {
         const responseText = await response.text();
-        
+
         let error;
         try {
           error = JSON.parse(responseText);
         } catch (e) {
           error = { error: 'Invalid JSON response' };
         }
-         
+
         console.error('Failed to create maintenance:', error);
         toast.error(`Lỗi: ${error.error || 'Không thể tạo case bảo trì'}`, {
           duration: 4000,
@@ -564,7 +593,8 @@ export default function CreateMaintenanceModal({
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .ios-input-fix input,
         .ios-input-fix select,
         .ios-input-fix textarea {
@@ -617,7 +647,7 @@ export default function CreateMaintenanceModal({
                     </div>
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">Admin</span>
                   </div>
-                  
+
                   <div className="p-3">
                     <select
                       value={formData.handler}
@@ -653,7 +683,7 @@ export default function CreateMaintenanceModal({
                     </div>
                     <span className="text-red-500 text-sm">*</span>
                   </div>
-                  
+
                   <div className="p-3">
                     <select
                       value={formData.maintenanceType}
@@ -687,7 +717,7 @@ export default function CreateMaintenanceModal({
                   <Building2 className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thông tin khách hàng</h3>
                 </div>
-                
+
                 <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -755,7 +785,7 @@ export default function CreateMaintenanceModal({
                   <FileText className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Chi tiết bảo trì</h3>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
@@ -806,7 +836,7 @@ export default function CreateMaintenanceModal({
                   <Calendar className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Thời gian</h3>
                 </div>
-                
+
                 <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -865,7 +895,7 @@ export default function CreateMaintenanceModal({
                   <FileText className="h-4 w-4 text-blue-600" />
                   <h3 className="text-sm font-semibold text-gray-900" style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>Trạng thái & Ghi chú</h3>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
@@ -913,7 +943,7 @@ export default function CreateMaintenanceModal({
                     <span className="hidden sm:inline">Làm mới</span>
                   </button>
                 </div>
-                
+
                 <div className="p-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* Mức độ khó */}

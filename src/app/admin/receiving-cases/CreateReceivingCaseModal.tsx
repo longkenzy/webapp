@@ -160,10 +160,13 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
   useEffect(() => {
     if (editData && isOpen) {
       console.log('Populating form with data:', editData);
-      // ... existing logic ...
-      // Convert ISO string to Date object for DateTimePicker
+
       const deliveryDateTime = editData.startDate ? new Date(editData.startDate) : null;
       const completionDateTime = editData.endDate ? new Date(editData.endDate) : null;
+
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      const matchedForm = formOptions.find(opt => opt.points.toString() === editData.userFormScore?.toString());
+      const formLabel = matchedForm ? matchedForm.label : (editData.form || 'Onsite');
 
       setFormData({
         supplierId: editData.supplier?.id || '',
@@ -178,7 +181,7 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
         estimatedTime: editData.userEstimatedTime?.toString() || '',
         impactLevel: editData.userImpactLevel?.toString() || '',
         urgencyLevel: editData.userUrgencyLevel?.toString() || '',
-        form: editData.form || 'Onsite',
+        form: formLabel,
         formScore: editData.userFormScore?.toString() || '2'
       });
 
@@ -230,7 +233,23 @@ export default function CreateReceivingCaseModal({ isOpen, onClose, onSuccess, e
       setSelectedPartner(null);
       setSearchTerm('');
     }
-  }, [editData, isOpen]);
+  }, [editData, isOpen, getFieldOptions]);
+
+  // Re-sync form label once configs are loaded
+  useEffect(() => {
+    if (editData && isOpen) {
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      if (formOptions.length > 0) {
+        const matchedForm = formOptions.find(opt => opt.points.toString() === editData.userFormScore?.toString());
+        if (matchedForm) {
+          setFormData(prev => ({
+            ...prev,
+            form: matchedForm.label
+          }));
+        }
+      }
+    }
+  }, [isOpen, editData?.userFormScore, getFieldOptions]);
 
   // Fetch data when modal opens
   useEffect(() => {

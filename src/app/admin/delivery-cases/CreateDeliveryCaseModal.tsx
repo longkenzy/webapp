@@ -136,15 +136,14 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
   // Populate form data when in edit mode
   useEffect(() => {
     if (editData && isOpen) {
+      console.log('Populating form with data:', editData);
+
       const deliveryDateTime = editData.startDate ? new Date(editData.startDate) : null;
       const completionDateTime = editData.endDate ? new Date(editData.endDate) : null;
 
       const formOptions = getFieldOptions(EvaluationCategory.FORM);
-      const defaultFormOption = formOptions.find(option => option.points === 2) || formOptions[0];
-      const selectedFormOption = formOptions.find(option =>
-        option.label === editData.form ||
-        (editData.userFormScore && option.points === editData.userFormScore)
-      );
+      const matchedForm = formOptions.find(opt => opt.points.toString() === editData.userFormScore?.toString());
+      const formLabel = matchedForm ? matchedForm.label : (editData.form || 'Onsite');
 
       setFormData({
         customerId: editData.customer?.id || '',
@@ -152,16 +151,17 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         deliveryDateTime,
         completionDateTime,
         status: editData.status || 'RECEIVED',
-        form: selectedFormOption?.label || defaultFormOption?.label || 'Onsite',
         crmReferenceCode: editData.crmReferenceCode || '',
-        notes: '',
+        notes: editData.notes || '',
         difficultyLevel: editData.userDifficultyLevel?.toString() || '',
         estimatedTime: editData.userEstimatedTime?.toString() || '',
         impactLevel: editData.userImpactLevel?.toString() || '',
         urgencyLevel: editData.userUrgencyLevel?.toString() || '',
+        form: formLabel,
         formScore: editData.userFormScore?.toString() || '2'
       });
 
+      // Set selected partner
       if (editData.customer) {
         setSelectedPartner({
           id: editData.customer.id,
@@ -174,8 +174,9 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
         setSearchTerm(editData.customer.shortName);
       }
 
+      // Set products
       if (editData.products) {
-        console.log('Setting delivery products:', editData.products);
+        console.log('Setting products:', editData.products);
         setProducts(editData.products.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -186,17 +187,44 @@ export default function CreateDeliveryCaseModal({ isOpen, onClose, onSuccess, ed
       } else {
         setProducts([]);
       }
+    } else if (!editData && isOpen) {
+      // Reset form when creating new case
+      setFormData({
+        customerId: '',
+        handler: '',
+        deliveryDateTime: null,
+        completionDateTime: null,
+        status: 'RECEIVED',
+        crmReferenceCode: '',
+        notes: '',
+        difficultyLevel: '',
+        estimatedTime: '',
+        impactLevel: '',
+        urgencyLevel: '',
+        form: 'Onsite',
+        formScore: '2'
+      });
+      setProducts([]);
+      setSelectedPartner(null);
+      setSearchTerm('');
     }
-  }, [editData, isOpen]);
+  }, [editData, isOpen, getFieldOptions]);
 
-  // Fetch data when modal opens
+  // Re-sync form label once configs are loaded
   useEffect(() => {
-    if (isOpen) {
-      fetchCustomers();
-      fetchEmployees();
-      fetchCurrentEmployee();
+    if (editData && isOpen) {
+      const formOptions = getFieldOptions(EvaluationCategory.FORM);
+      if (formOptions.length > 0) {
+        const matchedForm = formOptions.find(opt => opt.points.toString() === editData.userFormScore?.toString());
+        if (matchedForm) {
+          setFormData(prev => ({
+            ...prev,
+            form: matchedForm.label
+          }));
+        }
+      }
     }
-  }, [isOpen, session?.user?.email]);
+  }, [isOpen, editData?.userFormScore, getFieldOptions]);
 
   // Lock body scroll when modal is open
   useEffect(() => {

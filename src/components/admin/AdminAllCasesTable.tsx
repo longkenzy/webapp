@@ -446,13 +446,13 @@ function AdminAllCasesTable() {
       };
 
       const [internalRes, deliveryRes, receivingRes, maintenanceRes, incidentRes, warrantyRes, deploymentRes] = await Promise.all([
-        fetch('/api/internal-cases?limit=100', fetchOptions),
-        fetch('/api/delivery-cases?limit=100', fetchOptions),
-        fetch('/api/receiving-cases?limit=100', fetchOptions),
-        fetch('/api/maintenance-cases?limit=100', fetchOptions),
-        fetch('/api/incidents?limit=100', fetchOptions),
-        fetch('/api/warranties?limit=100', fetchOptions),
-        fetch('/api/deployment-cases?limit=100', fetchOptions)
+        fetch('/api/internal-cases?limit=500', fetchOptions),
+        fetch('/api/delivery-cases?limit=500', fetchOptions),
+        fetch('/api/receiving-cases?limit=500', fetchOptions),
+        fetch('/api/maintenance-cases?limit=500', fetchOptions),
+        fetch('/api/incidents?limit=500', fetchOptions),
+        fetch('/api/warranties?limit=500', fetchOptions),
+        fetch('/api/deployment-cases?limit=500', fetchOptions)
       ]);
 
       const [internalData, deliveryData, receivingData, maintenanceData, incidentData, warrantyData, deploymentData] = await Promise.all([

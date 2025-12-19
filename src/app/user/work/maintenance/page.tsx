@@ -76,11 +76,11 @@ export default function MaintenancePage() {
   const [refreshing, setRefreshing] = useState(false);
   const [partners, setPartners] = useState<any[]>([]);
   const [closingCaseId, setClosingCaseId] = useState<string | null>(null);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [casesPerPage] = useState(10);
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     handler: '',
@@ -111,8 +111,8 @@ export default function MaintenancePage() {
   const fetchMaintenanceCases = useCallback(async () => {
     try {
       setLoading(true);
-      
-      const response = await fetch('/api/maintenance-cases', {
+
+      const response = await fetch('/api/maintenance-cases?limit=500', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
@@ -120,7 +120,7 @@ export default function MaintenancePage() {
         },
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Maintenance Cases API response:', data);
@@ -154,7 +154,7 @@ export default function MaintenancePage() {
   // Silent refresh without loading state
   const silentRefresh = async () => {
     try {
-      const response = await fetch('/api/maintenance-cases', {
+      const response = await fetch('/api/maintenance-cases?limit=500', {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache',
@@ -162,7 +162,7 @@ export default function MaintenancePage() {
         },
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setMaintenanceCases(data.data || []);
@@ -186,12 +186,12 @@ export default function MaintenancePage() {
 
   const handleEditSuccess = async (updatedMaintenance: MaintenanceCase) => {
     // Cập nhật case trong danh sách với dữ liệu đầy đủ từ API
-    setMaintenanceCases(prevMaintenance => 
-      prevMaintenance.map(maintenance => 
+    setMaintenanceCases(prevMaintenance =>
+      prevMaintenance.map(maintenance =>
         maintenance.id === updatedMaintenance.id ? updatedMaintenance : maintenance
       )
     );
-    
+
     // Also refresh from server to ensure data consistency (silent refresh)
     await silentRefresh();
   };
@@ -203,7 +203,7 @@ export default function MaintenancePage() {
 
     try {
       setClosingCaseId(caseId);
-      
+
       const response = await fetch(`/api/maintenance-cases/${caseId}/close`, {
         method: 'PUT',
         headers: {
@@ -214,14 +214,14 @@ export default function MaintenancePage() {
       if (response.ok) {
         toast.success('Case đã được đóng thành công!');
         // Optimistic update - update the case status locally
-        setMaintenanceCases(prevCases => 
-          prevCases.map(maintenanceCase => 
-            maintenanceCase.id === caseId 
+        setMaintenanceCases(prevCases =>
+          prevCases.map(maintenanceCase =>
+            maintenanceCase.id === caseId
               ? { ...maintenanceCase, status: 'COMPLETED', endDate: new Date().toISOString() }
               : maintenanceCase
           )
         );
-        
+
         // Also refresh from server to ensure data consistency (silent refresh)
         await silentRefresh();
       } else {
@@ -283,33 +283,33 @@ export default function MaintenancePage() {
       maintenance.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (maintenance.customerName || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
-    
+
     // Handler filter
-    const matchesHandler = filters.handler === '' || 
+    const matchesHandler = filters.handler === '' ||
       maintenance.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase());
-    
+
     // Maintenance type filter
-    const matchesMaintenanceType = filters.maintenanceType === '' || 
+    const matchesMaintenanceType = filters.maintenanceType === '' ||
       maintenance.maintenanceType === filters.maintenanceType;
-    
+
     // Status filter
-    const matchesStatus = filters.status === '' || 
+    const matchesStatus = filters.status === '' ||
       maintenance.status === filters.status;
-    
+
     // Customer filter
-    const matchesCustomer = filters.customer === '' || 
+    const matchesCustomer = filters.customer === '' ||
       maintenance.customerId === filters.customer;
-    
+
     // Date range filter
     const maintenanceDate = new Date(maintenance.startDate);
     const startDate = filters.startDate ? new Date(filters.startDate) : null;
     const endDate = filters.endDate ? new Date(filters.endDate) : null;
-    
-    const matchesDateRange = (!startDate || maintenanceDate >= startDate) && 
+
+    const matchesDateRange = (!startDate || maintenanceDate >= startDate) &&
       (!endDate || maintenanceDate <= endDate);
-    
-    return matchesSearch && matchesHandler && 
-           matchesMaintenanceType && matchesStatus && matchesCustomer && matchesDateRange;
+
+    return matchesSearch && matchesHandler &&
+      matchesMaintenanceType && matchesStatus && matchesCustomer && matchesDateRange;
   });
 
   // Pagination logic
@@ -479,7 +479,8 @@ export default function MaintenancePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-orange-50 p-3 md:p-6 pt-3 md:pt-4">
       {/* iOS Safari text color fix */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         input, select, textarea {
           -webkit-text-fill-color: #111827 !important;
           opacity: 1 !important;
@@ -528,7 +529,7 @@ export default function MaintenancePage() {
                   <p className="text-xs text-gray-600 hidden md:block">Tìm kiếm và lọc case bảo trì theo nhiều tiêu chí</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={refreshMaintenanceCases}
                 disabled={refreshing}
                 className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 text-xs md:text-sm cursor-pointer"
@@ -563,7 +564,7 @@ export default function MaintenancePage() {
               <div>
                 {/* Collapsible Filter Header */}
                 <div className="flex items-center justify-between mb-2">
-                  <div 
+                  <div
                     onClick={() => setShowFilters(!showFilters)}
                     className="flex items-center gap-2 cursor-pointer flex-1"
                   >
@@ -682,9 +683,8 @@ export default function MaintenancePage() {
                         type="date"
                         value={filters.endDate}
                         onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                        className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${
-                          !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${!isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
+                          }`}
                       />
                       {!isDateRangeValid() && (
                         <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
@@ -828,7 +828,7 @@ export default function MaintenancePage() {
                           {totalCases - startIndex - index}
                         </span>
                       </td>
-                      
+
                       {/* Người xử lý */}
                       <td className="px-2 py-1 w-32">
                         <div>
@@ -836,7 +836,7 @@ export default function MaintenancePage() {
                           <div className="text-xs text-slate-500">{maintenance.handler.position}</div>
                         </div>
                       </td>
-                      
+
                       {/* Khách hàng */}
                       <td className="px-2 py-1 w-48">
                         <div>
@@ -857,12 +857,12 @@ export default function MaintenancePage() {
                           )}
                         </div>
                       </td>
-                      
+
                       {/* Loại bảo trì */}
                       <td className="px-2 py-1 w-32">
                         <div className="text-sm text-slate-700">{formatMaintenanceType(maintenance.maintenanceType)}</div>
                       </td>
-                      
+
                       {/* Thông tin Case */}
                       <td className="px-2 py-1 w-80">
                         <div>
@@ -877,7 +877,7 @@ export default function MaintenancePage() {
                           </div>
                         </div>
                       </td>
-                      
+
                       {/* Ghi chú */}
                       <td className="px-2 py-1 w-32">
                         <div className="text-xs text-slate-600 max-w-32">
@@ -890,7 +890,7 @@ export default function MaintenancePage() {
                           )}
                         </div>
                       </td>
-                      
+
                       {/* Mã CRM */}
                       <td className="px-2 py-1 w-24">
                         <div className="text-sm text-slate-900">
@@ -903,14 +903,14 @@ export default function MaintenancePage() {
                           )}
                         </div>
                       </td>
-                      
+
                       {/* Trạng thái */}
                       <td className="px-2 py-1 w-24">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(maintenance.status)}`}>
                           {getStatusText(maintenance.status)}
                         </span>
                       </td>
-                      
+
                       {/* Thời gian */}
                       <td className="px-2 py-1 w-36">
                         <div className="text-xs space-y-1">
@@ -926,12 +926,12 @@ export default function MaintenancePage() {
                           )}
                         </div>
                       </td>
-                      
+
                       {/* Hành động */}
                       <td className="px-2 py-1 w-20 text-center">
                         <div className="flex items-center justify-center space-x-1">
                           {maintenance.status !== 'COMPLETED' && (
-                            <button 
+                            <button
                               onClick={() => handleOpenEditModal(maintenance)}
                               className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 cursor-pointer"
                               title="Chỉnh sửa"
@@ -939,7 +939,7 @@ export default function MaintenancePage() {
                               <Edit className="h-4 w-4" />
                             </button>
                           )}
-                          
+
                           {maintenance.status !== 'COMPLETED' && (
                             <button
                               onClick={() => handleCloseCase(maintenance.id)}
@@ -1072,7 +1072,7 @@ export default function MaintenancePage() {
                 {/* Actions */}
                 {maintenanceCase.status !== 'COMPLETED' && (
                   <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-                    <button 
+                    <button
                       onClick={() => handleOpenEditModal(maintenanceCase)}
                       className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded transition-colors"
                     >
@@ -1124,7 +1124,7 @@ export default function MaintenancePage() {
                       <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
-                  
+
                   {/* Page numbers */}
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
@@ -1137,22 +1137,21 @@ export default function MaintenancePage() {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
                         onClick={() => goToPage(pageNum)}
-                        className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium ${
-                          currentPage === pageNum
+                        className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium ${currentPage === pageNum
                             ? 'z-10 bg-orange-50 border-orange-500 text-orange-600'
                             : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </button>
                     );
                   })}
-                  
+
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}
@@ -1169,52 +1168,52 @@ export default function MaintenancePage() {
           </div>
         )}
 
-      {/* Create Maintenance Modal */}
-      <CreateMaintenanceModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={async (newMaintenance: any) => {
-          // Add the new case to the list immediately for better UX
-          setMaintenanceCases(prevMaintenance => [newMaintenance as MaintenanceCase, ...prevMaintenance]);
-          
-          // Also refresh from server to ensure data consistency (silent refresh)
-          await silentRefresh();
-        }}
-      />
+        {/* Create Maintenance Modal */}
+        <CreateMaintenanceModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={async (newMaintenance: any) => {
+            // Add the new case to the list immediately for better UX
+            setMaintenanceCases(prevMaintenance => [newMaintenance as MaintenanceCase, ...prevMaintenance]);
 
-      {/* Edit Maintenance Modal */}
-      <EditMaintenanceModal
-        isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
-        onSuccess={handleEditSuccess}
-        maintenanceData={selectedMaintenance}
-      />
+            // Also refresh from server to ensure data consistency (silent refresh)
+            await silentRefresh();
+          }}
+        />
 
-      {/* Toast Notifications */}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            style: {
-              background: '#10B981',
-              color: '#fff',
-            },
-          },
-          error: {
+        {/* Edit Maintenance Modal */}
+        <EditMaintenanceModal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditModal}
+          onSuccess={handleEditSuccess}
+          maintenanceData={selectedMaintenance}
+        />
+
+        {/* Toast Notifications */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
             duration: 4000,
             style: {
-              background: '#EF4444',
+              background: '#363636',
               color: '#fff',
             },
-          },
-        }}
-      />
+            success: {
+              duration: 3000,
+              style: {
+                background: '#10B981',
+                color: '#fff',
+              },
+            },
+            error: {
+              duration: 4000,
+              style: {
+                background: '#EF4444',
+                color: '#fff',
+              },
+            },
+          }}
+        />
       </div>
     </div>
   );

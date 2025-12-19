@@ -20,12 +20,20 @@ export const GET = withErrorHandling(
       where: {
         OR: [
           {
+            // Case created today
             createdAt: {
               gte: startOfDay,
               lte: endOfDay
             }
           },
           {
+            // Or case is active (not finished)
+            status: {
+              notIn: [InternalCaseStatus.COMPLETED, InternalCaseStatus.CANCELLED]
+            }
+          },
+          {
+            // Or case finished recently (last 7 days)
             status: {
               in: [InternalCaseStatus.COMPLETED, InternalCaseStatus.CANCELLED]
             },
@@ -36,7 +44,7 @@ export const GET = withErrorHandling(
         ]
       },
       include: {
-        requester: { 
+        requester: {
           select: {
             id: true,
             fullName: true,
@@ -44,7 +52,7 @@ export const GET = withErrorHandling(
             department: true
           }
         },
-        handler: { 
+        handler: {
           select: {
             id: true,
             fullName: true,
@@ -56,7 +64,7 @@ export const GET = withErrorHandling(
       orderBy: {
         createdAt: 'desc'
       },
-      take: 50 // Limit results for better performance
+      take: 100 // Increased limit to ensure more cases are shown
     });
 
     return createOptimizedResponse(cases, {

@@ -66,11 +66,11 @@ export default function IncidentPage() {
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
   const [closingCaseId, setClosingCaseId] = useState<string | null>(null);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [casesPerPage] = useState(10);
-  
+
   // Filter states
   const [filters, setFilters] = useState({
     handler: '',
@@ -101,8 +101,8 @@ export default function IncidentPage() {
   const fetchIncidents = useCallback(async () => {
     try {
       setLoading(true);
-      
-      const response = await fetch('/api/incidents?page=1&limit=100', {
+
+      const response = await fetch('/api/incidents?page=1&limit=500', {
         method: 'GET',
         headers: {
           'Cache-Control': 'max-age=60',
@@ -110,7 +110,7 @@ export default function IncidentPage() {
         },
         credentials: 'include',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('Incidents API response:', data);
@@ -143,7 +143,7 @@ export default function IncidentPage() {
           'Cache-Control': 'max-age=300',
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setCustomers(data || []);
@@ -177,8 +177,8 @@ export default function IncidentPage() {
   };
 
   const handleEditSuccess = (updatedIncident: Incident) => {
-    setIncidents(prevIncidents => 
-      prevIncidents.map(incident => 
+    setIncidents(prevIncidents =>
+      prevIncidents.map(incident =>
         incident.id === updatedIncident.id ? updatedIncident : incident
       )
     );
@@ -191,7 +191,7 @@ export default function IncidentPage() {
 
     try {
       setClosingCaseId(caseId);
-      
+
       const response = await fetch(`/api/incidents/${caseId}/close`, {
         method: 'PUT',
         headers: {
@@ -202,9 +202,9 @@ export default function IncidentPage() {
       if (response.ok) {
         toast.success('Case đã được đóng thành công!');
         // Optimistic update - update the case status locally
-        setIncidents(prevIncidents => 
-          prevIncidents.map(incident => 
-            incident.id === caseId 
+        setIncidents(prevIncidents =>
+          prevIncidents.map(incident =>
+            incident.id === caseId
               ? { ...incident, status: 'COMPLETED', endDate: new Date().toISOString() }
               : incident
           )
@@ -257,33 +257,33 @@ export default function IncidentPage() {
       incident.incidentType.toLowerCase().includes(searchTerm.toLowerCase()) ||
       incident.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    
+
     // Handler filter
-    const matchesHandler = filters.handler === '' || 
+    const matchesHandler = filters.handler === '' ||
       (incident.handler?.fullName && incident.handler.fullName.toLowerCase().includes(filters.handler.toLowerCase()));
-    
+
     // Incident type filter
-    const matchesIncidentType = filters.incidentType === '' || 
+    const matchesIncidentType = filters.incidentType === '' ||
       incident.incidentType === filters.incidentType;
-    
+
     // Customer filter
-    const matchesCustomer = filters.customer === '' || 
+    const matchesCustomer = filters.customer === '' ||
       incident.customer?.id === filters.customer;
-    
+
     // Status filter
-    const matchesStatus = filters.status === '' || 
+    const matchesStatus = filters.status === '' ||
       incident.status === filters.status;
-    
+
     // Date range filter
     const incidentDate = new Date(incident.startDate);
     const startDate = filters.startDate ? new Date(filters.startDate) : null;
     const endDate = filters.endDate ? new Date(filters.endDate) : null;
-    
-    const matchesDateRange = (!startDate || incidentDate >= startDate) && 
+
+    const matchesDateRange = (!startDate || incidentDate >= startDate) &&
       (!endDate || incidentDate <= endDate);
-    
-    return matchesSearch && matchesHandler && 
-           matchesIncidentType && matchesCustomer && matchesStatus && matchesDateRange;
+
+    return matchesSearch && matchesHandler &&
+      matchesIncidentType && matchesCustomer && matchesStatus && matchesDateRange;
   });
 
   // Pagination logic
@@ -496,7 +496,8 @@ export default function IncidentPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50 p-3 md:p-6 pt-3 md:pt-4">
       {/* iOS Safari text color fix */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         input, select, textarea {
           -webkit-text-fill-color: #111827 !important;
           opacity: 1 !important;
@@ -545,7 +546,7 @@ export default function IncidentPage() {
                   <p className="text-xs text-gray-600 hidden md:block">Tìm kiếm và lọc sự cố theo nhiều tiêu chí</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={refreshIncidents}
                 disabled={refreshing}
                 className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs md:text-sm"
@@ -580,7 +581,7 @@ export default function IncidentPage() {
               <div>
                 {/* Collapsible Filter Header */}
                 <div className="flex items-center justify-between mb-2">
-                  <div 
+                  <div
                     onClick={() => setShowFilters(!showFilters)}
                     className="flex items-center gap-2 cursor-pointer flex-1"
                   >
@@ -669,7 +670,7 @@ export default function IncidentPage() {
                           </button>
                         )}
                       </div>
-                      
+
                       {/* Dropdown */}
                       {isCustomerDropdownOpen && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
@@ -734,9 +735,8 @@ export default function IncidentPage() {
                         type="date"
                         value={filters.endDate}
                         onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
-                        className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${
-                          !isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
-                        }`}
+                        className={`w-full px-2.5 md:px-3 py-1.5 md:py-2 border rounded-md focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 bg-gray-50 focus:bg-white text-xs md:text-sm ${!isDateRangeValid() ? 'border-red-300' : 'border-gray-200'
+                          }`}
                       />
                       {!isDateRangeValid() && (
                         <p className="text-xs text-red-600 mt-1">Ngày kết thúc phải sau ngày bắt đầu</p>
@@ -880,7 +880,7 @@ export default function IncidentPage() {
                           {totalCases - startIndex - index}
                         </span>
                       </td>
-                      
+
                       {/* Người xử lý */}
                       <td className="px-2 py-1 w-32">
                         <div>
@@ -888,7 +888,7 @@ export default function IncidentPage() {
                           <div className="text-xs text-slate-500">{incident.handler.position}</div>
                         </div>
                       </td>
-                      
+
                       {/* Khách hàng */}
                       <td className="px-2 py-1 w-48">
                         <div>
@@ -911,12 +911,12 @@ export default function IncidentPage() {
                           )}
                         </div>
                       </td>
-                      
+
                       {/* Loại sự cố */}
                       <td className="px-2 py-1 w-32">
                         <div className="text-sm text-slate-700">{formatIncidentType(incident.incidentType)}</div>
                       </td>
-                      
+
                       {/* Thông tin Sự cố */}
                       <td className="px-2 py-1 w-80">
                         <div>
@@ -931,7 +931,7 @@ export default function IncidentPage() {
                           </div>
                         </div>
                       </td>
-                      
+
                       {/* Ghi chú */}
                       <td className="px-2 py-1 w-32">
                         <div className="text-xs text-slate-600 max-w-32">
@@ -944,7 +944,7 @@ export default function IncidentPage() {
                           )}
                         </div>
                       </td>
-                      
+
                       {/* Mã CRM */}
                       <td className="px-2 py-1 w-24">
                         <div className="text-sm text-slate-900">
@@ -957,14 +957,14 @@ export default function IncidentPage() {
                           )}
                         </div>
                       </td>
-                      
+
                       {/* Trạng thái */}
                       <td className="px-2 py-1 w-24">
                         <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getStatusColor(incident.status)}`}>
                           {getStatusText(incident.status)}
                         </span>
                       </td>
-                      
+
                       {/* Thời gian */}
                       <td className="px-2 py-1 w-36">
                         <div className="text-xs space-y-1">
@@ -980,12 +980,12 @@ export default function IncidentPage() {
                           )}
                         </div>
                       </td>
-                      
+
                       {/* Hành động */}
                       <td className="px-2 py-1 w-20 text-center">
                         <div className="flex items-center justify-center space-x-1">
                           {incident.status !== 'COMPLETED' && (
-                            <button 
+                            <button
                               onClick={() => handleOpenEditModal(incident)}
                               className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200 cursor-pointer"
                               title="Chỉnh sửa"
@@ -993,7 +993,7 @@ export default function IncidentPage() {
                               <Edit className="h-4 w-4" />
                             </button>
                           )}
-                          
+
                           {incident.status !== 'COMPLETED' && (
                             <button
                               onClick={() => handleCloseCase(incident.id)}
@@ -1026,7 +1026,7 @@ export default function IncidentPage() {
               </tbody>
             </table>
           </div>
-          
+
         </div>
 
         {/* Incidents Cards - Mobile */}
@@ -1127,7 +1127,7 @@ export default function IncidentPage() {
                 {/* Actions */}
                 {incident.status !== 'COMPLETED' && (
                   <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-                    <button 
+                    <button
                       onClick={() => handleOpenEditModal(incident)}
                       className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 rounded transition-colors cursor-pointer"
                     >
@@ -1179,7 +1179,7 @@ export default function IncidentPage() {
                       <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </button>
-                  
+
                   {/* Page numbers */}
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
@@ -1192,22 +1192,21 @@ export default function IncidentPage() {
                     } else {
                       pageNum = currentPage - 2 + i;
                     }
-                    
+
                     return (
                       <button
                         key={pageNum}
                         onClick={() => goToPage(pageNum)}
-                        className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium cursor-pointer ${
-                          currentPage === pageNum
+                        className={`relative inline-flex items-center px-3 md:px-4 py-2 border text-xs md:text-sm font-medium cursor-pointer ${currentPage === pageNum
                             ? 'z-10 bg-red-50 border-red-500 text-red-600'
                             : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         {pageNum}
                       </button>
                     );
                   })}
-                  
+
                   <button
                     onClick={goToNextPage}
                     disabled={currentPage === totalPages}

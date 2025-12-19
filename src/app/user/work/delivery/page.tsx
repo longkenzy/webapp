@@ -145,7 +145,7 @@ export default function DeliveryCasePage() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/delivery-cases?page=1&limit=100', {
+      const response = await fetch('/api/delivery-cases?page=1&limit=500', {
         credentials: 'include' // Ensure cookies are sent
       });
 

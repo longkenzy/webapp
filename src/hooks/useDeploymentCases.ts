@@ -68,8 +68,8 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch('/api/deployment-cases?page=1&limit=100', {
+
+      const response = await fetch('/api/deployment-cases?page=1&limit=500', {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -77,7 +77,7 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
           'Expires': '0',
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setDeploymentCases(data.data || []);
@@ -97,7 +97,7 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
   const createCase = useCallback(async (caseData: Partial<DeploymentCase>): Promise<DeploymentCase | null> => {
     try {
       setError(null);
-      
+
       const response = await fetch('/api/deployment-cases', {
         method: 'POST',
         headers: {
@@ -105,14 +105,14 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
         },
         body: JSON.stringify(caseData),
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         const newCase = result.data;
-        
+
         // Refresh the entire list to get complete data
         await fetchCases();
-        
+
         return newCase;
       } else {
         const errorData = await response.json();
@@ -130,7 +130,7 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
   const updateCase = useCallback(async (id: string, caseData: Partial<DeploymentCase>): Promise<DeploymentCase | null> => {
     try {
       setError(null);
-      
+
       const response = await fetch(`/api/deployment-cases/${id}`, {
         method: 'PUT',
         headers: {
@@ -138,16 +138,16 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
         },
         body: JSON.stringify(caseData),
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         const updatedCase = result.data;
-        
+
         // Update the case in the list with complete data
-        setDeploymentCases(prev => 
+        setDeploymentCases(prev =>
           prev.map(caseItem => caseItem.id === id ? updatedCase : caseItem)
         );
-        
+
         return updatedCase;
       } else {
         const errorData = await response.json();
@@ -165,11 +165,11 @@ export function useDeploymentCases(): UseDeploymentCasesReturn {
   const deleteCase = useCallback(async (id: string): Promise<boolean> => {
     try {
       setError(null);
-      
+
       const response = await fetch(`/api/deployment-cases/${id}`, {
         method: 'DELETE',
       });
-      
+
       if (response.ok) {
         // Remove the case from the list
         setDeploymentCases(prev => prev.filter(caseItem => caseItem.id !== id));

@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const partners = await db.partner.findMany({ 
-      orderBy: { shortName: "asc" } 
+    const partners = await db.partner.findMany({
+      orderBy: { shortName: "asc" }
     });
 
     return NextResponse.json(partners);
@@ -64,6 +64,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if partner with same fullCompanyName already exists
+    const existingPartnerByName = await db.partner.findFirst({
+      where: { fullCompanyName: fullCompanyName.trim() }
+    });
+
+    if (existingPartnerByName) {
+      return NextResponse.json(
+        { error: `Tên công ty "${fullCompanyName}" đã tồn tại. Vui lòng kiểm tra lại.` },
+        { status: 400 }
+      );
+    }
+
     // Create the new partner
     const newPartner = await db.partner.create({
       data: {
@@ -81,7 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(newPartner);
   } catch (error: any) {
     console.error("Error creating partner:", error);
-    
+
     // Handle Prisma unique constraint violation
     if (error.code === 'P2002') {
       return NextResponse.json(
@@ -89,7 +101,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json(
       { error: "Lỗi server. Vui lòng thử lại sau." },
       { status: 500 }
